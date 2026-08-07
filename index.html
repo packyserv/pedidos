@@ -319,7 +319,35 @@
 </head>
 <body>
 
-<header>
+<!-- ============ PANTALLA DE LOGIN ============ -->
+<div id="pantallaLogin" style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--fondo); padding:20px;">
+  <div style="background:var(--superficie); border-radius:var(--radio); border:1px solid var(--gris-borde); padding:32px 28px; max-width:360px; width:100%; box-shadow:0 4px 24px var(--sombra)">
+    <div style="text-align:center; margin-bottom:24px">
+      <img src="data:image/png;base64,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" alt="Logo" style="height:48px; border-radius:6px; margin-bottom:12px">
+      <h2 style="margin:0; font-size:20px; color:var(--azul-oscuro)">Carga de Pedidos</h2>
+      <p style="color:var(--gris-texto); font-size:13px; margin:4px 0 0 0">Packaging y Servicios</p>
+    </div>
+
+    <div id="loginError" style="display:none; background:#fdecea; color:var(--rojo); border:1px solid #f2c0ba; border-radius:6px; padding:10px 12px; font-size:13px; margin-bottom:14px"></div>
+
+    <div class="campo">
+      <label for="loginVendedor">Tu nombre</label>
+      <select id="loginVendedor">
+        <option value="">Cargando vendedores...</option>
+      </select>
+    </div>
+
+    <div class="campo" id="campoClave" style="display:none">
+      <label for="loginClave">Clave (4 dígitos)</label>
+      <input type="password" id="loginClave" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••" autocomplete="off">
+      <div class="subnota" id="subnotaClave"></div>
+    </div>
+
+    <button type="button" class="btn btn-naranja btn-ancho" id="btnIngresar" style="margin-top:8px" disabled>Ingresar</button>
+  </div>
+</div>
+
+<header style="display:none" id="appHeader">
   <div style="display:flex; align-items:center; gap:10px"><img src="data:image/png;base64,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" alt="Packaging y Servicios" style="height:32px; border-radius:4px"><h1 style="font-size:17px; margin:0">Carga de Pedidos</h1></div>
   <div class="barra-vista">
     <div class="grupo-vista" title="Ancho de la pantalla">
@@ -333,7 +361,7 @@
   <div class="estado-conexion" id="estadoConexion"><span class="punto"></span> Conectando...</div>
 </header>
 
-<main id="mainContenido">
+<main id="mainContenido" style="display:none">
   <div id="bannerGlobal" class="banner"></div>
 
   <div class="card">
@@ -1239,6 +1267,15 @@ async function cargarDatos(intento) {
     // Con los datos ya cargados, si habia un pedido sin terminar guardado,
     // se ofrece retomarlo.
     ofrecerRestaurarBorrador();
+
+    // Pre-seleccionar el vendedor que se autenticó en el login
+    if (window._vendedorPreseleccionado) {
+      const sel = document.getElementById('vendedor');
+      sel.value = window._vendedorPreseleccionado;
+      resyncCombo('vendedor');
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      window._vendedorPreseleccionado = null;
+    }
 
   } catch (err) {
     console.error(`Error cargando datos (intento ${intento}):`, err);
@@ -3763,8 +3800,143 @@ document.getElementById('btnImprimir').addEventListener('click', () => {
 // El botón Confirmar de la barra sticky redirige al mismo handler del botón principal
 // (barra eliminada — el resumen ahora está integrado sobre los botones finales)
 
-cargarProvincias();
-cargarDatos();
+/* =========================================================================
+   SISTEMA DE LOGIN POR VENDEDOR + CLAVE
+   - Clave por defecto: 1234 (se fuerza el cambio la primera vez)
+   - Clave maestra: 3232 (desbloquea cualquier vendedor sin cambiar nada)
+   - Las claves se guardan en localStorage por dispositivo
+   ========================================================================= */
+const CLAVE_DEFAULT = '1234';
+const CLAVE_MAESTRA = '3232';
+const URL_VENDEDORES_LOGIN = WEB_APP_URL + '?action=datos';
+
+let vendedoresLogin = [];
+
+// Carga los vendedores en el select del login antes de que el usuario ingrese nada
+async function cargarVendedoresLogin() {
+  try {
+    const resp = await fetch(URL_VENDEDORES_LOGIN);
+    const data = await resp.json();
+    vendedoresLogin = data.vendedores || [];
+
+    const sel = document.getElementById('loginVendedor');
+    sel.innerHTML = '<option value="">Seleccioná tu nombre...</option>';
+    vendedoresLogin
+      .sort((a, b) => (a.Vendedor || '').localeCompare(b.Vendedor || ''))
+      .forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.CodVendedor;
+        opt.textContent = v.Vendedor;
+        sel.appendChild(opt);
+      });
+  } catch (err) {
+    document.getElementById('loginVendedor').innerHTML =
+      '<option value="">Error cargando — recargá la página</option>';
+  }
+}
+
+document.getElementById('loginVendedor').addEventListener('change', function () {
+  const campoClave = document.getElementById('campoClave');
+  const btnIngresar = document.getElementById('btnIngresar');
+  if (this.value) {
+    campoClave.style.display = 'block';
+    btnIngresar.disabled = false;
+    // Verificar si ya tiene clave seteada
+    const claveGuardada = localStorage.getItem('clave_' + this.value);
+    const subnota = document.getElementById('subnotaClave');
+    if (!claveGuardada) {
+      subnota.textContent = 'Primera vez: usá 1234 y después te pedirá cambiarla.';
+    } else {
+      subnota.textContent = '';
+    }
+    document.getElementById('loginClave').value = '';
+    document.getElementById('loginClave').focus();
+  } else {
+    campoClave.style.display = 'none';
+    btnIngresar.disabled = true;
+  }
+});
+
+document.getElementById('loginClave').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') document.getElementById('btnIngresar').click();
+});
+
+document.getElementById('btnIngresar').addEventListener('click', function () {
+  const codVendedor = document.getElementById('loginVendedor').value;
+  const claveIngresada = document.getElementById('loginClave').value.trim();
+  const errorDiv = document.getElementById('loginError');
+
+  if (!codVendedor) { mostrarErrorLogin('Seleccioná tu nombre.'); return; }
+  if (claveIngresada.length !== 4 || !/^\d{4}$/.test(claveIngresada)) {
+    mostrarErrorLogin('La clave debe ser exactamente 4 dígitos numéricos.'); return;
+  }
+
+  const claveGuardada = localStorage.getItem('clave_' + codVendedor) || CLAVE_DEFAULT;
+  const esMaestra = claveIngresada === CLAVE_MAESTRA;
+
+  if (!esMaestra && claveIngresada !== claveGuardada) {
+    mostrarErrorLogin('Clave incorrecta. Intentá de nuevo.'); return;
+  }
+
+  errorDiv.style.display = 'none';
+
+  // Si es la clave default y no es la maestra, forzar cambio
+  if (!esMaestra && claveGuardada === CLAVE_DEFAULT && !localStorage.getItem('clave_' + codVendedor)) {
+    pedirCambioClaveObligatorio(codVendedor);
+    return;
+  }
+
+  // Login OK — mostrar el formulario
+  autenticarVendedor(codVendedor);
+});
+
+function mostrarErrorLogin(msg) {
+  const div = document.getElementById('loginError');
+  div.textContent = msg;
+  div.style.display = 'block';
+  document.getElementById('loginClave').value = '';
+  document.getElementById('loginClave').focus();
+}
+
+function pedirCambioClaveObligatorio(codVendedor) {
+  const nueva = prompt('Es tu primera vez. Por seguridad, elegí una clave nueva de 4 dígitos:');
+  if (!nueva || !/^\d{4}$/.test(nueva.trim())) {
+    mostrarErrorLogin('La clave nueva debe ser exactamente 4 dígitos. Intentá de nuevo.');
+    return;
+  }
+  if (nueva.trim() === CLAVE_DEFAULT) {
+    mostrarErrorLogin('No podés usar 1234 como clave. Elegí otra.');
+    return;
+  }
+  if (nueva.trim() === CLAVE_MAESTRA) {
+    mostrarErrorLogin('Esa clave no está disponible. Elegí otra.');
+    return;
+  }
+  const confirmar = prompt('Repetí la clave nueva para confirmar:');
+  if (confirmar !== nueva.trim()) {
+    mostrarErrorLogin('Las claves no coinciden. Intentá de nuevo.');
+    return;
+  }
+  localStorage.setItem('clave_' + codVendedor, nueva.trim());
+  autenticarVendedor(codVendedor);
+}
+
+function autenticarVendedor(codVendedor) {
+  // Ocultar pantalla de login, mostrar app
+  document.getElementById('pantallaLogin').style.display = 'none';
+  document.getElementById('appHeader').style.display = '';
+  document.getElementById('mainContenido').style.display = '';
+
+  // Pre-seleccionar el vendedor en el formulario
+  window._vendedorPreseleccionado = codVendedor;
+
+  // Ahora sí cargar todos los datos
+  cargarProvincias();
+  cargarDatos();
+}
+
+// Arrancar cargando los vendedores para el login (liviano, solo esa lista)
+cargarVendedoresLogin();
 
 // Combos buscables de campos con opciones fijas (los de datos dinamicos se
 // crean cuando se pueblan, dentro de cargarDatos / cargarProvincias).
