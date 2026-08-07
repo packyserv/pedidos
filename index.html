@@ -1,0 +1,3780 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carga de Pedidos</title>
+<style>
+  :root{
+    --azul-oscuro:#12293f;
+    --azul:#1c4d73;
+    --azul-claro:#e8f0f6;
+    --naranja:#e8792c;
+    --naranja-oscuro:#c8611c;
+    --verde:#2e7d4f;
+    --rojo:#c0392b;
+    --gris-borde:#d5dde3;
+    --gris-texto:#516575;
+    --blanco:#ffffff;
+    --radio:8px;
+
+    /* Variables semanticas -- controlan el tema claro/oscuro */
+    --fondo:#f2f5f7;
+    --superficie:#ffffff;
+    --superficie-alt:#f4f6f7;
+    --texto:#1a2b38;
+    --texto-suave:#888888;
+    --borde-suave:#f0f2f4;
+    --overlay:rgba(18,41,63,.55);
+    --sombra:rgba(0,0,0,.12);
+
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+  body.tema-oscuro{
+    --fondo:#12181e;
+    --superficie:#1b2430;
+    --superficie-alt:#232e3c;
+    --texto:#e6edf3;
+    --texto-suave:#a8b4c0;
+    --gris-texto:#a8b4c0;
+    --gris-borde:#334154;
+    --borde-suave:#2a3648;
+    --azul-claro:#1f3a52;
+    --overlay:rgba(0,0,0,.65);
+    --sombra:rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--fondo);
+    color:var(--texto);
+    padding-bottom:60px;
+    transition:background .15s, color .15s;
+  }
+  header{
+    background:var(--azul-oscuro);
+    color:#fff;
+    padding:14px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+    position:sticky;
+    top:0;
+    z-index:40;
+  }
+  header h1{
+    font-size:17px;
+    margin:0;
+    font-weight:600;
+    letter-spacing:.3px;
+  }
+  header .estado-conexion{
+    font-size:12px;
+    color:#cfe0ec;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .punto{
+    width:8px;height:8px;border-radius:50%;
+    background:#8fbf9a;
+  }
+  .punto.error{background:var(--rojo);}
+
+  /* ---------- Barra de vista (PC/Tablet/Celular) + modo oscuro ---------- */
+  .barra-vista{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .grupo-vista{
+    display:flex; background:rgba(255,255,255,.12); border-radius:8px; padding:2px; gap:2px;
+  }
+  .btn-vista{
+    background:none; border:none; color:#cfe0ec; cursor:pointer;
+    padding:6px 9px; border-radius:6px; font-size:14px; line-height:1;
+    transition:background .15s, color .15s;
+  }
+  .btn-vista.activo{background:var(--naranja); color:#fff;}
+  .btn-tema{
+    background:rgba(255,255,255,.12); border:none; color:#fff; cursor:pointer;
+    padding:6px 10px; border-radius:6px; font-size:14px; line-height:1;
+  }
+
+  main{
+    max-width:760px;
+    margin:0 auto;
+    padding:16px;
+    transition:max-width .2s;
+  }
+  main.vista-tablet{max-width:600px;}
+  main.vista-celular{max-width:400px;}
+
+  .card{
+    background:var(--superficie);
+    border-radius:var(--radio);
+    border:1px solid var(--gris-borde);
+    padding:18px;
+    margin-bottom:14px;
+    transition:background .15s, border-color .15s;
+  }
+  .card h2{
+    font-size:14px;
+    text-transform:uppercase;
+    letter-spacing:.6px;
+    color:var(--azul);
+    margin:0 0 14px 0;
+    padding-bottom:8px;
+    border-bottom:2px solid var(--azul-claro);
+  }
+  body.tema-oscuro .card h2{color:#7fb3e0;}
+  label{
+    display:block;
+    font-size:13px;
+    font-weight:600;
+    color:var(--gris-texto);
+    margin-bottom:4px;
+  }
+  .campo{margin-bottom:12px;}
+  .fila{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  input, select, textarea{
+    width:100%;
+    padding:9px 12px;
+    border:1px solid var(--gris-borde);
+    border-radius:6px;
+    font-size:16px; /* 16px o mas evita el zoom automatico molesto de iOS al enfocar un campo */
+    background:var(--superficie);
+    color:var(--texto);
+  }
+  input:focus, select:focus, textarea:focus{
+    outline:none;
+    border-color:var(--azul);
+    box-shadow:0 0 0 3px rgba(28,77,115,.12);
+  }
+  .campo.invalido input, .campo.invalido select{
+    border-color:var(--rojo);
+    background:#fdf3f2;
+  }
+  body.tema-oscuro .campo.invalido input, body.tema-oscuro .campo.invalido select{
+    background:#3a1f1c;
+  }
+  .msg-error{
+    color:var(--rojo);
+    font-size:12px;
+    margin-top:4px;
+    display:none;
+  }
+  .campo.invalido .msg-error{display:block;}
+  .autocomplete{position:relative;}
+  .combo-buscable{position:relative;}
+  .combo-buscable::after{
+    content:"▾";
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    pointer-events:none; color:var(--gris-texto); font-size:12px;
+  }
+  .combo-buscable input{padding-right:28px;}
+  .autocomplete-lista{
+    position:absolute;
+    z-index:100;
+    top:100%;left:0;right:0;
+    background:var(--superficie);
+    border:1px solid var(--gris-borde);
+    border-radius:6px;
+    max-height:240px;
+    overflow-y:auto;
+    box-shadow:0 6px 16px var(--sombra);
+    display:none;
+    margin-top:2px;
+  }
+  .autocomplete-lista.abierta{display:block;}
+  .opcion{
+    padding:10px 12px;
+    cursor:pointer;
+    font-size:14px;
+    border-bottom:1px solid var(--borde-suave);
+  }
+  .opcion:last-child{border-bottom:none;}
+  .opcion:hover, .opcion.activa{background:var(--azul-claro);}
+  .opcion small{display:block;color:var(--gris-texto);font-size:12px;margin-top:2px;}
+  .info-box{
+    background:var(--azul-claro);
+    border-radius:6px;
+    padding:12px;
+    font-size:13px;
+    margin-top:8px;
+    display:none;
+  }
+  .info-box.visible{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;}
+  .info-box .dato b{display:block;color:var(--azul-oscuro);}
+  body.tema-oscuro .info-box .dato b{color:#bcd9f0;}
+  .info-box .alerta{color:var(--rojo);font-weight:700;}
+  .info-box .ok{color:var(--verde);font-weight:700;}
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:10px 18px;
+    border-radius:6px;
+    border:none;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .btn-naranja{background:var(--naranja);color:#fff;}
+  .btn-naranja:hover{background:var(--naranja-oscuro);}
+  .btn-secundario{background:var(--superficie);border:1px solid var(--gris-borde);color:var(--azul);}
+  body.tema-oscuro .btn-secundario{color:#7fb3e0;}
+  .btn-secundario:hover{background:var(--azul-claro);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-ancho{width:100%;padding:14px;font-size:15px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{
+    text-align:left;
+    font-size:11px;
+    text-transform:uppercase;
+    color:var(--gris-texto);
+    padding:6px 8px;
+    border-bottom:2px solid var(--gris-borde);
+  }
+  td{padding:8px;border-bottom:1px solid var(--borde-suave);vertical-align:top;}
+  .quitar{
+    background:none;border:none;color:var(--rojo);cursor:pointer;font-size:16px;
+  }
+  .vacio-carrito{
+    text-align:center;color:var(--gris-texto);padding:22px 10px;font-size:14px;
+  }
+  .total-pedido{
+    display:flex;justify-content:space-between;align-items:center;
+    padding-top:12px;margin-top:8px;border-top:2px solid var(--azul-claro);
+    font-size:16px;font-weight:700;color:var(--azul-oscuro);
+  }
+  body.tema-oscuro .total-pedido{color:#bcd9f0;}
+  .banner{
+    padding:12px 14px;border-radius:6px;font-size:14px;margin-bottom:14px;display:none;
+  }
+  .banner.visible{display:block;}
+  .banner.exito{background:#e6f4ea;color:var(--verde);border:1px solid #b8e0c4;}
+  .banner.fallo{background:#fdecea;color:var(--rojo);border:1px solid #f2c0ba;}
+  .banner.cargando{background:#fff6e8;color:#8a5a00;border:1px solid #f2dba0;}
+  body.tema-oscuro .banner.exito{background:#183324;}
+  body.tema-oscuro .banner.fallo{background:#3a1f1c;}
+  body.tema-oscuro .banner.cargando{background:#3a2f14;color:#e0c07a;}
+  .subnota{font-size:12px;color:var(--gris-texto);margin-top:4px;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  .grid-filtros{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;}
+  .grid-filtros select{padding:9px 8px; font-size:14px;}
+  .pills-modalidad{display:flex; flex-wrap:wrap; gap:8px;}
+  .pill{
+    display:flex; align-items:center; gap:6px;
+    border:1.5px solid var(--gris-borde); border-radius:20px;
+    padding:8px 14px; cursor:pointer; font-size:14px;
+    background:var(--superficie); transition:all .15s;
+  }
+  .pill input{width:16px; height:16px; accent-color:var(--naranja); margin:0;}
+  .pill:has(input:checked){border-color:var(--naranja); background:#fff3ea; color:var(--naranja-oscuro); font-weight:600;}
+  body.tema-oscuro .pill:has(input:checked){background:#3a2412; color:#f2a35c;}
+
+  @media (max-width:560px){
+    main{padding:12px;}
+    .fila, .grid-2, .grid-3{grid-template-columns:1fr;}
+    .grid-filtros{grid-template-columns:1.6fr 1fr 1fr 1fr; gap:6px;}
+    .grid-filtros select{padding:8px 4px; font-size:13px;}
+    .info-box.visible{grid-template-columns:1fr;}
+    .card{padding:14px;}
+  }
+
+  /* ---------- Impresion de la Orden de Pedido ---------- */
+  #areaImpresion{display:none;}
+  @media print{
+    /* Ocultamos TODO el contenido real (con display:none, que no deja
+       espacio en blanco -- a diferencia de visibility:hidden, que era lo
+       que generaba las paginas vacias de mas). */
+    body > *{display:none !important;}
+    #areaImpresion{
+      display:block !important;
+      padding:0; font-size:12px; color:#000;
+    }
+    #areaImpresion h1{font-size:18px; margin:0 0 4px 0;}
+    #areaImpresion h2{font-size:13px; margin:12px 0 6px 0; border-bottom:1px solid #999; padding-bottom:3px;}
+    #areaImpresion table{width:100%; border-collapse:collapse; font-size:11px;}
+    #areaImpresion th, #areaImpresion td{border:1px solid #ccc; padding:4px 6px; text-align:left;}
+    #areaImpresion .fila-datos{display:flex; justify-content:space-between; font-size:12px; margin-bottom:2px;}
+    #areaImpresion .total-final{font-size:14px; font-weight:700; text-align:right; margin-top:8px;}
+    #areaImpresion .pagina-salto{page-break-before:always;}
+    #areaImpresion .banda-sistema{
+      background:#fff3ea; border:2px solid #c8611c; border-radius:4px;
+      padding:8px 10px; margin:6px 0 12px 0; font-size:13px; font-weight:700;
+      color:#c8611c; text-align:center;
+    }
+    #areaImpresion .subnota-impresion{font-size:11px; color:#666; margin-bottom:10px;}
+    @page{size:A4; margin:12mm;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex; align-items:center; gap:10px"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFkAAAAnCAYAAABkI+QeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAABDOSURBVGhD7ZhpcF3FlYC/032fnp4ka5es3bJlybKxsWVjY8AYKDCYLSwJSVHUQEgyWZgkkwpTlclUAkwqM0VChiEkqWRIIJnMJBAgYEgCBGMbrzg2tvEiyatsa7dWa9d7794+8+PKw6CAganEv/RVvR/vvq7u01/f131Oi/5tgTLFXxUz+cEUf3mmJJ8DpiSfA6YknwOmJJ8DpiSfA6YknwOmJJ8DpiSfA+SDVHyqSjI9H8rn4uWVgRfBDfejJ/bi9bciqiiQTM2Ckhrs9FmYSBSXjONaG7CtDRgNAPCjGWjlImxBBYjFH+wO+xk8heSVI3MvRXuakaZdEB/GL5iJmbEQSYkhR7eT7D8FxTWYoipsagbqJwjaD2PbGjDJcQACMQTlC/DKz0OshxsdxG9txOtuQoCgqAbJK8U7sQcd7CYZy0ZL5+EVlIdxJ8ZwLQ3Y9kaMOkDxbRRXPh+vZA7iRQhGBwma9+N1n8BOzO29+ECSE7WXwoo7oagSk5mP2Ag6Noxr3o9Z91O8pjfx51yMW/YxtKQak1OC8SKon8S1HUJefxy7by3BzCXo0luR6mWYnOkoBh0ZwDW9iTzzTVh8A97N/4Tb8Rzmhe/i55aiV30OW3sJNG6GN9egyz+BK6jA5JZgUmIQBLjuk7D+Z3j7XiVIz8NdejtSuxIpnIEYi8ZHCY7txrz2E4z1CK75IgJ4L36HZEYuXPhxKJuHZBVgPA/1E7jWQ8imX+C99Qr+9Cp02a3I3MuRgrJw4eKjuJZ6zDP3E+lpnqzsHdgHlqQ/MPnhZPxbv0FK3XXQWo9Z/1Pk+G7IKsTOuxznJ5CW/VA2D5ORixzcjN2/Fjm4FU3Pwc5dCaMDuIFuWP1lvCXXIce2I9uegoYNyEAXxo9jm/agS2/BzFyMHt6KGz0N1/493sKr4dAWzLrHUHV4s5eijRvx9q+Fxo2oMdj5VyJjAwSdx9CrPotd+TeYsdPoKz/CNKzDdR7DBj407URmLcFecTfScRgOrMNdfjeR5R+FrmOYDY8jR/8E+eV41cshPoJ/6hhyxafDPvtakM3/hexfC53H8KIxzN6XkWRisrJ34E1+MBnfCKb2YiRIwp6XMDteAGMJFLRyMVI4E0nLwuxbS3BgHX7SJ7AeEk1HimpJnXcZaiMw/wrs/Mtx9Rswr/wIc6oJVCGSCtZDU9LQkhrc2AB+YRX2Y5cQmVlH8NZL2JceQTqPIZEU3G++iYuPMWY81ItgMqYTXSbg+7h5l+GdvwrGh+HJr+O1NAKK8SLgpeBU0bxyJBJDu44TuABbOgfxoridz5Oy/VmIppPMq8DMXIKKgdnLMIuvh54T8NIjmOO7wTmMlwIpMRgdmqzsz3jfg8/lz8JLz4fAh5b9ECTR5DjqJxHjIfFRAt9nfMEq3OefIHL/emLf2kzsG68SvfxOdHQQDZJIxQKIpKIH1iGdx8BPQJCE8SEY6UeDOK5pF4lTx/EWXo2dfQFEoqhJgfgozvmMVyzG//SP8O5bR+q3NpH2wOuk3vDV8Ezoa8WU1mKyi3D16zEdRyFIoC7BeDJJfGwIjWWhueXhXHqb0Yw8JJaNE0WO7QxjQtHsIhgfxo0PISVzMdlFaOMWpO0gJOO4wGc8kSQ+cnqyrnflfSVTuRAQgvgwtB8GQDNy0aJq8FLQ9gb8umuJ3PYAtqgK3fA47ulvEvzue7jkGDLSj4z0Q2YhGh/FDPeH/4oziCGIpBKfcQF2wZXEqpciTTtwu15Ex4eRWYsJ0nNIVl9C6pd+iTf7Atj9Iu6Z+/Ff+QFBVxM61IuODWAychAvBXpawfkAJPNm4H3vLeynfoBm5kJ+Oe50BzLQhRTNhtQM3EAntq81nFskFSk7Dx0ZQEZOY7IKAYGBU5AYC/usvpCUR+oxdzz49jzOwvtK1spFiAhBfxtMy8PPKydZdz1myQ3Q3og27cZWLcZkFhBs/Q1mx/OYg1twHQeRtEx0uA9aG5HEGCaaRjBjEX7hLIKcYsaLahlb+UmCe58j9Qs/xSuZizvyBjx9P7LtGehpweYU4UrnwvKPIdF03NGd6Nr/wBzajHQeCbeivjaktwUSo6gLcDUXkSyoxGUXwZyV2EgaDJxC0nMgtwztbYWhHpiQrCcOYAIHQJA6DVNYCSOnw5cqPgoornIJfskcgpzpULsCE8uC7pOTdb0rZ92TVQSZsRAAr6ga9w9rwDkiqekweApd/3NM0y504arwb3/hLQQlNTgvgs0qwgz14XqbMUe3Q1EVlM0jctVnCC74COocKdE01B9HRvrQ4R5MJIYc3o5pO4gbHUS6mpDiaqR6OWZsEMYGsZV1JO96GCcWmZaPzchBD27GdB2Hxk1QtoDonOUEX3maYLgPLy0L7WtD2w/DtELstBy0cRNuuB8pqMBEUnDNe0EDEIMW1+AZiw53YY6/CbF0mHMRKXXXENRciI4OYtOz0IFO5MRbk5W9K2fNLoL0HMz1X0FSM9Btv8E73Yo53QEHtyIbfo7Ur8eMj0JfK5IYwSTHsUEC29+BObQFrV+PNO/DNu+H7hPIwCmID2FGT2N7TyKHNqGb/xvz+i/BBUhXE9S/jvS2IPER8CLI+CDS34688TQkhjFjA1gXYAc6MUd3IAe3wLGdSGsjpuMwOtABY0OYkT7scE8oYvfv4fA2TGo6BofWb0A7jmKzC5GhXnTX7zB9bQBIfjniAji8DTm0DelpQXubkfGwTzN4CjnxJrpzDdKwCfHPnlnwfnlysmw+3t3fR1NS0e/ehBkZABEIkogqyNttVQwaiYaHUDIxUXxI2B4FDb+qFwXrgZ9EggSKIghqPEAQDUDDvy5iwxMeRQIfFQnHQMBPhG3DhuEYZ2IxEYhEUAVJjE+0E9QYMBbcxBjGC+NzfjifM/MQi6ibiGUibhsBm4JqgCTjyP8Z7/04q+QgqxCpWEhgLXJ0ZxigKqoaDqKKiQ9jJlYzEItaCypIkMBOCsQhOBtBxWCCxESlFK6UTuh2xgOxoA7jfAxKIGZiKXhHdfX2c4dRh2LDlG1iXEVxYlEbQZxDXHLiNwl/w07EGH4UIbAREIMJkhPV3ts4BLURVAQCH6v+RFRn56ySVZVkUTWsvAuTXQApqeHqBwlwDhcfxW78T2hpIKi9FOZeipmWF5auA11o8z68I9sxA134RdXogivDPdZLCffJHc8RaT2AeqkkF38EKZmDzSxAvRTwEwRtjdg9v0fPvwYpm4c73UHK7/8NgCC7iOCyuzBp2WjjRnR8NDyQDryGd3wXvhcjWLAKU70MScuGxBhBVxOmcSMy2EMw/0okPZvI9qfRgS6CivPRBaswhZWIGILeVmTfWryTb4EL8Itr0AWrsMXVYXzxEYKu48jRnUSadp71zT6r5GT+DOTOh7GzLiDxwoPYkjnYRavxdz6PelFMXhmy5kGC2cuRFbeHKdTYIJKajkbTcO1H0TXfAWvRa/4OW1iJJEYhNg0i6QSdR+CRj0NGAebe34Z78Ol2RAyaU4wD3GuPIcXV2POvxR/pJfL1pUgklcSyj+J94p/Rtkbcll/BvMuQeZfDE/egJ/bjbrsPO2clNj0LcQkwKfiDPegffwjxUeT6r0J7A+aZB0jWrsRe+RkkpxgzPgSRVIJIDNe0C3n5+2H+vPpLSNUSbHwMRJC0bILkOG7H83hP33fW9/k9UzhFcVd8Elu1NKzKphXAnpdwfa1o0y5Iy4LjuwjEYOtW4xVV4T91H/rwbQQP3og+9gXMrjVoEEev/hy2pBrd8AT66O0Ej30eRk7jVdZB1TK0fD4mpxjtPIz++FPoD+/EbX8WE8vC5M9AB7rDu4acIvxIlCAjD664G4IADqxHBnswRTUw3I8M9+NWfR5v8Y1INErwxBfx/+U6gkfvwPzhe0jzXiiejSmYAV0nSFYswLv2S5jSGnjlB+hDN6OPfxEZ6MSruQiqL4IFV2PnXYEeeZPgx5/GPXQT/kM3Iy9/H7P/tbMK5mySnfHwai5BIlFEBLtoNdp5DNewEfF9JKcYObEHK4TlpRjMTV9j/CNfJz7vKvyeVoINv4D8GXjVK1AHydkXkbj+ayRX3o2mZSFikEgKWrkQTSZwPa240RESsUxcdnH4xnQcRFrqIUhibArkzyC59Ga88nnQsg/eeBoyCyC7GE4dxY9l4S1ajY1m4F54CPPWH/C6mrBHtmPeeAYGujF5FWAs2n4IFt+IyS3HndyHvPoTTF870nUc13Uc8aKYtCxMWibiRbBzLyN5633EV9xJIrMIt+XXmMbNk9X9Ge8pGWPBvL1GkpWPK6qCnc/hai/G9LZgTh7ANO3BbH0STuzBi0ZJq7uG2B3fxrv3WYKltyJl5yHWYqMxUstrSa29kNjsOsz4AK6jEZp2QWUdJiVKZPktRB7eS8r967CLr0P3vozsew1aGyZKXkNQWYe95gvo6U7c1qdgsBvyyjHT8qDjMJJXisQyUVXY/xpGz8xh4qDOKoKcUnTwFG5sEG/6LLARtGHL/x50LiWKZhejY4PQ1wrbnkTfXIOMdBOdMZ/o6ntI/cqvCT75KPDOw/HdeE/Jxo+jLQ1oEJankhjDVC6C1ExMZR007UJPt+NyignqXyf56B0k/uVa/MfvQcdHMCkxvJIaxIuAKsmdLzL+3VuJf3s18QdvIv7oXfj//gl0pA9TPi/cJw9sgPoNMDoMYyO43X9Auo4jvc1oMixpufFebFo2euQNzO7fIVmFSP4M1AVw6hgSBIixAAS5pQRp2fiZhSQLKwmmFaA5xZBXip5qwiRGkTNZZjQNPxrDT8/Br74Yr2QOrr0R19WEGxsieOZbJP71WvyHPxrejSDYstqJFPPsvGcxIgg63A9VS9D0bNyO56C/Ha25GBONYTb9ChLj6C3/iFt1D37BTMguISiqJlK9DLqa0PU/C3Pq6guR6bNw+RW46bPRRdfirfosEh/Cxcfxrvos2teG+8WX0UPboKQWU1KL62xCmvcjYwO4JTcguaXYtCzoboLffhvb345Or0aX3gTGYP70W+g+AXMvRTIL0Krl+DlluKU3Y1bcjgZJSMvC1F2HHtqM2fMyFFUhRTW4otkkAofOvQx71WeQoR7Y/OswZ7jtAYKaFbicYjSnFJmzAomloZt/hT24dbK6P+M9JQOYvjZ0qJdAHQ5BiqrwsgqQrU8hhzZDWjZkFmBT0/GKq/CqFmNzpsOhNzDbnkT2rUWGeyEZR6yHV1ARfpzDtB2Eho2YabnYwpnQUg/bn8Ukx9HUdCQtE/rbMa31mLEhXFoWpqAc6WmBTb/E7v1jGGReGZSdB62NmIaNmI5D4dbiFJM+Da+gHM8loXlvWP2lZ2Gm5cJbr2BO7AlfBg2vQyOz6rCZecjx3eF99441SEYOkpmPl5VHZMZCvPLzMP1tsPePyKs/RpLxydr+jLOmcGdwGXmYORdBNIa2HUaa94cVkyrOWMiajhRWILEsdHQQ11KPHX/7nlW9FMirQPJKIUjielqgvxMJEkhuKeQWh/eyHYfD4iRrOuSXhpcz3SchPorGMpG5K9CRPjiyMyx9ATJyoaACxoahtxWS4+Hbl1MKZdUIBu1twXW3YFwAuSVIZn7Y72BPOD8vipTWIpn56HAf2nE0TOXOlCmp05CCCiR7OopCZxN0n3zfrOIMH0jyB2Oi/vyr82HG+TBtPygfvs/337U/MB9u4P8/H2acD9P2g/Lh+/wLSp7ivZiSfA6YknwOmJJ8DpiSfA6YknwOmJJ8DvgfYeOR1ekNpMoAAAAASUVORK5CYII=" alt="Packaging y Servicios" style="height:32px; border-radius:4px"><h1 style="font-size:17px; margin:0">Carga de Pedidos</h1></div>
+  <div class="barra-vista">
+    <div class="grupo-vista" title="Ancho de la pantalla">
+      <button type="button" class="btn-vista" id="btnVistaPc" title="Vista PC">🖥️</button>
+      <button type="button" class="btn-vista" id="btnVistaTablet" title="Vista Tablet">📱</button>
+      <button type="button" class="btn-vista" id="btnVistaCelular" title="Vista Celular">📲</button>
+    </div>
+    <button type="button" class="btn-tema" id="btnRecompra" title="Alerta de recompra" style="margin-right:4px">📊 Recompra</button>
+    <button type="button" class="btn-tema" id="btnTema" title="Modo oscuro">🌙</button>
+  </div>
+  <div class="estado-conexion" id="estadoConexion"><span class="punto"></span> Conectando...</div>
+</header>
+
+<main id="mainContenido">
+  <div id="bannerGlobal" class="banner"></div>
+
+  <div class="card">
+    <h2>Datos del pedido <span class="check-seccion" id="chkDatos" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2>
+
+    <div class="campo" id="campoVendedor">
+      <label for="vendedor">Vendedor *</label>
+      <select id="vendedor">
+        <option value="">Seleccioná tu nombre...</option>
+      </select>
+      <div class="msg-error">Seleccioná un vendedor</div>
+    </div>
+
+    <div class="campo autocomplete" id="campoCliente">
+      <label for="buscarCliente">Cliente *</label>
+      <div style="display:flex; gap:6px; align-items:flex-start">
+        <div style="flex:1; position:relative">
+          <input type="text" id="buscarCliente" placeholder="Buscar por nombre o código..." autocomplete="off">
+          <div class="autocomplete-lista" id="listaClientes"></div>
+        </div>
+        <button type="button" class="btn btn-secundario" id="btnLupaCliente" title="Ver última compra" disabled style="padding:9px 12px">🔍</button>
+        <button type="button" class="btn btn-secundario" id="btnPredecirCompra" title="Predecir próxima compra" disabled style="padding:9px 12px">🔮</button>
+        <button type="button" class="btn btn-secundario" id="btnNuevoCliente" title="Solicitar alta de nuevo cliente" style="padding:9px 12px; font-size:13px">➕</button>
+        <button type="button" class="btn btn-secundario" id="btnToggleFantasia" title="Agregar Nombre de Fantasía" style="padding:9px 12px; font-size:13px">🏷️</button>
+      </div>
+      <div class="msg-error">Seleccioná un cliente de la lista</div>
+      <div class="info-box" id="infoCliente"></div>
+    </div>
+
+    <div class="campo" id="campoNombreFantasia" style="display:none">
+      <label for="nombreFantasia">Nombre de Fantasía <span style="font-weight:400; color:var(--gris-texto)">(opcional)</span></label>
+      <input type="text" id="nombreFantasia" placeholder="Ej: El Emporio, La Casa del Packaging...">
+      <div class="subnota">Nombre comercial o de fantasía. No es obligatorio — quedará registrado en el pedido.</div>
+    </div>
+
+  </div>
+
+  <!-- ============ MODAL NUEVO CLIENTE ============ -->
+  <div id="modalNuevoCliente" style="display:none; position:fixed; inset:0; background:rgba(18,41,63,.55); z-index:50; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:var(--superficie); border-radius:var(--radio); max-width:440px; width:100%; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin:0; border:none; padding:0;">➕ Solicitar nuevo cliente</h2>
+        <button type="button" class="quitar" style="font-size:22px" onclick="cerrarModalNuevoCliente()">✕</button>
+      </div>
+      <div class="campo">
+        <label for="nuevoClienteCuit">CUIT</label>
+        <input type="text" id="nuevoClienteCuit" placeholder="XX-XXXXXXXX-X" autocomplete="off">
+      </div>
+      <div class="campo">
+        <label for="nuevoClienteRazonSocial">Razón Social</label>
+        <input type="text" id="nuevoClienteRazonSocial" placeholder="Nombre legal completo..." autocomplete="off">
+      </div>
+      <div class="campo">
+        <label for="nuevoClienteFantasia">Nombre de Fantasía <span style="font-weight:400; color:var(--gris-texto)">(opcional)</span></label>
+        <input type="text" id="nuevoClienteFantasia" placeholder="Nombre comercial..." autocomplete="off">
+      </div>
+      <div class="campo">
+        <label for="nuevoClienteObs">Observaciones adicionales <span style="font-weight:400; color:var(--gris-texto)">(opcional)</span></label>
+        <textarea id="nuevoClienteObs" rows="2" placeholder="Cualquier dato adicional para facilitar el alta..."></textarea>
+      </div>
+      <div class="subnota" style="margin-bottom:12px">Se enviará un mail a Administración y Pedidos para gestionar el alta. El vendedor recibirá copia.</div>
+      <div style="display:flex; gap:8px">
+        <button type="button" class="btn btn-secundario" style="flex:1" onclick="cerrarModalNuevoCliente()">Cancelar</button>
+        <button type="button" class="btn btn-naranja" style="flex:1" id="btnEnviarNuevoCliente" onclick="enviarSolicitudNuevoCliente()">Enviar solicitud</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL PREDECIR COMPRA ============ -->
+  <div id="modalPrediccion" style="display:none; position:fixed; inset:0; background:rgba(18,41,63,.55); z-index:50; align-items:center; justify-content:center; padding:8px;">
+    <div style="background:var(--superficie); border-radius:var(--radio); max-width:900px; width:100%; max-height:90vh; overflow-y:auto; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin:0; border:none; padding:0;">🔮 Predicción de compra
+          <span id="btnInfoPrediccion" title="¿Cómo se calcula?" style="cursor:pointer; font-size:14px; font-weight:400; color:var(--azul); margin-left:8px; border:1px solid var(--azul); border-radius:50%; padding:1px 7px" onclick="toggleInfoPrediccion()">i</span>
+        </h2>
+        <button type="button" class="quitar" style="font-size:22px" onclick="cerrarModalPrediccion()">✕</button>
+      </div>
+      <div id="panelInfoPrediccion" style="display:none; background:var(--azul-claro); border-radius:6px; padding:12px 14px; margin-bottom:12px; font-size:13px; line-height:1.6">
+        <b>¿Cómo se calcula la predicción?</b><br>
+        El sistema analiza el historial de compras del cliente y detecta qué artículos pide habitualmente. Para cada artículo calcula:
+        <ul style="margin:6px 0 6px 18px; padding:0">
+          <li><b>Participación:</b> en qué porcentaje de sus pedidos aparece ese artículo. <i>Ejemplo: si el cliente hizo 10 pedidos y pidió Cinta BOPPAC en 8 de ellos → 80% de participación.</i></li>
+          <li><b>Cantidad promedio:</b> cuántas unidades compra cuando lo pide. <i>Ejemplo: si pidió 100, 120 y 80 unidades → promedio 100 unidades.</i></li>
+          <li><b>Importe estimado:</b> cantidad promedio × último precio conocido del artículo.</li>
+        </ul>
+        Solo aparecen artículos con al menos 40% de participación y 2 o más compras registradas. Se usan los últimos 12 meses (si hay datos suficientes) o el historial completo si no.<br>
+        <small style="color:var(--gris-texto)">⚠ Los precios son de referencia — siempre revisalos antes de confirmar.</small>
+      </div>
+      <div id="contenidoPrediccion"></div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL ALERTA DE RECOMPRA ============ -->
+  <div id="modalRecompra" style="display:none; position:fixed; inset:0; background:rgba(18,41,63,.55); z-index:50; align-items:center; justify-content:center; padding:4px;">
+    <div style="background:var(--superficie); border-radius:var(--radio); width:100%; max-width:1200px; max-height:95vh; overflow-y:auto; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin:0; border:none; padding:0;">📊 Clientes para recontactar</h2>
+        <button type="button" class="quitar" style="font-size:22px" onclick="cerrarModalRecompra()">✕</button>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:flex-end">
+        <div style="flex:2; min-width:180px">
+          <label style="font-size:12px; margin-bottom:3px; display:block">Cliente</label>
+          <input type="text" id="buscarRecompra" placeholder="Filtrar por nombre o código..." autocomplete="off" oninput="filtrarRecompra()">
+        </div>
+        <div style="flex:1; min-width:150px; position:relative">
+          <label style="font-size:12px; margin-bottom:3px; display:block">Vendedor</label>
+          <input type="text" id="buscarVendedorRecompra" placeholder="Todos los vendedores..." autocomplete="off" oninput="filtrarRecompra()">
+          <div class="autocomplete-lista" id="listaVendedorRecompra" style="z-index:200"></div>
+        </div>
+        <button type="button" class="btn btn-secundario" style="padding:8px 14px; font-size:13px" onclick="limpiarFiltrosRecompra()">✕ Limpiar</button>
+      </div>
+      <div id="contenidoRecompra"></div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL RESUMEN DE CONFIRMACION ============ -->
+  <div id="modalResumen" style="display:none; position:fixed; inset:0; background:rgba(18,41,63,.55); z-index:50; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:var(--superficie); border-radius:var(--radio); max-width:480px; width:100%; max-height:85vh; overflow-y:auto; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin:0; border:none; padding:0;">Revisá antes de enviar</h2>
+        <button type="button" class="quitar" style="font-size:22px" onclick="cerrarModalResumen()">✕</button>
+      </div>
+      <div id="contenidoResumen"></div>
+      <div style="display:flex; gap:8px; margin-top:16px">
+        <button type="button" class="btn btn-secundario" style="flex:1" onclick="cerrarModalResumen()">Volver a revisar</button>
+        <button type="button" class="btn btn-naranja" style="flex:1" onclick="enviarPedidoConfirmado()">Confirmar y enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL PREDECIR COMPRA (arriba) y ULTIMA COMPRA (abajo) ============ -->
+
+  <div id="modalUltimaCompra" style="display:none; position:fixed; inset:0; background:rgba(18,41,63,.55); z-index:50; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#fff; border-radius:var(--radio); max-width:560px; width:100%; max-height:80vh; overflow-y:auto; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin:0; border:none; padding:0;">Última compra del cliente</h2>
+        <button type="button" class="quitar" style="font-size:22px" onclick="cerrarModalUltimaCompra()">✕</button>
+      </div>
+      <div id="contenidoUltimaCompra"></div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL FECHA POR ITEM ============ -->
+  <div id="modalFechaItem" style="display:none; position:fixed; inset:0; background:rgba(18,41,63,.55); z-index:50; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#fff; border-radius:var(--radio); max-width:360px; width:100%; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin:0; border:none; padding:0;">Fecha de entrega de este ítem</h2>
+        <button type="button" class="quitar" style="font-size:22px" onclick="cerrarModalFechaItem()">✕</button>
+      </div>
+      <div class="campo">
+        <label for="fechaItemInput">Fecha específica para este artículo</label>
+        <input type="date" id="fechaItemInput">
+        <div class="subnota">Si no la cargás, se usa la fecha general de "Entrega de la mercadería".</div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px">
+        <button type="button" class="btn btn-secundario" style="flex:1" onclick="quitarFechaItem()">Quitar (usar la general)</button>
+        <button type="button" class="btn btn-naranja" style="flex:1" onclick="guardarFechaItem()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL FACTURACION POR ITEM ============ -->
+  <div id="modalFacturacionItem" style="display:none; position:fixed; inset:0; background:rgba(18,41,63,.55); z-index:50; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#fff; border-radius:var(--radio); max-width:360px; width:100%; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin:0; border:none; padding:0;">Facturación de este ítem</h2>
+        <button type="button" class="quitar" style="font-size:22px" onclick="cerrarModalFacturacionItem()">✕</button>
+      </div>
+      <div class="campo">
+        <label>Tipo de facturación para este artículo</label>
+        <div class="pills-modalidad">
+          <label class="pill">
+            <input type="checkbox" id="chkBejermanItem" checked>
+            <span>Bejerman</span>
+          </label>
+          <label class="pill">
+            <input type="checkbox" id="chkV2Item">
+            <span>V2</span>
+          </label>
+        </div>
+        <div class="grid-2" id="bloquePctFacturacionItem" style="display:none; margin-top:8px">
+          <div>
+            <label style="font-size:12px">% Bejerman</label>
+            <input type="text" inputmode="decimal" id="pctBejermanItem" class="campo-porcentaje" value="50,00%">
+          </div>
+          <div>
+            <label style="font-size:12px">% V2</label>
+            <input type="text" inputmode="decimal" id="pctV2Item" class="campo-porcentaje" value="50,00%">
+          </div>
+        </div>
+        <div class="subnota">Por defecto usa el tipo de facturación general del pedido. Guardá acá solo si este artículo puntual necesita algo distinto.</div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:12px">
+        <button type="button" class="btn btn-secundario" style="flex:1" onclick="quitarFacturacionItem()">Quitar (usar la general)</button>
+        <button type="button" class="btn btn-naranja" style="flex:1" onclick="guardarFacturacionItem()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CONDICIONES ============ -->
+  <div class="card">
+    <h2>Agregar artículos</h2>
+
+    <div class="grid-filtros">
+      <div class="campo">
+        <label for="filtroCodigo">Artículo (código base)</label>
+        <select id="filtroCodigo"><option value="">Todos...</option></select>
+      </div>
+      <div class="campo">
+        <label for="filtroAncho">Ancho</label>
+        <select id="filtroAncho"><option value="">Todos...</option></select>
+      </div>
+      <div class="campo">
+        <label for="filtroLargo">Largo</label>
+        <select id="filtroLargo"><option value="">Todos...</option></select>
+      </div>
+      <div class="campo">
+        <label for="filtroMicColor">Mic/Color</label>
+        <select id="filtroMicColor"><option value="">Todos...</option></select>
+      </div>
+    </div>
+
+    <div class="campo autocomplete" id="campoArticulo">
+      <label for="buscarArticulo">O buscar directamente por descripción</label>
+      <input type="text" id="buscarArticulo" placeholder="Escribí para buscar..." autocomplete="off">
+      <div class="autocomplete-lista" id="listaArticulos"></div>
+      <div class="info-box" id="infoArticulo"></div>
+    </div>
+
+    <div class="campo" id="campoResultadosFiltro" style="display:none">
+      <label>Resultados del filtro</label>
+      <select id="resultadosFiltro" size="6"></select>
+    </div>
+
+    <div class="grid-3">
+      <div class="campo">
+        <label for="cantidad">Cantidad (unidades)</label>
+        <input type="number" id="cantidad" min="1" step="1" placeholder="0">
+        <div id="chipsCantistad" style="display:flex; gap:4px; flex-wrap:wrap; margin-top:5px"></div>
+      </div>
+      <div class="campo">
+        <label for="precioUnitario" id="labelPrecioUnitario">Precio unitario ($)</label>
+        <input type="number" id="precioUnitario" min="0.01" step="0.01" placeholder="0.00">
+      </div>
+      <div class="campo">
+        <label for="descuentoItem">Descuento ítem (%)</label>
+        <input type="text" inputmode="decimal" id="descuentoItem" class="campo-porcentaje" value="0,00%">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="campo">
+        <label>M2 total (Um2)</label>
+        <input type="text" id="m2TotalCalc" readonly style="background:#f4f6f7">
+      </div>
+      <div class="campo">
+        <label>Precio neto (con descuento)</label>
+        <input type="text" id="precioNetoCalc" readonly style="background:#f4f6f7">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="observacionItem">Observación adicional del ítem (opcional)</label>
+      <input type="text" id="observacionItem" placeholder="Ej: Impresión Logo, fondo Blanco">
+    </div>
+
+    <button type="button" class="btn btn-secundario" id="btnAgregarItem" style="width:100%">+ Agregar al pedido</button>
+  </div>
+
+  <!-- ============ CARRITO ============ -->
+  <div class="card">
+    <h2>🛒 Artículos cargados <span class="check-seccion" id="chkArticulos" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2>
+    <div id="carritoContenedor">
+      <div class="vacio-carrito">Todavía no agregaste artículos</div>
+    </div>
+    <div class="total-pedido" id="totalPedido" style="display:none; flex-direction:column; align-items:stretch; gap:4px; margin-top:10px">
+      <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:400; color:var(--gris-texto)">
+        <span>Subtotal (con descuentos de ítem)</span>
+        <span id="subtotalPedidoValor">$ 0</span>
+      </div>
+      <div id="lineaDescuentoGlobal" style="display:none; justify-content:space-between; font-size:14px; font-weight:400; color:var(--rojo)">
+        <span>Descuento General / Canal</span>
+        <span id="descuentoGlobalValor">- $ 0</span>
+      </div>
+      <div style="display:flex; justify-content:space-between">
+        <span>Total del pedido</span>
+        <span id="totalPedidoValor">$ 0</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:400; color:var(--gris-texto); padding-top:4px; border-top:1px dashed var(--gris-borde); margin-top:4px">
+        <span>+ IVA (21%)</span>
+        <span id="ivaValor">$ 0</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-weight:700; color:var(--naranja-oscuro)">
+        <span>Total con IVA</span>
+        <span id="totalConIvaValor">$ 0</span>
+      </div>
+      <div id="lineaReferenciaOtraMoneda" style="display:none; justify-content:space-between; font-size:13px; font-weight:400; color:var(--gris-texto); padding-top:4px; border-top:1px dashed var(--gris-borde); margin-top:4px">
+        <span id="labelReferenciaOtraMoneda">Referencia</span>
+        <span id="totalReferenciaOtraMoneda">-</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ADJUNTOS ============ -->
+  <div class="card">
+    <h2>Condiciones de venta <span class="check-seccion" id="chkCondiciones" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2>
+
+    <div class="fila">
+      <div class="campo" id="campoMoneda">
+        <label for="monedaCarga">Moneda en la que se carga el pedido *</label>
+        <select id="monedaCarga">
+          <option value="ARS">Pesos argentinos (ARS)</option>
+          <option value="USD">Dólares (USD)</option>
+        </select>
+        <div class="subnota">A partir de acá, todo el pedido se carga y se muestra en la moneda elegida.</div>
+      </div>
+      <div class="campo" id="campoCondVta">
+        <label for="condicionVenta">Condición de venta *</label>
+        <select id="condicionVenta">
+          <option value="">Seleccioná...</option>
+        </select>
+        <div class="msg-error">Seleccioná una condición de venta</div>
+      </div>
+    </div>
+
+    <div id="bloqueTipoCambio" style="display:none">
+      <div class="campo" id="campoTipoCambio">
+        <label for="tipoCambio">Tipo de cambio USD (BCRA vendedor) *</label>
+        <input type="number" id="tipoCambio" min="0.01" step="0.01">
+        <div class="msg-error">Ingresá un tipo de cambio válido</div>
+        <div class="subnota" id="notaCotizacion">Cargando cotización del día...</div>
+      </div>
+      <div class="campo">
+        <label>Tipo de cotización</label>
+        <div class="pills-modalidad">
+          <label class="pill">
+            <input type="radio" name="tipoCotizacionBCRA" value="Billete" checked>
+            <span>Billete</span>
+          </label>
+          <label class="pill">
+            <input type="radio" name="tipoCotizacionBCRA" value="Divisa">
+            <span>Divisa</span>
+          </label>
+        </div>
+        <div class="subnota">La cotización automática usa la referencia oficial del BCRA (Comunicación A 3500), que no distingue Billete de Divisa — ajustá el valor a mano si tu operación usa una cotización distinta.</div>
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="motivoDescuentoGlobal">Descuento General / Canal sobre el pedido</label>
+      <div class="grid-2">
+        <select id="motivoDescuentoGlobal">
+          <option value="">Sin Descuento General / Canal</option>
+          <option value="Pronto pago">Pronto pago</option>
+          <option value="Volumen">Volumen</option>
+          <option value="Compra Anticipada">Compra Anticipada</option>
+          <option value="Liquidación">Liquidación</option>
+          <option value="Sobrestock">Sobrestock</option>
+          <option value="Otro">Otro</option>
+        </select>
+        <input type="text" inputmode="decimal" id="descuentoGlobal" class="campo-porcentaje" value="0,00%" disabled>
+      </div>
+      <input type="text" id="motivoOtroDetalle" placeholder="Aclará el motivo del descuento..." style="display:none; margin-top:8px">
+    </div>
+
+    <div class="campo">
+      <label>Tipo de facturación</label>
+      <div class="pills-modalidad">
+        <label class="pill">
+          <input type="checkbox" id="chkBejerman" checked>
+          <span>Bejerman</span>
+        </label>
+        <label class="pill">
+          <input type="checkbox" id="chkV2">
+          <span>V2</span>
+        </label>
+      </div>
+      <div class="grid-2" id="bloquePctFacturacion" style="display:none; margin-top:8px">
+        <div>
+          <label style="font-size:12px">% Bejerman</label>
+          <input type="text" inputmode="decimal" id="pctBejerman" class="campo-porcentaje" value="50,00%">
+        </div>
+        <div>
+          <label style="font-size:12px">% V2</label>
+          <input type="text" inputmode="decimal" id="pctV2" class="campo-porcentaje" value="50,00%">
+        </div>
+      </div>
+      <div class="subnota">Aplica a todo el pedido. Si no tocás nada, el 100% factura por Bejerman. Si activás uno solo, ese factura el 100%. Si activás los dos, cargás a mano cuánto va a cada uno (deben sumar 100%).</div>
+    </div>
+  </div>
+
+  <!-- ============ ENTREGA DE LA MERCADERIA ============ -->
+  <div class="card">
+    <h2>Entrega de la mercadería <span class="check-seccion" id="chkEntrega" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2>
+
+    <div class="campo" id="campoModalidadEntrega">
+      <label>Modalidad de entrega *</label>
+      <div class="pills-modalidad">
+        <label class="pill">
+          <input type="radio" name="modalidadEntrega" value="Entrega Directa a Cliente" checked>
+          <span>Entrega Directa a Cliente</span>
+        </label>
+        <label class="pill">
+          <input type="radio" name="modalidadEntrega" value="Entrega en Expreso">
+          <span>Entrega en Expreso</span>
+        </label>
+        <label class="pill">
+          <input type="radio" name="modalidadEntrega" value="Retiro por Fábrica">
+          <span>Retiro por Fábrica</span>
+        </label>
+      </div>
+      <div class="msg-error">Seleccioná una modalidad de entrega</div>
+      <input type="text" id="nombreExpreso" placeholder="Nombre del expreso..." style="display:none; margin-top:8px">
+    </div>
+
+    <div id="bloqueDireccionEntrega" style="display:block">
+      <div class="fila">
+        <div class="campo" id="campoProvincia">
+          <label for="provinciaEntrega">Provincia *</label>
+          <select id="provinciaEntrega">
+            <option value="">Cargando provincias...</option>
+          </select>
+          <div class="msg-error">Seleccioná una provincia</div>
+        </div>
+        <div class="campo autocomplete" id="campoLocalidad">
+          <label for="buscarLocalidad">Partido, Localidad o Barrio *</label>
+          <input type="text" id="buscarLocalidad" placeholder="Elegí una provincia primero..." autocomplete="off" disabled>
+          <div class="autocomplete-lista" id="listaLocalidades"></div>
+          <div class="msg-error">Seleccioná una localidad de la lista</div>
+        </div>
+      </div>
+
+      <div class="campo" id="campoLugar">
+        <label for="lugarEntrega">Dirección / referencia de entrega *</label>
+        <input type="text" id="lugarEntrega" placeholder="Calle, número, depósito, referencia...">
+        <div class="msg-error">Ingresá la dirección o referencia de entrega</div>
+      </div>
+    </div>
+
+    <div class="campo">
+      <label>Plazo de entrega sugerido</label>
+      <div class="pills-modalidad">
+        <label class="pill">
+          <input type="radio" name="plazoEntrega" value="5h">
+          <span>5 días hábiles</span>
+        </label>
+        <label class="pill">
+          <input type="radio" name="plazoEntrega" value="10h" checked>
+          <span>10 días hábiles</span>
+        </label>
+        <label class="pill">
+          <input type="radio" name="plazoEntrega" value="15h">
+          <span>15 días hábiles</span>
+        </label>
+        <label class="pill">
+          <input type="radio" name="plazoEntrega" value="30c">
+          <span>30 días</span>
+        </label>
+      </div>
+      <div class="subnota">Calcula automáticamente la fecha sugerida. Si cae sábado o domingo, pasa al lunes siguiente. Podés ajustarla a mano abajo.</div>
+    </div>
+
+    <div class="fila">
+      <div class="campo" id="campoFecha">
+        <label for="fechaEntrega">Fecha de entrega *</label>
+        <input type="date" id="fechaEntrega" min="2020-01-01" max="2099-12-31">
+        <div class="msg-error">Seleccioná una fecha</div>
+      </div>
+      <div class="campo" id="campoHorario">
+        <label for="horarioEntrega">Horario de entrega *</label>
+        <input type="time" id="horarioEntrega" value="08:00">
+        <div class="msg-error">Seleccioná un horario</div>
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="observaciones">Observaciones</label>
+      <textarea id="observaciones" rows="3" placeholder="Cualquier aclaración adicional sobre el pedido..."></textarea>
+    </div>
+  </div>
+
+  <!-- ============ AGREGAR ARTICULOS ============ -->
+  <div class="card">
+    <h2>Adjuntos</h2>
+
+    <div class="campo">
+      <label for="archivoOrdenCompra">Orden de Compra (PDF)</label>
+      <input type="file" id="archivoOrdenCompra" accept=".pdf">
+      <div id="nombreOrdenCompra" class="subnota"></div>
+    </div>
+
+    <div class="campo">
+      <label for="archivosAnexos">Otros anexos (PDF, imágenes, Excel, Word, etc.)</label>
+      <input type="file" id="archivosAnexos" multiple accept=".pdf,.jpg,.jpeg,.bmp,.png,.ai,.xls,.xlsx,.doc,.docx">
+      <div id="listaAnexos"></div>
+    </div>
+    <div class="subnota">Evitá adjuntar archivos muy pesados (ideal: menos de 5 MB en total) para que el envío no falle.</div>
+  </div>
+
+  <!-- Resumen + botones finales: el resumen va arriba como contexto,
+       los botones debajo en una sola fila equilibrada. -->
+  <div id="resumenPrevioAcciones" style="display:none; background:var(--azul-claro); border-radius:var(--radio); padding:10px 14px; margin-bottom:8px; font-size:13px; text-align:center">
+    <span id="resumenItemsTexto" style="color:var(--gris-texto)"></span>
+    <span style="margin:0 10px; color:var(--gris-borde)">|</span>
+    <span id="resumenTotalTexto" style="font-weight:700; color:var(--azul-oscuro); font-size:15px"></span>
+  </div>
+
+  <div style="display:flex; gap:8px; margin-top:0">
+    <button type="button" class="btn btn-secundario" id="btnImprimir" style="flex:1; font-size:13px; padding:10px 8px">🖨️ Imprimir</button>
+    <button type="button" class="btn btn-secundario" id="btnAnular" style="flex:0 0 auto; font-size:13px; padding:10px 14px; color:var(--rojo); border-color:var(--rojo)">✕ Anular</button>
+    <button type="button" class="btn btn-naranja" id="btnConfirmar" style="flex:2; font-size:15px; padding:10px 8px">✅ Confirmar pedido</button>
+  </div>
+
+</main>
+
+<!-- Contenido armado dinamicamente al imprimir -->
+<div id="areaImpresion"></div>
+
+<script>
+/* =========================================================================
+   CONFIGURACION
+   ========================================================================= */
+// Pegar aca la MISMA URL de implementacion del Web App de Apps Script
+// (la que ya usaste en el Paso 3 / la de "PEGAR_AQUI..." de Code.gs).
+// Se auto-referencia: este mismo formulario, servido por Apps Script,
+// le pide datos y le manda pedidos a esa misma URL.
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwjDU1jXdqW7WQxaR8SBHfKPRBdXKkqKDtvGkP7Y4_tUfYroF6UHOL67GFhAtpOs6cCug/exec";
+const URL_DATOS = WEB_APP_URL + "?action=datos";
+const URL_COTIZACION = WEB_APP_URL + "?action=cotizacion";
+
+/* =========================================================================
+   ESTADO GLOBAL
+   ========================================================================= */
+let DATOS = { vendedores: [], clientes: [], articulos: [], stock: [], condVta: [] };
+let clienteSeleccionado = null;
+let articuloSeleccionado = null;
+let carrito = [];
+
+// Indices precalculados (se arman una sola vez cuando llegan los datos, en
+// vez de recorrer los arrays completos cada vez que se busca o filtra).
+let INDICE_STOCK = {};            // CodigoConcatenado -> fila de stock
+let CODIGOS_BASE = [];            // lista ordenada de CodItem base unicos
+let itemEnEdicion = null;         // indice del carrito que se esta reeditando (o null)
+
+function construirIndices() {
+  INDICE_STOCK = {};
+  (DATOS.stock || []).forEach(s => { INDICE_STOCK[s.CodigoConcatenado] = s; });
+  CODIGOS_BASE = [...new Set((DATOS.articulos || []).map(a => a.CodItem.trim()))].sort();
+}
+
+/* =========================================================================
+   AUTOGUARDADO DEL PEDIDO EN CURSO (borrador)
+   Guarda el carrito y los datos principales en el navegador, para que si la
+   pagina se recarga o el celular la descarta en segundo plano, no se pierda
+   el trabajo. Se borra al enviar el pedido con exito.
+   ========================================================================= */
+const CLAVE_BORRADOR = 'borradorPedidoPys';
+
+function guardarBorrador() {
+  try {
+    if (carrito.length === 0 && !clienteSeleccionado) return; // nada que guardar
+    const borrador = {
+      ts: Date.now(),
+      codVendedor: document.getElementById('vendedor')?.value || '',
+      codCliente: clienteSeleccionado ? clienteSeleccionado.CodCliente : '',
+      moneda: document.getElementById('monedaCarga')?.value || 'ARS',
+      observaciones: document.getElementById('observaciones')?.value || '',
+      carrito: carrito,
+    };
+    localStorage.setItem(CLAVE_BORRADOR, JSON.stringify(borrador));
+  } catch (err) {
+    // Si el navegador bloquea localStorage, el autoguardado simplemente no
+    // funciona, pero no debe romper el resto del formulario.
+    console.warn('No se pudo autoguardar el borrador:', err);
+  }
+}
+
+function borrarBorrador() {
+  try { localStorage.removeItem(CLAVE_BORRADOR); } catch (err) {}
+}
+
+function leerBorrador() {
+  try {
+    const raw = localStorage.getItem(CLAVE_BORRADOR);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) { return null; }
+}
+
+// Se llama despues de que cargaron los datos: si hay un borrador con articulos,
+// ofrece restaurarlo con un banner (no lo restaura solo, para no sorprender).
+function ofrecerRestaurarBorrador() {
+  const b = leerBorrador();
+  if (!b || !b.carrito || b.carrito.length === 0) return;
+
+  const fecha = new Date(b.ts);
+  const cuandoTexto = fecha.toLocaleString('es-AR');
+  const banner = document.getElementById('bannerGlobal');
+  banner.className = 'banner cargando visible';
+  banner.innerHTML = `📝 Tenés un pedido sin terminar de ${cuandoTexto} (${b.carrito.length} artículo/s). `
+    + `<button type="button" class="btn btn-secundario" style="margin-left:6px; padding:4px 12px; font-size:13px" onclick="restaurarBorrador()">Retomar</button> `
+    + `<button type="button" class="btn btn-secundario" style="margin-left:4px; padding:4px 12px; font-size:13px" onclick="descartarBorrador()">Descartar</button>`;
+}
+
+function restaurarBorrador() {
+  const b = leerBorrador();
+  if (!b) { ocultarBanner(); return; }
+
+  // Vendedor
+  if (b.codVendedor) {
+    document.getElementById('vendedor').value = b.codVendedor;
+    resyncCombo('vendedor');
+  }
+  // Moneda
+  if (b.moneda) {
+    document.getElementById('monedaCarga').value = b.moneda;
+    resyncCombo('monedaCarga');
+    document.getElementById('monedaCarga').dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  // Cliente (se busca el objeto completo en los datos ya cargados)
+  if (b.codCliente) {
+    const cli = DATOS.clientes.find(c => String(c.CodCliente) === String(b.codCliente));
+    if (cli) seleccionarCliente(cli);
+  }
+  // Observaciones
+  if (b.observaciones) document.getElementById('observaciones').value = b.observaciones;
+  // Carrito
+  carrito = b.carrito || [];
+  renderizarCarrito();
+
+  ocultarBanner();
+  mostrarBanner('exito', 'Pedido retomado. Revisá los datos y continuá donde lo dejaste.');
+}
+
+function descartarBorrador() {
+  borrarBorrador();
+  ocultarBanner();
+}
+
+/* =========================================================================
+   PLAZO DE ENTREGA -> FECHA SUGERIDA
+   - "5h"/"10h"/"15h": suma esa cantidad de dias HABILES (saltea sab y dom).
+   - "30c": suma 30 dias corridos.
+   - En todos los casos, si la fecha final cae sabado o domingo, se corre al
+     lunes siguiente. El vendedor puede editarla a mano igual.
+   ========================================================================= */
+function sumarDiasHabiles(desde, cantidad) {
+  const f = new Date(desde);
+  let agregados = 0;
+  while (agregados < cantidad) {
+    f.setDate(f.getDate() + 1);
+    const dia = f.getDay(); // 0 = domingo, 6 = sabado
+    if (dia !== 0 && dia !== 6) agregados++;
+  }
+  return f;
+}
+
+function correrSiFinDeSemana(fecha) {
+  const f = new Date(fecha);
+  if (f.getDay() === 6) f.setDate(f.getDate() + 2); // sabado -> lunes
+  else if (f.getDay() === 0) f.setDate(f.getDate() + 1); // domingo -> lunes
+  return f;
+}
+
+function fechaAInputValue(fecha) {
+  // Devuelve 'aaaa-mm-dd' en hora local (no UTC, para no correrse un dia).
+  const aaaa = fecha.getFullYear();
+  const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dd = String(fecha.getDate()).padStart(2, '0');
+  return `${aaaa}-${mm}-${dd}`;
+}
+
+function aplicarPlazoEntrega(valor) {
+  const hoy = new Date();
+  let fecha;
+  if (valor === '30c') {
+    fecha = new Date(hoy);
+    fecha.setDate(fecha.getDate() + 30);
+  } else {
+    const dias = parseInt(valor, 10); // "5h" -> 5, "10h" -> 10, "15h" -> 15
+    fecha = sumarDiasHabiles(hoy, dias);
+  }
+  fecha = correrSiFinDeSemana(fecha);
+  document.getElementById('fechaEntrega').value = fechaAInputValue(fecha);
+  marcarValido('campoFecha');
+}
+
+document.querySelectorAll('input[name="plazoEntrega"]').forEach(radio => {
+  radio.addEventListener('change', function () { aplicarPlazoEntrega(this.value); });
+});
+
+/* =========================================================================
+   CARGA INICIAL DE DATOS
+   ========================================================================= */
+/* =========================================================================
+   COMBO BUSCABLE (campo con búsqueda para reemplazar los <select> nativos)
+   - Mantiene el <select> original oculto como fuente de datos y de .value,
+     así todo el código que lo lee sigue funcionando igual.
+   - Encima pone un campo de texto: al tocarlo se abre la lista (ideal en
+     celular, no depende del selector nativo), y al escribir filtra.
+   - Al elegir, actualiza el <select> y dispara su evento 'change' para que
+     los listeners existentes (filtros dependientes, provincia, etc.) corran.
+   ========================================================================= */
+function crearComboBuscable(selectId, opciones) {
+  opciones = opciones || {};
+  const select = document.getElementById(selectId);
+  if (!select) return;
+
+  // Si el combo ya existe, solo actualiza el placeholder y el resync —
+  // no lo recrea (evita duplicar listeners). Pero siempre re-sincroniza
+  // el texto visible con el <select> actualizado.
+  if (select.dataset.comboListo === '1') {
+    if (opciones.placeholder && select._comboInput) {
+      select._comboInput.placeholder = opciones.placeholder;
+    }
+    if (typeof select._comboResync === 'function') select._comboResync();
+    return;
+  }
+  select.dataset.comboListo = '1';
+  select.style.display = 'none';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'combo-buscable';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.autocomplete = 'off';
+  input.placeholder = opciones.placeholder || 'Tocá para elegir o escribí para buscar...';
+  select._comboInput = input; // referencia para poder actualizar placeholder luego
+  const lista = document.createElement('div');
+  lista.className = 'autocomplete-lista combo-lista';
+  wrap.appendChild(input);
+  wrap.appendChild(lista);
+  select.parentNode.insertBefore(wrap, select.nextSibling);
+
+  function opcionesActuales() {
+    return Array.from(select.options).map(o => ({ value: o.value, label: o.textContent }));
+  }
+  function sincronizarTexto() {
+    const sel = select.options[select.selectedIndex];
+    input.value = (sel && sel.value) ? sel.textContent : '';
+  }
+  let indiceActivo = -1; // para navegacion con flechas
+
+  function marcarActivo(idx) {
+    const divs = lista.querySelectorAll('.opcion');
+    divs.forEach((d, i) => d.classList.toggle('activa', i === idx));
+    if (divs[idx]) divs[idx].scrollIntoView({ block: 'nearest' });
+    indiceActivo = idx;
+  }
+
+  function abrir(filtro) {
+    const q = (filtro || '').trim().toLowerCase();
+    const ops = opcionesActuales().filter(o => o.value && (!q || o.label.toLowerCase().includes(q)));
+    lista.innerHTML = '';
+    indiceActivo = -1;
+    if (ops.length === 0) {
+      lista.innerHTML = '<div class="opcion" style="color:var(--gris-texto)">Sin resultados</div>';
+    } else {
+      ops.slice(0, 80).forEach((o, idx) => {
+        const div = document.createElement('div');
+        div.className = 'opcion';
+        div.textContent = o.label || '—';
+        div.addEventListener('touchstart', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          elegir(o.value);
+        }, { passive: false });
+        div.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          elegir(o.value);
+        });
+        lista.appendChild(div);
+      });
+      // Autocompletado predictivo: si hay una sola coincidencia exacta
+      // al principio, la marca activa para que Enter la seleccione directo.
+      if (ops.length === 1) marcarActivo(0);
+    }
+    lista.classList.add('abierta');
+  }
+  function elegir(value) {
+    select.value = value;
+    sincronizarTexto();
+    lista.classList.remove('abierta');
+    indiceActivo = -1;
+    input.blur();
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  input.addEventListener('focus', () => {
+    input.value = '';
+    abrir('');
+  });
+  input.addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+    if (!lista.classList.contains('abierta')) { input.value = ''; abrir(''); }
+  }, { passive: false });
+  input.addEventListener('input', () => abrir(input.value));
+
+  document.addEventListener('mousedown', (e) => {
+    if (!wrap.contains(e.target)) { lista.classList.remove('abierta'); sincronizarTexto(); }
+  });
+  document.addEventListener('touchstart', (e) => {
+    if (!wrap.contains(e.target)) { lista.classList.remove('abierta'); sincronizarTexto(); }
+  }, { passive: true });
+
+  // Navegacion con flechas + Enter + Escape
+  input.addEventListener('keydown', (e) => {
+    const divs = lista.querySelectorAll('.opcion');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      marcarActivo(Math.min(indiceActivo + 1, divs.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      marcarActivo(Math.max(indiceActivo - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (indiceActivo >= 0 && divs[indiceActivo]) {
+        // Selecciona el item marcado con la flecha
+        const ops = opcionesActuales().filter(o => o.value &&
+          (!input.value.trim() || o.label.toLowerCase().includes(input.value.trim().toLowerCase())));
+        if (ops[indiceActivo]) elegir(ops[indiceActivo].value);
+      } else if (divs.length === 1 && !divs[0].style.color) {
+        // Si hay una sola opcion visible, la selecciona con Enter
+        const ops = opcionesActuales().filter(o => o.value &&
+          o.label.toLowerCase().includes(input.value.trim().toLowerCase()));
+        if (ops.length === 1) elegir(ops[0].value);
+      }
+    } else if (e.key === 'Escape') {
+      lista.classList.remove('abierta');
+      sincronizarTexto();
+      input.blur();
+    }
+  });
+
+  sincronizarTexto();
+  select._comboResync = sincronizarTexto;
+}
+
+// Resincroniza el texto visible de un combo cuyo <select> fue repoblado.
+function resyncCombo(selectId) {
+  const select = document.getElementById(selectId);
+  if (select && typeof select._comboResync === 'function') select._comboResync();
+}
+
+async function cargarDatos(intento) {
+  intento = intento || 1;
+  const MAX_INTENTOS = 3;
+  const estado = document.getElementById('estadoConexion');
+
+  // La cotizacion del BCRA se pide en paralelo (no bloquea el resto): es la
+  // parte mas lenta de la carga porque depende de una API externa, y no
+  // hace falta esperarla para mostrar vendedores, clientes o articulos.
+  if (intento === 1) cargarCotizacion();
+
+  try {
+    estado.innerHTML = intento === 1
+      ? '<span class="punto"></span> Conectando...'
+      : `<span class="punto"></span> Reintentando (${intento}/${MAX_INTENTOS})...`;
+
+    // Timeout manual: si el servidor no responde en 20s, se corta y se
+    // reintenta -- en redes moviles inestables (caso Chrome Android) a veces
+    // la primera peticion se queda colgada sin fallar ni completar.
+    const controlador = new AbortController();
+    const timeout = setTimeout(() => controlador.abort(), 20000);
+    const resp = await fetch(URL_DATOS, { method: 'GET', signal: controlador.signal });
+    clearTimeout(timeout);
+
+    if (!resp.ok) throw new Error('Respuesta no valida del servidor');
+    DATOS = await resp.json();
+    construirIndices();
+
+    estado.innerHTML = '<span class="punto"></span> Datos actualizados';
+    ocultarBanner();
+
+    // Vendedores
+    // La solapa "Vendedores" del Sheet ya viene pre-filtrada desde el script
+    // de sincronizacion: solo incluye a los que tienen venta registrada en
+    // "Venta Consolidada" desde el año de corte vigente -- no hace falta
+    // filtrar nada aca, se listan todos los que llegan.
+    poblarSelectVendedores();
+    crearComboBuscable('vendedor', { placeholder: 'Escribí tu nombre (ej: Lu → Luciana)...' });
+
+    // Condiciones de venta
+    const selCond = document.getElementById('condicionVenta');
+    DATOS.condVta.forEach(c => {
+      if (!c.Descripcion || c.Descripcion.trim() === '---') return;
+      const opt = document.createElement('option');
+      opt.value = c.Descripcion;
+      opt.dataset.diasPlazo = c.DiasPlazo || '';
+      opt.textContent = c.Descripcion + (c.DiasPlazo ? ` (${c.DiasPlazo} días)` : '');
+      selCond.appendChild(opt);
+    });
+    crearComboBuscable('condicionVenta', { placeholder: 'Tocá o escribí para elegir...' });
+
+    inicializarFiltrosArticulo();
+    crearComboBuscable('filtroCodigo', { placeholder: 'Todos / buscar código...' });
+    crearComboBuscable('filtroAncho', { placeholder: 'Todos...' });
+    crearComboBuscable('filtroLargo', { placeholder: 'Todos...' });
+    crearComboBuscable('filtroMicColor', { placeholder: 'Todos...' });
+
+    // Resync por si esta fue una recarga (reintento manual): los combos ya
+    // existian y hay que refrescar su texto visible con las opciones nuevas.
+    ['vendedor', 'condicionVenta', 'filtroCodigo', 'filtroAncho', 'filtroLargo', 'filtroMicColor'].forEach(resyncCombo);
+
+    // Con los datos ya cargados, si habia un pedido sin terminar guardado,
+    // se ofrece retomarlo.
+    ofrecerRestaurarBorrador();
+
+  } catch (err) {
+    console.error(`Error cargando datos (intento ${intento}):`, err);
+
+    if (intento < MAX_INTENTOS) {
+      // Reintento automatico con una espera creciente (1s, luego 2s). Esto
+      // resuelve la mayoria de los fallos intermitentes de Chrome en Android,
+      // donde la primera carga falla pero la segunda anda bien.
+      mostrarBanner('cargando', `La conexión tardó demasiado. Reintentando automáticamente (${intento}/${MAX_INTENTOS})...`);
+      setTimeout(() => cargarDatos(intento + 1), intento * 1000);
+    } else {
+      estado.innerHTML = '<span class="punto error"></span> Sin conexión con la base';
+      mostrarBannerReintento();
+    }
+  }
+}
+
+// Banner de error con boton de reintento manual -- mas claro y accionable
+// que solo pedir "recargá la pagina", sobre todo en el celular.
+function mostrarBannerReintento() {
+  const banner = document.getElementById('bannerGlobal');
+  banner.className = 'banner fallo visible';
+  banner.innerHTML = 'No se pudieron cargar los datos. Suele ser la conexión del celular. '
+    + '<button type="button" class="btn btn-secundario" style="margin-left:8px; padding:4px 12px; font-size:13px" onclick="reintentarCargaManual()">🔄 Reintentar</button>';
+}
+
+function reintentarCargaManual() {
+  ocultarBanner();
+  // Limpia los selects para no duplicar opciones al recargar los datos.
+  document.getElementById('condicionVenta').innerHTML = '<option value="">Seleccioná...</option>';
+  cargarDatos(1);
+}
+
+async function cargarCotizacion() {
+  const notaCot = document.getElementById('notaCotizacion');
+  try {
+    const resp = await fetch(URL_COTIZACION, { method: 'GET' });
+    const data = await resp.json();
+    DATOS.cotizacionUSD = data.cotizacionUSD;
+
+    const inputTC = document.getElementById('tipoCambio');
+    if (data.cotizacionUSD && data.cotizacionUSD.valor) {
+      // Solo la autocompletamos si el campo esta vacio -- si el vendedor ya
+      // escribio algo mientras esto cargaba (o cambio a ARS), no se lo pisamos.
+      if (!inputTC.value) inputTC.value = data.cotizacionUSD.valor;
+      const fuente = data.cotizacionUSD.fuente === 'BNA' ? 'Banco Nación (respaldo, BCRA no disponible)' : 'BCRA';
+      notaCot.textContent = `Cotización ${fuente} del ${data.cotizacionUSD.fecha || 'día'} (podés ajustarla si hace falta)`;
+    } else {
+      notaCot.textContent = 'No se pudo obtener la cotización automática, cargala manualmente';
+    }
+  } catch (err) {
+    notaCot.textContent = 'No se pudo obtener la cotización automática, cargala manualmente';
+    console.error('Error cargando cotizacion:', err);
+  }
+  // Si ya habia articulos cargados en el carrito antes de que esto terminara
+  // de llegar, se recalcula la linea de referencia en la otra moneda.
+  if (carrito.length > 0) renderizarCarrito();
+}
+
+/* =========================================================================
+   VENDEDORES
+   La lista ya viene depurada desde la sincronizacion (solo vendedores con
+   venta vigente). Si por algun motivo llega vacia (por ejemplo, el Sheet
+   todavia no se sincronizo), se avisa en vez de dejar el desplegable mudo.
+   ========================================================================= */
+function poblarSelectVendedores() {
+  const selVendedor = document.getElementById('vendedor');
+  selVendedor.innerHTML = '<option value="">Seleccioná tu nombre...</option>';
+
+  const lista = [...(DATOS.vendedores || [])].sort((a,b) => (a.Vendedor||'').localeCompare(b.Vendedor||''));
+
+  lista.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.CodVendedor;
+    opt.textContent = v.Vendedor;
+    opt.dataset.email = v.Email || '';
+    selVendedor.appendChild(opt);
+  });
+
+  if (lista.length === 0) {
+    mostrarBanner('fallo', '⚠ No hay vendedores cargados todavía — revisá que la sincronización con el Excel haya corrido.');
+  }
+
+  // Recordar el ultimo vendedor usado en este dispositivo
+  const ultimoVendedor = localStorage.getItem('ultimoVendedorPys');
+  if (ultimoVendedor) {
+    const existe = lista.find(v => v.CodVendedor === ultimoVendedor);
+    if (existe) {
+      selVendedor.value = ultimoVendedor;
+      resyncCombo('vendedor');
+      // Actualizar placeholder del buscador de clientes
+      const vendedorNombre = selVendedor.options[selVendedor.selectedIndex]?.textContent || '';
+      document.getElementById('buscarCliente').placeholder = `Clientes de ${vendedorNombre} (↓ para ver todos)`;
+    }
+  }
+}
+
+// Guardar el vendedor cada vez que se selecciona uno
+document.getElementById('vendedor').addEventListener('change', function () {
+  if (this.value) {
+    try { localStorage.setItem('ultimoVendedorPys', this.value); } catch(e) {}
+  }
+});
+
+/* =========================================================================
+   AUTOCOMPLETE DE CLIENTES
+   ========================================================================= */
+let debounceBuscarCliente = null;
+let indiceActivoCliente = -1;
+let coincidenciasClienteActuales = [];
+
+// Devuelve los clientes filtrados por el vendedor seleccionado (cascada)
+function clientesFiltradosPorVendedor() {
+  const codVendedor = document.getElementById('vendedor').value;
+  if (!codVendedor) return DATOS.clientes;
+  return DATOS.clientes.filter(c => String(c.CodVendedor) === String(codVendedor));
+}
+
+function abrirListaClientes(q) {
+  const lista = document.getElementById('listaClientes');
+  indiceActivoCliente = -1;
+  lista.innerHTML = '';
+
+  const base = clientesFiltradosPorVendedor();
+  coincidenciasClienteActuales = q && q.length >= 1
+    ? base.filter(c => `${c.RazonSocial} ${c.CodCliente}`.toLowerCase().includes(q.toLowerCase())).slice(0, 40)
+    : base.slice(0, 40);
+
+  if (coincidenciasClienteActuales.length === 0) {
+    lista.innerHTML = '<div class="opcion">Sin resultados</div>';
+  } else {
+    coincidenciasClienteActuales.forEach((c) => {
+      const div = document.createElement('div');
+      div.className = 'opcion';
+      div.innerHTML = `<b>${c.RazonSocial}</b><small>Código ${c.CodCliente} · Plazo ${c.DiasPlazo || '-'} días</small>`;
+      div.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); seleccionarCliente(c); lista.classList.remove('abierta'); }, { passive: false });
+      div.addEventListener('mousedown', (e) => { e.preventDefault(); seleccionarCliente(c); lista.classList.remove('abierta'); });
+      lista.appendChild(div);
+    });
+    if (coincidenciasClienteActuales.length === 1) {
+      lista.querySelectorAll('.opcion')[0].classList.add('activa');
+      indiceActivoCliente = 0;
+    }
+  }
+  lista.classList.add('abierta');
+}
+
+document.getElementById('buscarCliente').addEventListener('input', function () {
+  clearTimeout(debounceBuscarCliente);
+  debounceBuscarCliente = setTimeout(() => abrirListaClientes(this.value.trim()), 200);
+});
+
+document.getElementById('buscarCliente').addEventListener('keydown', function (e) {
+  const lista = document.getElementById('listaClientes');
+  const divs = lista.querySelectorAll('.opcion');
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (!lista.classList.contains('abierta')) { abrirListaClientes(this.value.trim()); return; }
+    indiceActivoCliente = Math.min(indiceActivoCliente + 1, divs.length - 1);
+    divs.forEach((d, i) => d.classList.toggle('activa', i === indiceActivoCliente));
+    if (divs[indiceActivoCliente]) divs[indiceActivoCliente].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    indiceActivoCliente = Math.max(indiceActivoCliente - 1, 0);
+    divs.forEach((d, i) => d.classList.toggle('activa', i === indiceActivoCliente));
+    if (divs[indiceActivoCliente]) divs[indiceActivoCliente].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter' && coincidenciasClienteActuales.length > 0) {
+    e.preventDefault();
+    const idx = indiceActivoCliente >= 0 ? indiceActivoCliente : 0;
+    if (coincidenciasClienteActuales[idx]) { seleccionarCliente(coincidenciasClienteActuales[idx]); lista.classList.remove('abierta'); }
+  } else if (e.key === 'Escape') {
+    lista.classList.remove('abierta');
+  }
+});
+
+// Cascada: al cambiar el vendedor, si hay un cliente seleccionado que no
+// pertenece a ese vendedor, lo limpia. Y actualiza el placeholder del buscador.
+document.getElementById('vendedor').addEventListener('change', function () {
+  const codVendedor = this.value;
+  const vendedorNombre = this.options[this.selectedIndex]?.textContent || '';
+  const inputCli = document.getElementById('buscarCliente');
+
+  if (codVendedor && clienteSeleccionado && String(clienteSeleccionado.CodVendedor) !== String(codVendedor)) {
+    // El cliente actual no pertenece a este vendedor — limpia
+    clienteSeleccionado = null;
+    inputCli.value = '';
+    document.getElementById('infoCliente').classList.remove('visible');
+    document.getElementById('btnLupaCliente').disabled = true;
+    document.getElementById('btnPredecirCompra').disabled = true;
+  }
+
+  inputCli.placeholder = codVendedor
+    ? `Clientes de ${vendedorNombre} (↓ para ver todos)`
+    : 'Buscar por nombre o código...';
+});
+
+function actualizarIndicadoresProgreso() {
+  // Datos del pedido: vendedor + cliente seleccionados
+  const okDatos = !!document.getElementById('vendedor').value && !!clienteSeleccionado;
+  document.getElementById('chkDatos').style.display = okDatos ? 'inline' : 'none';
+
+  // Artículos: al menos 1 en el carrito
+  const okArticulos = carrito.length > 0;
+  document.getElementById('chkArticulos').style.display = okArticulos ? 'inline' : 'none';
+
+  // Condiciones de venta: condición elegida
+  const okCondiciones = !!document.getElementById('condicionVenta').value;
+  document.getElementById('chkCondiciones').style.display = okCondiciones ? 'inline' : 'none';
+
+  // Entrega: modalidad elegida
+  const okEntrega = !!modalidadEntregaSeleccionada();
+  document.getElementById('chkEntrega').style.display = okEntrega ? 'inline' : 'none';
+}
+
+function seleccionarCliente(c) {
+  clienteSeleccionado = c;
+  document.getElementById('buscarCliente').value = c.RazonSocial;
+  marcarValido('campoCliente');
+  document.getElementById('btnLupaCliente').disabled = false;
+  document.getElementById('btnPredecirCompra').disabled = false;
+  actualizarIndicadoresProgreso();
+
+  const box = document.getElementById('infoCliente');
+  const habilitado = (c.Habilitado === 'SI');
+  const credVencido = Number(c.CreditoVencido || 0);
+  const ticketArs = Number(c.TicketPromedioARS || 0);
+  const ticketUsd = c.TicketPromedioUSD !== '' && c.TicketPromedioUSD !== undefined ? Number(c.TicketPromedioUSD) : null;
+  const ultimaArs = Number(c.UltimaCompraARS || 0);
+  const ultimaUsd = c.UltimaCompraUSD !== '' && c.UltimaCompraUSD !== undefined ? Number(c.UltimaCompraUSD) : null;
+
+  box.innerHTML = `
+    <div class="dato"><b>Estado</b><span class="${habilitado ? 'ok' : 'alerta'}">${habilitado ? 'Habilitado' : 'NO HABILITADO'}</span></div>
+    <div class="dato"><b>Días de plazo</b>${c.DiasPlazo || '-'}</div>
+    <div class="dato"><b>Días sin comprar</b>${c.DiasSinCompra || '-'}</div>
+    <div class="dato"><b>Deuda vencida</b><span class="${credVencido > 0 ? 'alerta' : ''}">${formatoMoneda(credVencido)}</span></div>
+    <div class="dato"><b>Deuda a vencer</b>${formatoMoneda(Number(c.CreditoAVencer || 0))}</div>
+    <div class="dato"><b>Ticket promedio</b>${ticketArs ? formatoMoneda(ticketArs) : '-'}${ticketUsd !== null ? ` · U$S ${ticketUsd.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2})}` : ''}</div>
+    <div class="dato"><b>Última operación</b>${ultimaArs ? formatoMoneda(ultimaArs) : '-'}${ultimaUsd !== null ? ` · U$S ${ultimaUsd.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2})}` : ''}</div>
+  `;
+  box.classList.add('visible');
+}
+
+/* ---------- Lupa: ultima compra del cliente ---------- */
+document.getElementById('btnLupaCliente').addEventListener('click', () => {
+  if (!clienteSeleccionado) return;
+
+  const items = (DATOS.ultimaVenta || []).filter(v => v.CodCliente === clienteSeleccionado.CodCliente);
+  const cont = document.getElementById('contenidoUltimaCompra');
+
+  if (items.length === 0) {
+    cont.innerHTML = '<p style="color:var(--gris-texto)">No hay compras registradas para este cliente.</p>';
+  } else {
+    let totalArs = 0, totalUsd = 0;
+    let filas = '';
+    items.forEach(it => {
+      const importe = Number(it.Importe || 0);
+      const importeUsd = Number(it.ImporteUSD || 0);
+      totalArs += importe;
+      totalUsd += importeUsd;
+      filas += `<tr>
+        <td>${it.Descripcion}<br><small style="color:#888">${it.CodItem} · ${it.Ancho}/${it.Largo}/${it.MicColor}</small></td>
+        <td>${it.Cantidad}</td>
+        <td>${formatoMoneda(importe)}</td>
+        <td>${importeUsd ? 'U$S ' + importeUsd.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2}) : '-'}</td>
+      </tr>`;
+    });
+    cont.innerHTML = `
+      <p style="font-size:13px; color:var(--gris-texto)">Fecha: <b>${items[0].Fecha}</b></p>
+      <table>
+        <thead><tr><th>Artículo</th><th>Cant.</th><th>Importe $</th><th>Importe USD</th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+      <div class="total-pedido"><span>Total</span><span>${formatoMoneda(totalArs)} · U$S ${totalUsd.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2})}</span></div>
+    `;
+  }
+  document.getElementById('modalUltimaCompra').style.display = 'flex';
+});
+
+function cerrarModalUltimaCompra() {
+  document.getElementById('modalUltimaCompra').style.display = 'none';
+}
+
+/* ---------- Predecir Compra (bajo demanda, por cliente) ---------- */
+const URL_PREDICCION = WEB_APP_URL + "?action=prediccion&codCliente=";
+
+document.getElementById('btnPredecirCompra').addEventListener('click', async () => {
+  if (!clienteSeleccionado) return;
+
+  const cont = document.getElementById('contenidoPrediccion');
+  cont.innerHTML = '<p style="color:var(--gris-texto)">Calculando predicción...</p>';
+  document.getElementById('modalPrediccion').style.display = 'flex';
+
+  try {
+    const resp = await fetch(URL_PREDICCION + encodeURIComponent(clienteSeleccionado.CodCliente));
+    const data = await resp.json();
+    window._datosPrediccionActual = data;
+    ordenPrediccion = { col: 'recurrencia', asc: false };
+    renderizarPrediccion(data);
+  } catch (err) {
+    cont.innerHTML = '<p style="color:var(--rojo)">No se pudo calcular la predicción. Probá de nuevo.</p>';
+    console.error('Error prediccion:', err);
+  }
+});
+
+let ordenPrediccion = { col: 'recurrencia', asc: false };
+
+function renderizarPrediccion(data) {
+  const cont = document.getElementById('contenidoPrediccion');
+  const items = data.items || [];
+
+  if (items.length === 0) {
+    cont.innerHTML = '<p style="color:var(--gris-texto)">Este cliente todavía no tiene historial de compra suficiente para predecir (necesita al menos 2 compras registradas).</p>';
+    return;
+  }
+
+  const frecTexto = data.frecuencia
+    ? `Compra en promedio cada <b>${Math.round(data.frecuencia.DiasPromedioEntreCompras)} días</b> · Última compra hace <b>${data.frecuencia.DiasDesdeUltima} días</b> (${data.frecuencia.TotalOcasiones} compras · ${data.frecuencia.PeriodoUsado.toLowerCase()})`
+    : '';
+
+  // Enriquecemos cada item con precio de venta media y stock actual.
+  const itemsEnriquecidos = items.map(it => {
+    const cantidadRedondeada = Math.round(Number(it.CantidadPromedio));
+    const stockInfo = INDICE_STOCK[it.CodigoConcatenado];
+    const stockDisp = stockInfo ? Number(stockInfo.StockUnidades || 0) : 0;
+
+    // El precio sugerido vive en DATOS.articulos (campo PrecioSugerido,
+    // viene de la solapa "Venta media" del Excel).
+    const articuloBase = DATOS.articulos.find(a => a.CodigoConcatenado === it.CodigoConcatenado);
+    const precioUlt = articuloBase ? Number(articuloBase.PrecioSugerido || 0) : 0;
+    const importeEstimado = cantidadRedondeada * precioUlt;
+
+    const diasDesdeItem = data.frecuencia ? Number(data.frecuencia.DiasDesdeUltima || 0) : null;
+
+    return { ...it, cantidadRedondeada, stockDisp, precioUlt, importeEstimado, diasDesdeItem };
+  });
+
+  // Participación: cada item / suma total de PctRecurrencia (para que sumen ~100%).
+  const sumaTotal = itemsEnriquecidos.reduce((acc, it) => acc + Number(it.PctRecurrencia), 0);
+
+  // Ordenamiento de la tabla segun la columna activa.
+  const sorted = [...itemsEnriquecidos].sort((a, b) => {
+    let va, vb;
+    switch (ordenPrediccion.col) {
+      case 'recurrencia': va = Number(a.PctRecurrencia); vb = Number(b.PctRecurrencia); break;
+      case 'cantidad':    va = a.cantidadRedondeada; vb = b.cantidadRedondeada; break;
+      case 'importe':     va = a.importeEstimado; vb = b.importeEstimado; break;
+      case 'stock':       va = a.stockDisp; vb = b.stockDisp; break;
+      case 'dias':        va = a.diasDesdeItem || 0; vb = b.diasDesdeItem || 0; break;
+      default:            va = 0; vb = 0;
+    }
+    return ordenPrediccion.asc ? va - vb : vb - va;
+  });
+
+  function thOrdenable(col, label) {
+    const activa = ordenPrediccion.col === col;
+    const flecha = activa ? (ordenPrediccion.asc ? ' ↑' : ' ↓') : ' ↕';
+    return `<th style="cursor:pointer; user-select:none" onclick="cambiarOrdenPrediccion('${col}')">${label}${flecha}</th>`;
+  }
+
+  const filas = sorted.map(it => {
+    const disponible = !!DATOS.articulos.find(a => a.CodigoConcatenado === it.CodigoConcatenado);
+    const btnCargar = disponible
+      ? `<button type="button" class="btn btn-secundario" style="font-size:12px; padding:5px 10px; white-space:nowrap" onclick="cargarItemPredicho('${it.CodigoConcatenado}', ${it.cantidadRedondeada})">+ Cargar</button>`
+      : `<small style="color:var(--gris-texto)">No disp.</small>`;
+
+    // Participacion normalizada: pct de este item / suma de todos -> suma 100%
+    const participacion = sumaTotal > 0
+      ? formatoPorcentaje((Number(it.PctRecurrencia) / sumaTotal) * 100)
+      : formatoPorcentaje(Number(it.PctRecurrencia));
+
+    // Importe en ARS sin decimales
+    const importeTexto = it.importeEstimado > 0
+      ? '$ ' + Math.round(it.importeEstimado).toLocaleString('es-AR')
+      : (it.precioUlt === 0 ? 'Sin precio' : '-');
+
+    const diasTexto = it.diasDesdeItem !== null ? `${it.diasDesdeItem}d` : '-';
+    const sinStock = it.stockDisp === 0;
+    const stockSuficiente = it.stockDisp >= it.cantidadRedondeada;
+    const estiloFila = sinStock ? 'background:#c0392b; color:#fff; font-weight:700;' : '';
+    const colorStock = sinStock ? '#fff' : stockSuficiente ? '#2e7d4f' : '#c0392b';
+    const boldStock = 'font-weight:700;';
+    return `<tr style="${estiloFila}">
+      <td style="word-break:break-word">${it.Descripcion}<br><small style="color:${sinStock ? '#ffcccc' : '#888'}">${it.CodItem} · ${it.Ancho}/${it.Largo}/${it.MicColor}</small></td>
+      <td style="text-align:center">${participacion}</td>
+      <td style="text-align:center">${it.cantidadRedondeada}</td>
+      <td style="text-align:right">${importeTexto}</td>
+      <td style="text-align:center; color:${colorStock}; ${boldStock}">${it.stockDisp}</td>
+      <td style="text-align:center">${diasTexto}</td>
+      <td style="text-align:center">${btnCargar}</td>
+    </tr>`;
+  }).join('');
+
+  // Totales al pie de la tabla
+  const totalCantidad = sorted.reduce((acc, it) => acc + it.cantidadRedondeada, 0);
+  const totalImporte = sorted.reduce((acc, it) => acc + it.importeEstimado, 0);
+  const totalStock = sorted.reduce((acc, it) => acc + it.stockDisp, 0);
+  const totalImporteTexto = totalImporte > 0
+    ? '$ ' + Math.round(totalImporte).toLocaleString('es-AR')
+    : '-';
+  const filaTotales = `<tr style="font-weight:700; border-top:2px solid var(--gris-borde); background:var(--superficie-alt)">
+    <td style="padding:6px 8px">TOTAL</td>
+    <td></td>
+    <td style="text-align:center; padding:6px 8px">${totalCantidad}</td>
+    <td style="text-align:right; padding:6px 8px">${totalImporteTexto}</td>
+    <td style="text-align:center; padding:6px 8px">${totalStock}</td>
+    <td></td>
+    <td style="text-align:center; padding:6px 8px">
+      <button type="button" class="btn btn-naranja" style="font-size:12px; padding:5px 10px; white-space:nowrap" onclick="cargarTodoPredicho()">+ Cargar todo</button>
+    </td>
+  </tr>`;
+
+  cont.innerHTML = `
+    <p style="font-size:13px; color:var(--gris-texto); margin-bottom:8px">${frecTexto}</p>
+    <div style="overflow-x:auto">
+    <table style="font-size:12px; width:100%; table-layout:fixed">
+      <colgroup>
+        <col style="width:30%">
+        <col style="width:12%">
+        <col style="width:8%">
+        <col style="width:14%">
+        <col style="width:10%">
+        <col style="width:10%">
+        <col style="width:16%">
+      </colgroup>
+      <thead><tr>
+        ${thOrdenable('recurrencia','Artículo')}
+        <th style="cursor:pointer; user-select:none" onclick="cambiarOrdenPrediccion('recurrencia')">Participación ↕</th>
+        ${thOrdenable('cantidad','Cant. prom.')}
+        ${thOrdenable('importe','Importe est. ARS')}
+        ${thOrdenable('stock','Stock (un.)')}
+        ${thOrdenable('dias','Días sin comprar')}
+        <th style="text-align:center">Acción</th>
+      </tr></thead>
+      <tbody>${filas}${filaTotales}</tbody>
+    </table>
+    </div>
+    <div class="subnota" style="margin-top:8px">📌 "Cargar" completa el artículo y la cantidad sugerida — revisá el precio y confirmá con "+ Agregar al pedido". Tocá los encabezados ↕ para ordenar.</div>
+  `;
+}
+
+function cambiarOrdenPrediccion(col) {
+  if (ordenPrediccion.col === col) {
+    ordenPrediccion.asc = !ordenPrediccion.asc;
+  } else {
+    ordenPrediccion.col = col;
+    ordenPrediccion.asc = false;
+  }
+  // Re-renderiza con los mismos datos que ya llegaron.
+  if (window._datosPrediccionActual) renderizarPrediccion(window._datosPrediccionActual);
+}
+
+function cargarItemPredicho(codigoConcatenado, cantidadSugerida) {
+  const articulo = DATOS.articulos.find(a => a.CodigoConcatenado === codigoConcatenado);
+  if (!articulo) { mostrarBanner('fallo', 'Ese artículo ya no está disponible en el catálogo vigente.'); return; }
+
+  seleccionarArticulo(articulo, INDICE_STOCK[articulo.CodigoConcatenado]);
+  document.getElementById('cantidad').value = cantidadSugerida;
+  recalcularM2();
+  recalcularPrecioNeto();
+
+  cerrarModalPrediccion();
+  document.getElementById('campoArticulo').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  mostrarBanner('exito', `Se cargó "${articulo.Descripcion}" con la cantidad sugerida (${cantidadSugerida}) — revisá el precio y confirmá con "+ Agregar al pedido".`);
+}
+
+function cargarTodoPredicho() {
+  if (!window._datosPrediccionActual) return;
+  const items = window._datosPrediccionActual.items || [];
+  let cargados = 0;
+  let omitidos = 0;
+
+  items.forEach(it => {
+    const articulo = DATOS.articulos.find(a => a.CodigoConcatenado === it.CodigoConcatenado);
+    if (!articulo) { omitidos++; return; }
+
+    const cantidadRedondeada = Math.round(Number(it.CantidadPromedio));
+    if (!(cantidadRedondeada > 0)) { omitidos++; return; }
+
+    // Precio sugerido del articulo
+    const precioSugerido = Number(articulo.PrecioSugerido || 0);
+
+    carrito.push({
+      codItem: articulo.CodItem.trim(),
+      descripcion: articulo.Descripcion,
+      ancho: articulo.Ancho,
+      largo: articulo.Largo,
+      micColor: articulo.MicColor,
+      cantidad: cantidadRedondeada,
+      precioUnitario: precioSugerido,
+      descuentoItemPct: 0,
+      precioNeto: precioSugerido,
+      m2Total: '',
+      observacionItem: '',
+      fechaEntregaOverride: null,
+      facturacionOverride: null,
+    });
+    cargados++;
+  });
+
+  cerrarModalPrediccion();
+  renderizarCarrito();
+
+  let msg = `Se cargaron ${cargados} artículo(s) al carrito con las cantidades sugeridas.`;
+  if (omitidos > 0) msg += ` (${omitidos} omitido(s) por no estar disponibles en el catálogo).`;
+  msg += ' Revisá los precios antes de confirmar.';
+  mostrarBanner('exito', msg);
+  document.getElementById('carritoContenedor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cerrarModalPrediccion() {
+  document.getElementById('modalPrediccion').style.display = 'none';
+  document.getElementById('panelInfoPrediccion').style.display = 'none';
+}
+function toggleInfoPrediccion() {
+  const panel = document.getElementById('panelInfoPrediccion');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+/* ---------- Alerta de recompra ---------- */
+const URL_RECOMPRA = WEB_APP_URL + "?action=recompra";
+let DATOS_RECOMPRA = [];
+let ordenRecompra = { col: 'urgencia', asc: false };
+let filtroVendedorRecompraActual = ''; // nombre del vendedor seleccionado
+let indiceActivoVendedorRecompra = -1;
+const CLAVE_ESTADOS_RECOMPRA = 'estadosRecompraPys';
+
+function leerEstadosRecompra() {
+  try { return JSON.parse(localStorage.getItem(CLAVE_ESTADOS_RECOMPRA) || '{}'); } catch(e) { return {}; }
+}
+function guardarEstadoRecompra(codCliente, estado) {
+  const estados = leerEstadosRecompra();
+  estados[String(codCliente)] = estado;
+  try { localStorage.setItem(CLAVE_ESTADOS_RECOMPRA, JSON.stringify(estados)); } catch(e) {}
+  renderizarRecompra();
+}
+
+const CONFIG_ESTADO = {
+  revisar:   { label: 'A revisar',  bg: '#c0392b', color: '#fff' },
+  informar:  { label: 'A informar', bg: '#f1c40f', color: '#000' },
+  informado: { label: 'Informado',  bg: '#2e7d4f', color: '#fff' },
+};
+
+// Obtiene el nombre del vendedor a partir del CodVendedor del cliente
+function nombreVendedorDeCodigo(codVendedor) {
+  const v = (DATOS.vendedores || []).find(v => String(v.CodVendedor) === String(codVendedor));
+  return v ? v.Vendedor : (codVendedor || '—');
+}
+
+function esOportunidadRecompra(f) {
+  const prom = Number(f.DiasPromedioEntreCompras);
+  const desde = Number(f.DiasDesdeUltima);
+  if (!(prom > 0) || !(desde >= 0)) return false;
+  const ratio = desde / prom;
+  return ratio >= 1.15 && ratio <= 3 && desde <= 120;
+}
+
+/* -- Filtros en cascada -- */
+function filtrarRecompra() {
+  renderizarRecompra();
+  actualizarListaVendedoresRecompra();
+}
+
+function actualizarListaVendedoresRecompra() {
+  const qCli = (document.getElementById('buscarRecompra').value || '').trim().toLowerCase();
+  const qVend = (document.getElementById('buscarVendedorRecompra').value || '').trim().toLowerCase();
+  const lista = document.getElementById('listaVendedorRecompra');
+
+  // Vendedores disponibles filtrados por el texto de cliente actual (cascada)
+  const vendedoresDisponibles = [...new Set(
+    DATOS_RECOMPRA
+      .filter(f => {
+        if (!qCli) return true;
+        const cli = DATOS.clientes.find(c => String(c.CodCliente) === String(f.CodCliente));
+        const nombre = cli ? cli.RazonSocial : '';
+        return `${nombre} ${f.CodCliente}`.toLowerCase().includes(qCli);
+      })
+      .map(f => {
+        const cli = DATOS.clientes.find(c => String(c.CodCliente) === String(f.CodCliente));
+        return cli ? nombreVendedorDeCodigo(cli.CodVendedor) : '';
+      })
+      .filter(Boolean)
+  )].sort();
+
+  const filtrados = vendedoresDisponibles.filter(v => !qVend || v.toLowerCase().includes(qVend));
+
+  lista.innerHTML = '';
+  if (!document.getElementById('buscarVendedorRecompra').matches(':focus') && !qVend) {
+    lista.classList.remove('abierta'); return;
+  }
+  indiceActivoVendedorRecompra = -1;
+
+  if (filtrados.length === 0) {
+    lista.innerHTML = '<div class="opcion" style="color:var(--gris-texto)">Sin resultados</div>';
+  } else {
+    // Opción "Todos"
+    const divTodos = document.createElement('div');
+    divTodos.className = 'opcion' + (filtroVendedorRecompraActual === '' ? ' activa' : '');
+    divTodos.textContent = 'Todos los vendedores';
+    divTodos.addEventListener('mousedown', (e) => { e.preventDefault(); elegirVendedorRecompra(''); });
+    divTodos.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); elegirVendedorRecompra(''); }, { passive: false });
+    lista.appendChild(divTodos);
+
+    filtrados.forEach(v => {
+      const div = document.createElement('div');
+      div.className = 'opcion' + (filtroVendedorRecompraActual === v ? ' activa' : '');
+      div.textContent = v;
+      div.addEventListener('mousedown', (e) => { e.preventDefault(); elegirVendedorRecompra(v); });
+      div.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); elegirVendedorRecompra(v); }, { passive: false });
+      lista.appendChild(div);
+    });
+  }
+  lista.classList.add('abierta');
+}
+
+function elegirVendedorRecompra(nombre) {
+  filtroVendedorRecompraActual = nombre;
+  document.getElementById('buscarVendedorRecompra').value = nombre || '';
+  document.getElementById('listaVendedorRecompra').classList.remove('abierta');
+  renderizarRecompra();
+}
+
+function limpiarFiltrosRecompra() {
+  document.getElementById('buscarRecompra').value = '';
+  document.getElementById('buscarVendedorRecompra').value = '';
+  filtroVendedorRecompraActual = '';
+  renderizarRecompra();
+}
+
+document.getElementById('btnRecompra').addEventListener('click', async () => {
+  document.getElementById('modalRecompra').style.display = 'flex';
+  const cont = document.getElementById('contenidoRecompra');
+
+  if (DATOS_RECOMPRA.length === 0) {
+    cont.innerHTML = '<p style="color:var(--gris-texto)">Cargando clientes...</p>';
+    try {
+      const resp = await fetch(URL_RECOMPRA);
+      const data = await resp.json();
+      DATOS_RECOMPRA = (data.frecuencia || []).filter(esOportunidadRecompra);
+    } catch (err) {
+      cont.innerHTML = '<p style="color:var(--rojo)">No se pudo cargar la información de recompra.</p>';
+      console.error('Error recompra:', err);
+      return;
+    }
+  }
+  renderizarRecompra();
+});
+
+// Navegación con flechas en el buscador de vendedores
+const inputVendRecompra = document.getElementById('buscarVendedorRecompra');
+inputVendRecompra.addEventListener('focus', () => actualizarListaVendedoresRecompra());
+inputVendRecompra.addEventListener('keydown', (e) => {
+  const lista = document.getElementById('listaVendedorRecompra');
+  const divs = lista.querySelectorAll('.opcion');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    indiceActivoVendedorRecompra = Math.min(indiceActivoVendedorRecompra + 1, divs.length - 1);
+    divs.forEach((d, i) => d.classList.toggle('activa', i === indiceActivoVendedorRecompra));
+    if (divs[indiceActivoVendedorRecompra]) divs[indiceActivoVendedorRecompra].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    indiceActivoVendedorRecompra = Math.max(indiceActivoVendedorRecompra - 1, 0);
+    divs.forEach((d, i) => d.classList.toggle('activa', i === indiceActivoVendedorRecompra));
+    if (divs[indiceActivoVendedorRecompra]) divs[indiceActivoVendedorRecompra].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    const idx = indiceActivoVendedorRecompra >= 0 ? indiceActivoVendedorRecompra : 0;
+    if (divs[idx]) divs[idx].dispatchEvent(new MouseEvent('mousedown'));
+  } else if (e.key === 'Escape') {
+    lista.classList.remove('abierta');
+  }
+});
+document.addEventListener('mousedown', (e) => {
+  if (!document.getElementById('buscarVendedorRecompra').contains(e.target) &&
+      !document.getElementById('listaVendedorRecompra').contains(e.target)) {
+    document.getElementById('listaVendedorRecompra').classList.remove('abierta');
+  }
+});
+
+// Navegación con flechas en el buscador de cliente de recompra
+const inputCliRecompra = document.getElementById('buscarRecompra');
+inputCliRecompra.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { filtrarRecompra(); }
+  else if (e.key === 'Escape') { limpiarFiltrosRecompra(); }
+});
+
+function thRecompra(col, label) {
+  const activa = ordenRecompra.col === col;
+  const flecha = activa ? (ordenRecompra.asc ? ' ↑' : ' ↓') : ' ↕';
+  return `<th style="cursor:pointer; user-select:none; white-space:nowrap" onclick="cambiarOrdenRecompra('${col}')">${label}${flecha}</th>`;
+}
+
+function cambiarOrdenRecompra(col) {
+  ordenRecompra.asc = ordenRecompra.col === col ? !ordenRecompra.asc : false;
+  ordenRecompra.col = col;
+  renderizarRecompra();
+}
+
+function renderizarRecompra() {
+  const cont = document.getElementById('contenidoRecompra');
+  const q = (document.getElementById('buscarRecompra').value || '').trim().toLowerCase();
+  const estados = leerEstadosRecompra();
+
+  if (DATOS_RECOMPRA.length === 0) {
+    cont.innerHTML = '<p style="color:var(--gris-texto)">No hay clientes atrasados en su recompra habitual en este momento. 👍</p>';
+    return;
+  }
+
+  // Enriquecer con datos de DATOS.clientes
+  let filasDatos = DATOS_RECOMPRA.map(f => {
+    const cli = DATOS.clientes.find(c => String(c.CodCliente) === String(f.CodCliente));
+    const nombre = cli ? cli.RazonSocial : `(cliente ${f.CodCliente})`;
+    const vendedor = cli ? nombreVendedorDeCodigo(cli.CodVendedor) : '—';
+    const prom = Math.round(Number(f.DiasPromedioEntreCompras));
+    const desde = Number(f.DiasDesdeUltima);
+    const urgencia = desde / prom;
+    const estado = estados[String(f.CodCliente)] || 'revisar';
+    const ticketArs = cli ? Number(cli.TicketPromedioARS || 0) : 0;
+    return { f, cli, nombre, vendedor, prom, desde, urgencia, estado, ticketArs };
+  });
+
+  // Filtros en cascada: cliente filtra vendedores disponibles, vendedor filtra clientes
+  filasDatos = filasDatos.filter(({ nombre, f, vendedor }) => {
+    if (q && !`${nombre} ${f.CodCliente}`.toLowerCase().includes(q)) return false;
+    if (filtroVendedorRecompraActual && vendedor !== filtroVendedorRecompraActual) return false;
+    return true;
+  });
+
+  // Ordenamiento
+  filasDatos.sort((a, b) => {
+    let va, vb;
+    switch (ordenRecompra.col) {
+      case 'cliente':  return ordenRecompra.asc ? a.nombre.localeCompare(b.nombre) : b.nombre.localeCompare(a.nombre);
+      case 'vendedor': return ordenRecompra.asc ? a.vendedor.localeCompare(b.vendedor) : b.vendedor.localeCompare(a.vendedor);
+      case 'estado':   return ordenRecompra.asc ? a.estado.localeCompare(b.estado) : b.estado.localeCompare(a.estado);
+      case 'prom':     va = a.prom; vb = b.prom; break;
+      case 'desde':    va = a.desde; vb = b.desde; break;
+      case 'urgencia': va = a.urgencia; vb = b.urgencia; break;
+      case 'ticket':   va = a.ticketArs; vb = b.ticketArs; break;
+      default:         va = a.urgencia; vb = b.urgencia;
+    }
+    return ordenRecompra.asc ? va - vb : vb - va;
+  });
+
+  const filas = filasDatos.map(({ f, cli, nombre, vendedor, prom, desde, urgencia, estado, ticketArs }) => {
+    const cfg = CONFIG_ESTADO[estado] || CONFIG_ESTADO.revisar;
+    const btnPedido = cli
+      ? `<button type="button" class="btn btn-secundario" style="font-size:11px; padding:4px 8px; white-space:nowrap" onclick='iniciarPedidoDesdeRecompra(${JSON.stringify(f.CodCliente)})'>Cargar pedido</button>`
+      : '';
+    const ticketTexto = ticketArs > 0 ? '$ ' + Math.round(ticketArs).toLocaleString('es-AR') : '-';
+    const urgenciaTexto = urgencia.toFixed(1) + 'x';
+    const selectEstado = `<select onchange="guardarEstadoRecompra('${f.CodCliente}', this.value)"
+      style="font-size:11px; padding:3px 6px; border-radius:4px; font-weight:700;
+             background:${cfg.bg}; color:${cfg.color}; border:none; cursor:pointer; width:100%">
+      <option value="revisar"   ${estado==='revisar'  ?'selected':''} style="background:#c0392b;color:#fff">A revisar</option>
+      <option value="informar"  ${estado==='informar' ?'selected':''} style="background:#f1c40f;color:#000">A informar</option>
+      <option value="informado" ${estado==='informado'?'selected':''} style="background:#2e7d4f;color:#fff">Informado</option>
+    </select>`;
+    return `<tr>
+      <td style="font-size:12px">${nombre}<br><small style="color:#888">Cód. ${f.CodCliente}</small></td>
+      <td style="font-size:12px; text-align:center">${vendedor}</td>
+      <td style="font-size:12px; text-align:center">~${prom}d<br><small style="color:#888">últ. ${f.UltimaFecha}</small></td>
+      <td style="font-size:12px; text-align:center; font-weight:700; color:var(--naranja-oscuro)">${desde}d</td>
+      <td style="font-size:12px; text-align:center">${urgenciaTexto}</td>
+      <td style="font-size:12px; text-align:right">${ticketTexto}</td>
+      <td>${selectEstado}</td>
+      <td style="text-align:center">${btnPedido}</td>
+    </tr>`;
+  }).join('');
+
+  const totalTicket = filasDatos.reduce((acc, r) => acc + r.ticketArs, 0);
+  const totalTicketTexto = totalTicket > 0 ? '$ ' + Math.round(totalTicket).toLocaleString('es-AR') : '-';
+
+  cont.innerHTML = `
+    <p style="font-size:13px; color:var(--gris-texto); margin-bottom:8px">
+      ${filasDatos.length} de ${DATOS_RECOMPRA.length} cliente/s. Tocá los estados para marcar el seguimiento (se guardan en este navegador).
+    </p>
+    <div style="overflow-x:auto">
+    <table style="width:100%; table-layout:fixed; min-width:700px">
+      <colgroup>
+        <col style="width:22%"><col style="width:12%"><col style="width:12%">
+        <col style="width:9%"><col style="width:8%"><col style="width:11%">
+        <col style="width:13%"><col style="width:13%">
+      </colgroup>
+      <thead><tr>
+        ${thRecompra('cliente','Cliente')}
+        ${thRecompra('vendedor','Vendedor')}
+        ${thRecompra('prom','Frec. habitual')}
+        ${thRecompra('desde','Sin comprar')}
+        ${thRecompra('urgencia','Urgencia')}
+        ${thRecompra('ticket','Ticket prom.')}
+        ${thRecompra('estado','Estado')}
+        <th></th>
+      </tr></thead>
+      <tbody>
+        ${filas || `<tr><td colspan="8" style="color:var(--gris-texto); text-align:center; padding:12px">Sin coincidencias.</td></tr>`}
+        <tr style="font-weight:700; border-top:2px solid var(--gris-borde); background:var(--superficie-alt)">
+          <td colspan="5" style="padding:6px 8px; font-size:12px">TOTAL (${filasDatos.length} clientes)</td>
+          <td style="text-align:right; padding:6px 8px; font-size:12px">${totalTicketTexto}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+
+async function iniciarPedidoDesdeRecompra(codCliente) {
+  const cli = DATOS.clientes.find(c => String(c.CodCliente) === String(codCliente));
+  if (!cli) return;
+
+  cerrarModalRecompra();
+  seleccionarCliente(cli);
+  mostrarBanner('cargando', `⏳ Cargando condiciones del último pedido de "${cli.RazonSocial}"...`);
+
+  try {
+    const resp = await fetch(WEB_APP_URL + '?action=ultimoPedido&codCliente=' + encodeURIComponent(codCliente));
+    const data = await resp.json();
+
+    if (data.items && data.items.length > 0) {
+      // --- Cargar ítems al carrito ---
+      data.items.forEach(it => {
+        const articuloBase = DATOS.articulos.find(a =>
+          a.CodItem.trim() === it.codItem.trim() &&
+          a.Ancho === it.ancho && a.Largo === it.largo && a.MicColor === it.micColor
+        );
+        const precioFinal = it.precioUnitario > 0 ? it.precioUnitario
+          : (articuloBase ? Number(articuloBase.PrecioSugerido || 0) : 0);
+        const descPct = Number(it.descuentoItemPct || 0);
+        const precioNeto = precioFinal * (1 - descPct / 100);
+
+        carrito.push({
+          codItem: it.codItem,
+          descripcion: it.descripcion,
+          ancho: it.ancho,
+          largo: it.largo,
+          micColor: it.micColor,
+          cantidad: it.cantidad,
+          precioUnitario: precioFinal,
+          descuentoItemPct: descPct,
+          precioNeto: precioNeto,
+          m2Total: it.m2Total || '',
+          observacionItem: it.observacionItem || '',
+          fechaEntregaOverride: null,
+          facturacionOverride: null,
+        });
+      });
+      renderizarCarrito();
+    }
+
+    // --- Cargar condiciones comerciales (solo si vienen de Pedidos_Nuevos) ---
+    const c = data.condiciones;
+    if (c) {
+      // Moneda
+      if (c.monedaCarga) {
+        document.getElementById('monedaCarga').value = c.monedaCarga;
+        resyncCombo('monedaCarga');
+        document.getElementById('monedaCarga').dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      // Condición de venta
+      if (c.condicionVenta) {
+        document.getElementById('condicionVenta').value = c.condicionVenta;
+        resyncCombo('condicionVenta');
+      }
+      // Facturación Bejerman/V2
+      const bejCheck = document.getElementById('chkBejerman');
+      const v2Check = document.getElementById('chkV2');
+      bejCheck.checked = c.pctBejerman > 0;
+      v2Check.checked = c.pctV2 > 0;
+      actualizarBloqueFacturacion('');
+      if (c.pctBejerman > 0 && c.pctV2 > 0) {
+        setPorcentaje('pctBejerman', c.pctBejerman);
+        setPorcentaje('pctV2', c.pctV2);
+      }
+      // Descuento general
+      if (c.descuentoGlobalPct > 0) {
+        document.getElementById('motivoDescuentoGlobal').value = c.motivoDescuentoGlobal || '';
+        resyncCombo('motivoDescuentoGlobal');
+        document.getElementById('descuentoGlobal').disabled = false;
+        setPorcentaje('descuentoGlobal', c.descuentoGlobalPct);
+        renderizarCarrito();
+      }
+      // Modalidad de entrega
+      if (c.modalidadEntrega) {
+        const radio = document.querySelector(`input[name="modalidadEntrega"][value="${c.modalidadEntrega}"]`);
+        if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+        if (c.modalidadEntrega === 'Entrega en Expreso' && c.nombreExpreso) {
+          document.getElementById('nombreExpreso').value = c.nombreExpreso;
+        }
+      }
+      // Dirección: provincia/localidad/lugar
+      if (c.provincia) {
+        // Busca la opción en el select de provincia por texto
+        const selProv = document.getElementById('provinciaEntrega');
+        for (let i = 0; i < selProv.options.length; i++) {
+          if (selProv.options[i].textContent.toLowerCase() === c.provincia.toLowerCase()) {
+            selProv.value = selProv.options[i].value;
+            resyncCombo('provinciaEntrega');
+            selProv.dispatchEvent(new Event('change', { bubbles: true }));
+            break;
+          }
+        }
+      }
+      if (c.localidad) {
+        setTimeout(() => {
+          // Espera a que carguen las localidades tras el cambio de provincia
+          document.getElementById('buscarLocalidad').value = c.localidad;
+          localidadSeleccionada = { nombre: c.localidad };
+          marcarValido('campoLocalidad');
+        }, 800);
+      }
+      if (c.lugarEntrega) document.getElementById('lugarEntrega').value = c.lugarEntrega;
+      if (c.horarioEntrega) document.getElementById('horarioEntrega').value = c.horarioEntrega;
+      if (c.observaciones) document.getElementById('observaciones').value = c.observaciones;
+    }
+
+    // Mensaje final con contexto claro
+    const fuente = data.fuente === 'Pedidos_Nuevos'
+      ? `último pedido registrado en el sistema (${data.nroPedido})`
+      : data.fuente === 'UltimaVenta'
+        ? 'última compra del historial (solo ítems, sin condiciones comerciales)'
+        : 'sin historial previo';
+
+    if (data.items && data.items.length > 0) {
+      mostrarBanner('exito', `✅ Se cargaron ${data.items.length} ítem(s) del ${fuente}. ⚠ Revisá los precios antes de confirmar.`);
+    } else {
+      mostrarBanner('cargando', `Cliente seleccionado. No se encontró historial previo de pedidos.`);
+    }
+
+    document.getElementById('campoCliente').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  } catch (err) {
+    mostrarBanner('fallo', 'No se pudo cargar el historial del cliente. Podés cargarlo manualmente.');
+    console.error('Error ultimoPedido:', err);
+  }
+}
+
+function cerrarModalRecompra() {
+  document.getElementById('modalRecompra').style.display = 'none';
+}
+
+/* ---------- Nuevo cliente (solicitud de alta por mail) ---------- */
+document.getElementById('btnToggleFantasia').addEventListener('click', () => {
+  const campo = document.getElementById('campoNombreFantasia');
+  const visible = campo.style.display !== 'none';
+  campo.style.display = visible ? 'none' : 'block';
+  if (!visible) document.getElementById('nombreFantasia').focus();
+});
+
+document.getElementById('btnNuevoCliente').addEventListener('click', () => {
+  // Precarga el nombre de fantasía si ya lo escribió
+  const fantasia = document.getElementById('nombreFantasia').value.trim();
+  if (fantasia) document.getElementById('nuevoClienteFantasia').value = fantasia;
+  document.getElementById('modalNuevoCliente').style.display = 'flex';
+});
+
+function cerrarModalNuevoCliente() {
+  document.getElementById('modalNuevoCliente').style.display = 'none';
+}
+
+async function enviarSolicitudNuevoCliente() {
+  const cuit = document.getElementById('nuevoClienteCuit').value.trim();
+  const razonSocial = document.getElementById('nuevoClienteRazonSocial').value.trim();
+  const fantasia = document.getElementById('nuevoClienteFantasia').value.trim();
+  const obs = document.getElementById('nuevoClienteObs').value.trim();
+
+  if (!cuit && !razonSocial) {
+    alert('Completá al menos el CUIT o la Razón Social para poder enviar la solicitud.');
+    return;
+  }
+
+  const vendedorSel = document.getElementById('vendedor');
+  const vendedorNombre = vendedorSel.options[vendedorSel.selectedIndex]?.textContent || '(sin seleccionar)';
+
+  const btn = document.getElementById('btnEnviarNuevoCliente');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try {
+    const resp = await fetch(WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        accion: 'nuevoCliente',
+        vendedor: vendedorNombre,
+        cuit, razonSocial, fantasia, obs,
+      }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      cerrarModalNuevoCliente();
+      mostrarBanner('exito', '✅ Solicitud enviada. Administración recibirá el mail para gestionar el alta.');
+      // Limpia los campos del modal
+      ['nuevoClienteCuit','nuevoClienteRazonSocial','nuevoClienteFantasia','nuevoClienteObs']
+        .forEach(id => { document.getElementById(id).value = ''; });
+    } else {
+      mostrarBanner('fallo', 'No se pudo enviar la solicitud: ' + (data.error || 'error desconocido'));
+    }
+  } catch (err) {
+    mostrarBanner('fallo', 'Error de conexión al enviar la solicitud. Intentá de nuevo.');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar solicitud';
+  }
+}
+
+
+let debounceBuscarArticulo = null;
+let indiceActivoArticulo = -1;
+let coincidenciasArticuloActuales = [];
+
+document.getElementById('buscarArticulo').addEventListener('input', function () {
+  const q = this.value.trim().toLowerCase();
+  const lista = document.getElementById('listaArticulos');
+  indiceActivoArticulo = -1;
+  clearTimeout(debounceBuscarArticulo);
+  if (q.length < 2) { lista.classList.remove('abierta'); lista.innerHTML = ''; return; }
+
+  debounceBuscarArticulo = setTimeout(() => {
+    lista.innerHTML = '';
+    coincidenciasArticuloActuales = DATOS.articulos
+      .filter(a => `${a.CodItem} ${a.Descripcion}`.toLowerCase().includes(q))
+      .slice(0, 40);
+
+    if (coincidenciasArticuloActuales.length === 0) {
+      lista.innerHTML = '<div class="opcion">Sin resultados</div>';
+    } else {
+      coincidenciasArticuloActuales.forEach((a, idx) => {
+        const st = INDICE_STOCK[a.CodigoConcatenado];
+        const stockDisp = st ? Number(st.StockUnidades || 0) : 0;
+        const div = document.createElement('div');
+        div.className = 'opcion';
+        div.innerHTML = `<b>${a.Descripcion}</b><small>${a.CodItem.trim()} · ${a.Ancho}/${a.Largo}/${a.MicColor} · Stock: ${stockDisp}</small>`;
+        div.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); seleccionarArticulo(a, st); lista.classList.remove('abierta'); }, { passive: false });
+        div.addEventListener('mousedown', (e) => { e.preventDefault(); seleccionarArticulo(a, st); lista.classList.remove('abierta'); });
+        lista.appendChild(div);
+      });
+      if (coincidenciasArticuloActuales.length === 1) {
+        lista.querySelectorAll('.opcion')[0].classList.add('activa');
+        indiceActivoArticulo = 0;
+      }
+    }
+    lista.classList.add('abierta');
+  }, 200);
+});
+
+document.getElementById('buscarArticulo').addEventListener('keydown', function (e) {
+  const lista = document.getElementById('listaArticulos');
+  const divs = lista.querySelectorAll('.opcion');
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    indiceActivoArticulo = Math.min(indiceActivoArticulo + 1, divs.length - 1);
+    divs.forEach((d, i) => d.classList.toggle('activa', i === indiceActivoArticulo));
+    if (divs[indiceActivoArticulo]) divs[indiceActivoArticulo].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    indiceActivoArticulo = Math.max(indiceActivoArticulo - 1, 0);
+    divs.forEach((d, i) => d.classList.toggle('activa', i === indiceActivoArticulo));
+    if (divs[indiceActivoArticulo]) divs[indiceActivoArticulo].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter' && coincidenciasArticuloActuales.length > 0) {
+    e.preventDefault();
+    const idx = indiceActivoArticulo >= 0 ? indiceActivoArticulo : 0;
+    if (coincidenciasArticuloActuales[idx]) {
+      const a = coincidenciasArticuloActuales[idx];
+      seleccionarArticulo(a, INDICE_STOCK[a.CodigoConcatenado]);
+      lista.classList.remove('abierta');
+    }
+  } else if (e.key === 'Escape') {
+    lista.classList.remove('abierta');
+  }
+});
+
+document.addEventListener('click', (e) => {
+  const input = document.getElementById('buscarArticulo');
+  const lista = document.getElementById('listaArticulos');
+  if (!input.contains(e.target) && !lista.contains(e.target)) lista.classList.remove('abierta');
+});
+
+function seleccionarArticulo(a, stockInfo) {
+  articuloSeleccionado = a;
+  document.getElementById('buscarArticulo').value = a.Descripcion;
+
+  const stockDisp = stockInfo ? Number(stockInfo.StockUnidades || 0) : 0;
+  const moneda = document.getElementById('monedaCarga').value || 'ARS';
+  const tipoCambio = Number(document.getElementById('tipoCambio').value || 0);
+
+  // PrecioSugerido viene siempre en ARS (es el ultimo precio de venta
+  // historico). Si el pedido se esta cargando en USD, se muestra convertido.
+  let precioSugeridoTexto = 'No disponible';
+  let precioParaCargar = null;
+  if (a.PrecioSugerido) {
+    const precioArs = Number(a.PrecioSugerido);
+    precioSugeridoTexto = formatoMoneda(precioArs) + ' (ARS)';
+    if (moneda === 'USD') {
+      if (tipoCambio > 0) {
+        const precioUsd = precioArs / tipoCambio;
+        precioSugeridoTexto += ` · ≈ ${formatoUSD(precioUsd)}`;
+        precioParaCargar = precioUsd;
+      }
+      // si no hay tipo de cambio cargado todavia, no se puede convertir --
+      // se deja el campo vacio para que el vendedor no cargue por error un
+      // valor en ARS pensando que esta en USD.
+    } else {
+      precioParaCargar = precioArs;
+    }
+  }
+
+  const box = document.getElementById('infoArticulo');
+  box.innerHTML = `
+    <div class="dato"><b>Código</b>${a.CodItem.trim()}</div>
+    <div class="dato"><b>Medidas</b>${a.Ancho}/${a.Largo}/${a.MicColor}</div>
+    <div class="dato"><b>Stock disponible</b><span class="${stockDisp <= 0 ? 'alerta' : 'ok'}">${stockDisp} unidades</span></div>
+    <div class="dato"><b>Precio sugerido</b>${precioSugeridoTexto}</div>
+  `;
+  box.classList.add('visible');
+
+  document.getElementById('precioUnitario').value = precioParaCargar !== null ? precioParaCargar.toFixed(2) : '';
+  document.getElementById('cantidad').focus();
+  recalcularM2();
+  recalcularPrecioNeto();
+
+  // Chips de cantidad rapida: cantidades tipicas de este cliente para este articulo
+  // (tomadas de UltimaVenta si existe, sino cantidades redondas genericas)
+  actualizarChipsCantistad(a);
+}
+
+function actualizarChipsCantistad(articulo) {
+  const chips = document.getElementById('chipsCantistad');
+  if (!chips) return;
+  chips.innerHTML = '';
+
+  // Buscar cantidades historicas del cliente para este articulo en UltimaVenta
+  let cantidades = [];
+  if (clienteSeleccionado && DATOS.ultimaVenta) {
+    const historial = DATOS.ultimaVenta.filter(u =>
+      String(u.CodCliente) === String(clienteSeleccionado.CodCliente) &&
+      u.CodItem && u.CodItem.trim() === articulo.CodItem.trim()
+    );
+    cantidades = [...new Set(historial.map(u => Number(u.Cantidad)).filter(c => c > 0))].sort((a,b) => a-b).slice(0, 4);
+  }
+
+  // Si no hay historial, usar cantidades redondas genéricas
+  if (cantidades.length === 0) cantidades = [100, 500, 1000, 5000];
+
+  cantidades.forEach(c => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = c.toLocaleString('es-AR');
+    btn.title = `Cargar ${c} unidades`;
+    btn.style.cssText = 'font-size:11px; padding:2px 8px; border:1px solid var(--azul); border-radius:12px; background:none; color:var(--azul); cursor:pointer; white-space:nowrap';
+    btn.addEventListener('click', () => {
+      document.getElementById('cantidad').value = c;
+      recalcularM2();
+      recalcularPrecioNeto();
+    });
+    chips.appendChild(btn);
+  });
+}
+
+/* =========================================================================
+   FILTROS EN CASCADA (Codigo -> Ancho -> Largo -> Mic/Color)
+   ========================================================================= */
+function mapaStock() {
+  // Se mantiene el nombre por compatibilidad con el resto del codigo, pero
+  // ahora devuelve el indice ya precalculado en vez de reconstruirlo.
+  return INDICE_STOCK;
+}
+
+function llenarSelect(id, valores, textoDefault) {
+  const sel = document.getElementById(id);
+  const valorPrevio = sel.value;
+  sel.innerHTML = `<option value="">${textoDefault}</option>`;
+  valores.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    sel.appendChild(opt);
+  });
+  if (valores.includes(valorPrevio)) sel.value = valorPrevio;
+  resyncCombo(id);
+}
+
+function articulosFiltrados() {
+  const cod = document.getElementById('filtroCodigo').value;
+  const ancho = document.getElementById('filtroAncho').value;
+  const largo = document.getElementById('filtroLargo').value;
+  const mic = document.getElementById('filtroMicColor').value;
+  return DATOS.articulos.filter(a =>
+    (!cod || a.CodItem.trim() === cod) &&
+    (!ancho || a.Ancho === ancho) &&
+    (!largo || a.Largo === largo) &&
+    (!mic || a.MicColor === mic)
+  );
+}
+
+function inicializarFiltrosArticulo() {
+  llenarSelect('filtroCodigo', CODIGOS_BASE, 'Todos...');
+  actualizarFiltrosDependientes();
+}
+
+function actualizarFiltrosDependientes() {
+  const cod = document.getElementById('filtroCodigo').value;
+
+  const disponiblesPorCod = cod ? DATOS.articulos.filter(a => a.CodItem.trim() === cod) : DATOS.articulos;
+  const anchos = [...new Set(disponiblesPorCod.map(a => a.Ancho).filter(Boolean))].sort();
+  llenarSelect('filtroAncho', anchos, 'Todos...');
+
+  const ancho = document.getElementById('filtroAncho').value;
+  const disponiblesPorAncho = disponiblesPorCod.filter(a => !ancho || a.Ancho === ancho);
+  const largos = [...new Set(disponiblesPorAncho.map(a => a.Largo).filter(Boolean))].sort();
+  llenarSelect('filtroLargo', largos, 'Todos...');
+
+  const largo = document.getElementById('filtroLargo').value;
+  const disponiblesPorLargo = disponiblesPorAncho.filter(a => !largo || a.Largo === largo);
+  const mics = [...new Set(disponiblesPorLargo.map(a => a.MicColor).filter(Boolean))].sort();
+  llenarSelect('filtroMicColor', mics, 'Todos...');
+
+  mostrarResultadosFiltro();
+}
+
+function mostrarResultadosFiltro() {
+  const cont = document.getElementById('campoResultadosFiltro');
+  const sel = document.getElementById('resultadosFiltro');
+  const cod = document.getElementById('filtroCodigo').value;
+  const ancho = document.getElementById('filtroAncho').value;
+  const largo = document.getElementById('filtroLargo').value;
+  const mic = document.getElementById('filtroMicColor').value;
+
+  // Solo mostramos la lista de resultados cuando ya se acoto bastante la busqueda,
+  // para no listar cientos de articulos de una.
+  if (!cod && !ancho && !largo && !mic) {
+    cont.style.display = 'none';
+    return;
+  }
+
+  const stk = mapaStock();
+  const resultados = articulosFiltrados().slice(0, 200);
+  sel.innerHTML = '';
+  resultados.forEach(a => {
+    const st = stk[a.CodigoConcatenado];
+    const stockDisp = st ? Number(st.StockUnidades || 0) : 0;
+    const opt = document.createElement('option');
+    opt.value = a.CodigoConcatenado;
+    opt.textContent = `${a.Descripcion} — ${a.Ancho}/${a.Largo}/${a.MicColor} — Stock: ${stockDisp}`;
+    sel.appendChild(opt);
+  });
+  cont.style.display = resultados.length ? 'block' : 'none';
+}
+
+['filtroCodigo', 'filtroAncho', 'filtroLargo', 'filtroMicColor'].forEach(id => {
+  document.getElementById(id).addEventListener('change', actualizarFiltrosDependientes);
+});
+
+document.getElementById('resultadosFiltro').addEventListener('change', function () {
+  const a = DATOS.articulos.find(x => x.CodigoConcatenado === this.value);
+  if (!a) return;
+  const st = mapaStock()[a.CodigoConcatenado];
+  seleccionarArticulo(a, st);
+});
+
+/* =========================================================================
+   CALCULO M2 (si el articulo tiene Ancho/Largo numericos, en mm)
+   ========================================================================= */
+/* =========================================================================
+   CALCULO M2
+   Reglas confirmadas:
+   - Ancho viene expresado en MILIMETROS (ej. "048" = 0,048 metros).
+   - Largo viene expresado en METROS en general (ej. "090" = 90 metros).
+   - EXCEPCION: cuando Largo tiene el formato "MXX" (ej. "M50", "M00"),
+     representa una bobina grande: metros = 1000 + XX*10.
+     M00 -> 1000 metros, M50 -> 1500 metros.
+   ========================================================================= */
+function largoEnMetros(largoStr) {
+  const texto = String(largoStr || '').trim().toUpperCase();
+  const especial = texto.match(/^M(\d{2})$/);
+  if (especial) {
+    return 1000 + (Number(especial[1]) * 10);
+  }
+  const num = parseFloat(texto);
+  return isNaN(num) ? NaN : num;
+}
+
+function recalcularM2() {
+  const cant = Number(document.getElementById('cantidad').value || 0);
+  let m2 = '';
+  if (articuloSeleccionado) {
+    const anchoMm = parseFloat(articuloSeleccionado.Ancho);
+    const largoM = largoEnMetros(articuloSeleccionado.Largo);
+    if (!isNaN(anchoMm) && !isNaN(largoM) && anchoMm > 0 && largoM > 0) {
+      const anchoM = anchoMm / 1000;
+      m2 = (anchoM * largoM * cant).toFixed(2);
+    }
+  }
+  document.getElementById('m2TotalCalc').value = m2 ? `${m2} m²` : '-';
+}
+document.getElementById('cantidad').addEventListener('input', recalcularM2);
+
+/* =========================================================================
+   CALCULO DE PRECIO NETO (precio unitario - descuento de item)
+   ========================================================================= */
+function recalcularPrecioNeto() {
+  const precio = Number(document.getElementById('precioUnitario').value || 0);
+  const desc = valorPorcentaje('descuentoItem');
+  const neto = precio * (1 - (desc / 100));
+  document.getElementById('precioNetoCalc').value = precio > 0 ? formatoMoneda(neto) : '-';
+}
+document.getElementById('precioUnitario').addEventListener('input', recalcularPrecioNeto);
+document.getElementById('descuentoItem').addEventListener('input', recalcularPrecioNeto);
+
+/* =========================================================================
+   CARRITO DE ARTICULOS
+   ========================================================================= */
+/* =========================================================================
+   TIPO DE FACTURACION (Bejerman / V2) -- general del pedido, y por item
+   ========================================================================= */
+function actualizarBloqueFacturacion(sufijo) {
+  sufijo = sufijo || '';
+  const bej = document.getElementById('chkBejerman' + sufijo).checked;
+  const v2 = document.getElementById('chkV2' + sufijo).checked;
+  const bloque = document.getElementById('bloquePctFacturacion' + sufijo);
+  bloque.style.display = (bej && v2) ? 'grid' : 'none';
+}
+document.getElementById('chkBejerman').addEventListener('change', () => actualizarBloqueFacturacion());
+document.getElementById('chkV2').addEventListener('change', () => actualizarBloqueFacturacion());
+document.getElementById('chkBejermanItem').addEventListener('change', () => actualizarBloqueFacturacion('Item'));
+document.getElementById('chkV2Item').addEventListener('change', () => actualizarBloqueFacturacion('Item'));
+
+// Mantiene los dos porcentajes sumando 100 automaticamente al tocar uno.
+function vincularPorcentajesFacturacion(sufijo) {
+  document.getElementById('pctBejerman' + sufijo).addEventListener('input', function () {
+    setPorcentaje('pctV2' + sufijo, Math.max(0, 100 - parsearPorcentaje(this.value)));
+  });
+  document.getElementById('pctV2' + sufijo).addEventListener('input', function () {
+    setPorcentaje('pctBejerman' + sufijo, Math.max(0, 100 - parsearPorcentaje(this.value)));
+  });
+}
+vincularPorcentajesFacturacion('');
+vincularPorcentajesFacturacion('Item');
+
+function leerFacturacionDesde(sufijo) {
+  sufijo = sufijo || '';
+  const bej = document.getElementById('chkBejerman' + sufijo).checked;
+  const v2 = document.getElementById('chkV2' + sufijo).checked;
+  if (bej && v2) {
+    const pctBej = valorPorcentaje('pctBejerman' + sufijo);
+    const pctV2 = valorPorcentaje('pctV2' + sufijo);
+    return { pctBejerman: pctBej, pctV2: pctV2 };
+  }
+  if (v2 && !bej) return { pctBejerman: 0, pctV2: 100 };
+  return { pctBejerman: 100, pctV2: 0 }; // default: solo Bejerman, o ninguno tildado
+}
+
+function obtenerFacturacionActual() {
+  return leerFacturacionDesde('');
+}
+
+/* ---------- Modal: facturacion especifica por item ---------- */
+let indiceItemFacturacionModal = null;
+
+function abrirModalFacturacionItem(i) {
+  indiceItemFacturacionModal = i;
+  const override = carrito[i].facturacionOverride;
+  if (override) {
+    document.getElementById('chkBejermanItem').checked = override.pctBejerman > 0;
+    document.getElementById('chkV2Item').checked = override.pctV2 > 0;
+    setPorcentaje('pctBejermanItem', override.pctBejerman);
+    setPorcentaje('pctV2Item', override.pctV2);
+  } else {
+    // Por defecto, arranca mostrando la facturacion general del pedido.
+    const general = obtenerFacturacionActual();
+    document.getElementById('chkBejermanItem').checked = general.pctBejerman > 0;
+    document.getElementById('chkV2Item').checked = general.pctV2 > 0;
+    setPorcentaje('pctBejermanItem', general.pctBejerman);
+    setPorcentaje('pctV2Item', general.pctV2);
+  }
+  actualizarBloqueFacturacion('Item');
+  document.getElementById('modalFacturacionItem').style.display = 'flex';
+}
+
+function cerrarModalFacturacionItem() {
+  document.getElementById('modalFacturacionItem').style.display = 'none';
+  indiceItemFacturacionModal = null;
+}
+
+function guardarFacturacionItem() {
+  const facturacion = leerFacturacionDesde('Item');
+  if (Math.round(facturacion.pctBejerman + facturacion.pctV2) !== 100) {
+    mostrarBanner('fallo', 'Los porcentajes de Bejerman y V2 de este ítem tienen que sumar 100%.');
+    return;
+  }
+  if (indiceItemFacturacionModal !== null) {
+    carrito[indiceItemFacturacionModal].facturacionOverride = facturacion;
+    renderizarCarrito();
+  }
+  cerrarModalFacturacionItem();
+}
+
+function quitarFacturacionItem() {
+  if (indiceItemFacturacionModal !== null) {
+    carrito[indiceItemFacturacionModal].facturacionOverride = null;
+    renderizarCarrito();
+  }
+  cerrarModalFacturacionItem();
+}
+
+/* =========================================================================
+   ADJUNTOS (Orden de Compra + otros anexos)
+   ========================================================================= */
+let archivoOrdenCompraSeleccionado = null;
+let archivosAnexosSeleccionados = []; // [{file, nombre}]
+
+document.getElementById('archivoOrdenCompra').addEventListener('change', function () {
+  archivoOrdenCompraSeleccionado = this.files[0] || null;
+  document.getElementById('nombreOrdenCompra').textContent = archivoOrdenCompraSeleccionado
+    ? `📎 ${archivoOrdenCompraSeleccionado.name}`
+    : '';
+});
+
+document.getElementById('archivosAnexos').addEventListener('change', function () {
+  archivosAnexosSeleccionados = Array.from(this.files || []);
+  renderizarListaAnexos();
+});
+
+function renderizarListaAnexos() {
+  const cont = document.getElementById('listaAnexos');
+  if (archivosAnexosSeleccionados.length === 0) { cont.innerHTML = ''; return; }
+  cont.innerHTML = archivosAnexosSeleccionados
+    .map(f => `<div class="subnota">📎 ${f.name} (${(f.size / 1024).toFixed(0)} KB)</div>`)
+    .join('');
+}
+
+function archivoABase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // El resultado viene como "data:<mime>;base64,AAAA..." -- solo nos
+      // interesa la parte despues de la coma.
+      const base64 = reader.result.split(',')[1];
+      resolve({ nombre: file.name, mimeType: file.type || 'application/octet-stream', base64 });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function prepararAdjuntosParaEnvio() {
+  const ordenCompra = archivoOrdenCompraSeleccionado
+    ? await archivoABase64(archivoOrdenCompraSeleccionado)
+    : null;
+  const anexos = await Promise.all(archivosAnexosSeleccionados.map(archivoABase64));
+  return { ordenCompra, anexos };
+}
+
+function agregarItemAlCarrito() {
+  const cantidad = Number(document.getElementById('cantidad').value);
+  const precio = Number(document.getElementById('precioUnitario').value);
+  const descuentoItemPct = valorPorcentaje('descuentoItem');
+
+  if (!articuloSeleccionado) { mostrarBanner('fallo', 'Buscá y seleccioná un artículo antes de agregarlo.'); return; }
+  if (!(cantidad > 0)) { mostrarBanner('fallo', 'Ingresá una cantidad mayor a cero.'); return; }
+  if (!(precio > 0)) { mostrarBanner('fallo', 'Ingresá un precio unitario mayor a cero.'); return; }
+  if (descuentoItemPct < 0 || descuentoItemPct > 100) { mostrarBanner('fallo', 'El descuento del ítem tiene que estar entre 0 y 100.'); return; }
+
+  const m2Texto = document.getElementById('m2TotalCalc').value;
+  const m2Total = m2Texto && m2Texto !== '-' ? parseFloat(m2Texto) : '';
+  const precioNeto = precio * (1 - (descuentoItemPct / 100));
+
+  const stockInfo = INDICE_STOCK[articuloSeleccionado.CodigoConcatenado];
+  const stockDisp = stockInfo ? Number(stockInfo.StockUnidades || 0) : 0;
+
+  const datosItem = {
+    codItem: articuloSeleccionado.CodItem.trim(),
+    descripcion: articuloSeleccionado.Descripcion,
+    ancho: articuloSeleccionado.Ancho,
+    largo: articuloSeleccionado.Largo,
+    micColor: articuloSeleccionado.MicColor,
+    cantidad, precioUnitario: precio, descuentoItemPct, precioNeto, m2Total,
+    observacionItem: document.getElementById('observacionItem').value.trim(),
+  };
+
+  if (itemEnEdicion !== null) {
+    // Reedicion: se conservan los overrides (fecha/facturacion) que ya tuviera.
+    const previo = carrito[itemEnEdicion];
+    carrito[itemEnEdicion] = {
+      ...datosItem,
+      fechaEntregaOverride: previo.fechaEntregaOverride || null,
+      facturacionOverride: previo.facturacionOverride || null,
+    };
+    itemEnEdicion = null;
+    document.getElementById('btnAgregarItem').textContent = '+ Agregar al pedido';
+  } else {
+    // Aviso si el articulo ya esta en el carrito (#8)
+    const yaExiste = carrito.findIndex(it =>
+      it.codItem === datosItem.codItem &&
+      it.ancho === datosItem.ancho &&
+      it.largo === datosItem.largo &&
+      it.micColor === datosItem.micColor
+    );
+    if (yaExiste >= 0) {
+      const confirmar = confirm(
+        `"${datosItem.descripcion}" ya está en el carrito.\n\n` +
+        `¿Querés sumar la cantidad (${carrito[yaExiste].cantidad} + ${cantidad} = ${carrito[yaExiste].cantidad + cantidad} unidades) ` +
+        `o agregar como línea separada?`
+      );
+      if (confirmar) {
+        carrito[yaExiste].cantidad += cantidad;
+      } else {
+        carrito.push({ ...datosItem, fechaEntregaOverride: null, facturacionOverride: null });
+      }
+    } else {
+      carrito.push({ ...datosItem, fechaEntregaOverride: null, facturacionOverride: null });
+    }
+  }
+
+  // reset del bloque de carga de articulo
+  articuloSeleccionado = null;
+  document.getElementById('buscarArticulo').value = '';
+  document.getElementById('cantidad').value = '';
+  document.getElementById('precioUnitario').value = '';
+  setPorcentaje('descuentoItem', 0);
+  document.getElementById('m2TotalCalc').value = '';
+  document.getElementById('precioNetoCalc').value = '';
+  document.getElementById('observacionItem').value = '';
+  document.getElementById('infoArticulo').classList.remove('visible');
+
+  renderizarCarrito();
+
+  // Aviso informativo (no bloqueante): la decision de vender igual queda a
+  // criterio del vendedor, tal como se definio para el resto del formulario.
+  if (cantidad > stockDisp) {
+    mostrarBanner('fallo', `⚠ Artículo agregado, pero la cantidad (${cantidad}) supera el stock disponible (${stockDisp}). Podés confirmar igual si corresponde.`);
+  } else {
+    ocultarBanner();
+  }
+}
+
+document.getElementById('btnAgregarItem').addEventListener('click', agregarItemAlCarrito);
+
+// Agilidad: Enter desde cantidad, precio o descuento agrega el item al pedido
+// (evita tener que bajar hasta el boton con el mouse en cada carga).
+['cantidad', 'precioUnitario', 'descuentoItem'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); agregarItemAlCarrito(); }
+  });
+});
+
+/* ---------- Reedicion de un item ya cargado ---------- */
+function editarItemDelCarrito(i) {
+  const it = carrito[i];
+  itemEnEdicion = i;
+
+  // Buscamos el articulo original para poder recalcular M2 y precio sugerido.
+  articuloSeleccionado = DATOS.articulos.find(a =>
+    a.CodItem.trim() === it.codItem && a.Ancho === it.ancho && a.Largo === it.largo && a.MicColor === it.micColor
+  ) || {
+    CodItem: it.codItem, Descripcion: it.descripcion,
+    Ancho: it.ancho, Largo: it.largo, MicColor: it.micColor,
+    CodigoConcatenado: '',
+  };
+
+  document.getElementById('buscarArticulo').value = it.descripcion;
+  document.getElementById('cantidad').value = it.cantidad;
+  document.getElementById('precioUnitario').value = it.precioUnitario;
+  setPorcentaje('descuentoItem', it.descuentoItemPct);
+  document.getElementById('observacionItem').value = it.observacionItem || '';
+  document.getElementById('btnAgregarItem').textContent = '✔ Guardar cambios del ítem';
+
+  const st = INDICE_STOCK[articuloSeleccionado.CodigoConcatenado];
+  const stockDisp = st ? Number(st.StockUnidades || 0) : 0;
+  const box = document.getElementById('infoArticulo');
+  box.innerHTML = `
+    <div class="dato"><b>Código</b>${it.codItem}</div>
+    <div class="dato"><b>Medidas</b>${it.ancho}/${it.largo}/${it.micColor}</div>
+    <div class="dato"><b>Stock disponible</b><span class="${stockDisp <= 0 ? 'alerta' : 'ok'}">${stockDisp} unidades</span></div>
+  `;
+  box.classList.add('visible');
+
+  recalcularM2();
+  recalcularPrecioNeto();
+  document.getElementById('campoArticulo').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+
+function formatoUSD(n) {
+  return 'U$S ' + Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatoEnMoneda(n, moneda) {
+  return moneda === 'USD' ? formatoUSD(n) : formatoMoneda(n);
+}
+
+function renderizarCarrito() {
+  guardarBorrador();
+  actualizarIndicadoresProgreso();
+  const cont = document.getElementById('carritoContenedor');
+  const totalBox = document.getElementById('totalPedido');
+
+  if (carrito.length === 0) {
+    cont.innerHTML = '<div class="vacio-carrito">Todavía no agregaste artículos</div>';
+    totalBox.style.display = 'none';
+    return;
+  }
+
+  const moneda = document.getElementById('monedaCarga').value || 'ARS';
+
+  let subtotal = 0;
+  let filas = '';
+  carrito.forEach((it, i) => {
+    const importe = it.cantidad * it.precioNeto;
+    subtotal += importe;
+    const descTexto = it.descuentoItemPct > 0 ? ` <small style="color:var(--verde)">(-${formatoPorcentaje(it.descuentoItemPct)})</small>` : '';
+    const fechaTexto = it.fechaEntregaOverride
+      ? `<br><small style="color:var(--naranja-oscuro)">📅 Entrega: ${it.fechaEntregaOverride}</small>`
+      : '';
+    const facturacionTexto = it.facturacionOverride
+      ? `<br><small style="color:var(--naranja-oscuro)">🧾 Facturación: Bejerman ${formatoPorcentaje(it.facturacionOverride.pctBejerman)} / V2 ${formatoPorcentaje(it.facturacionOverride.pctV2)}</small>`
+      : '';
+    const observacionTexto = it.observacionItem
+      ? `<br><small style="color:var(--gris-texto)">📝 ${it.observacionItem}</small>`
+      : '';
+    const medidas = [it.ancho, it.largo, it.micColor].filter(Boolean).join('/');
+    const m2Texto = (it.m2Total !== '' && it.m2Total !== undefined && it.m2Total !== null)
+      ? ` · M2 (Um2): ${Number(it.m2Total).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : '';
+    const detalleTexto = `<br><small style="color:#888">${it.codItem}${medidas ? ' · ' + medidas : ''} · P.Unit: ${formatoEnMoneda(it.precioUnitario, moneda)}${m2Texto}</small>`;
+    filas += `<tr>
+      <td><b>${it.descripcion}</b>${detalleTexto}${fechaTexto}${facturacionTexto}${observacionTexto}</td>
+      <td>
+        <input type="number" min="1" value="${it.cantidad}"
+          style="width:60px; text-align:center; padding:4px 6px; font-size:13px"
+          title="Cantidad — editá directo acá"
+          onchange="editarCantidadEnCarrito(${i}, this.value)"
+          onclick="this.select()">
+      </td>
+      <td>${formatoEnMoneda(it.precioNeto, moneda)}${descTexto}</td>
+      <td>${formatoEnMoneda(importe, moneda)}</td>
+      <td style="white-space:nowrap">
+        <button type="button" class="quitar" style="font-size:15px" title="Fecha de entrega de este ítem" onclick="abrirModalFechaItem(${i})">📅</button>
+        <button type="button" class="quitar" style="font-size:15px" title="Editar este ítem" onclick="editarItemDelCarrito(${i})">✏️</button>
+        <button type="button" class="quitar" style="font-size:15px" title="Facturación de este ítem" onclick="abrirModalFacturacionItem(${i})">🧾</button>
+        <button type="button" class="quitar" style="font-size:15px" title="Duplicar este ítem" onclick="duplicarItemDelCarrito(${i})">📋</button>
+        <button type="button" class="quitar" onclick="quitarDelCarrito(${i})">✕</button>
+      </td>
+    </tr>`;
+  });
+
+  cont.innerHTML = `<table>
+    <thead><tr><th>Artículo</th><th>Cant.</th><th>P. Neto</th><th>Importe</th><th></th></tr></thead>
+    <tbody>${filas}</tbody>
+  </table>`;
+
+  const descuentoGlobalPct = valorPorcentaje('descuentoGlobal');
+  const descuentoGlobalMonto = subtotal * (descuentoGlobalPct / 100);
+  const total = subtotal - descuentoGlobalMonto;
+
+  totalBox.style.display = 'flex';
+  document.getElementById('subtotalPedidoValor').textContent = formatoEnMoneda(subtotal, moneda);
+  const lineaDG = document.getElementById('lineaDescuentoGlobal');
+  if (descuentoGlobalPct > 0) {
+    lineaDG.style.display = 'flex';
+    document.getElementById('descuentoGlobalValor').textContent = `- ${formatoEnMoneda(descuentoGlobalMonto, moneda)} (${formatoPorcentaje(descuentoGlobalPct)})`;
+  } else {
+    lineaDG.style.display = 'none';
+  }
+  document.getElementById('totalPedidoValor').textContent = formatoEnMoneda(total, moneda);
+
+  const IVA_PCT = 21;
+  const iva = total * (IVA_PCT / 100);
+  const totalConIva = total + iva;
+  document.getElementById('ivaValor').textContent = formatoEnMoneda(iva, moneda);
+  document.getElementById('totalConIvaValor').textContent = formatoEnMoneda(totalConIva, moneda);
+
+  // Referencia en la otra moneda
+  const lineaRef = document.getElementById('lineaReferenciaOtraMoneda');
+  const tipoCambioManual = Number(document.getElementById('tipoCambio').value || 0);
+  const tipoCambioParaReferencia = tipoCambioManual > 0
+    ? tipoCambioManual
+    : (DATOS.cotizacionUSD && DATOS.cotizacionUSD.valor ? Number(DATOS.cotizacionUSD.valor) : 0);
+
+  if (tipoCambioParaReferencia > 0) {
+    lineaRef.style.display = 'flex';
+    if (moneda === 'USD') {
+      document.getElementById('labelReferenciaOtraMoneda').textContent = 'Referencia en ARS';
+      document.getElementById('totalReferenciaOtraMoneda').textContent = formatoMoneda(totalConIva * tipoCambioParaReferencia);
+    } else {
+      document.getElementById('labelReferenciaOtraMoneda').textContent = 'Referencia en USD';
+      document.getElementById('totalReferenciaOtraMoneda').textContent = formatoUSD(totalConIva / tipoCambioParaReferencia);
+    }
+  } else {
+    lineaRef.style.display = 'none';
+  }
+
+  // Resumen integrado encima de los botones finales
+  const resumenDiv = document.getElementById('resumenPrevioAcciones');
+  if (carrito.length > 0 && resumenDiv) {
+    const totalUnidades = carrito.reduce((acc, it) => acc + Number(it.cantidad), 0);
+    document.getElementById('resumenItemsTexto').textContent =
+      `${carrito.length} ítem(s) · ${totalUnidades} unidades`;
+    document.getElementById('resumenTotalTexto').textContent =
+      `Total c/IVA: ${formatoEnMoneda(totalConIva, moneda)}`;
+    resumenDiv.style.display = 'block';
+  } else if (resumenDiv) {
+    resumenDiv.style.display = 'none';
+  }
+}
+
+function editarCantidadEnCarrito(i, nuevaCantidad) {
+  const cant = parseInt(nuevaCantidad);
+  if (isNaN(cant) || cant < 1) { renderizarCarrito(); return; }
+  carrito[i].cantidad = cant;
+  // Recalcular M2 si aplica
+  if (carrito[i].m2Total !== '') {
+    const a = DATOS.articulos.find(a => a.CodItem.trim() === carrito[i].codItem.trim());
+    if (a) {
+      const anchoM = Number(a.Ancho) / 1000;
+      const largoM = parsearLargo(a.Largo);
+      if (anchoM > 0 && largoM > 0) carrito[i].m2Total = +(anchoM * largoM * cant).toFixed(4);
+    }
+  }
+  renderizarCarrito();
+}
+
+function duplicarItemDelCarrito(i) {
+  const copia = JSON.parse(JSON.stringify(carrito[i]));
+  carrito.splice(i + 1, 0, copia);
+  renderizarCarrito();
+  mostrarBanner('exito', `Ítem duplicado — podés modificar la cantidad o el precio de la copia.`);
+}
+
+function quitarDelCarrito(i) {
+  carrito.splice(i, 1);
+  // Si estaba en edicion justo ese item (o uno posterior cuyo indice cambia),
+  // se cancela la edicion para no pisar el item equivocado.
+  if (itemEnEdicion !== null) {
+    itemEnEdicion = null;
+    document.getElementById('btnAgregarItem').textContent = '+ Agregar al pedido';
+    document.getElementById('buscarArticulo').value = '';
+    document.getElementById('cantidad').value = '';
+    document.getElementById('precioUnitario').value = '';
+    setPorcentaje('descuentoItem', 0);
+    document.getElementById('observacionItem').value = '';
+    document.getElementById('infoArticulo').classList.remove('visible');
+    articuloSeleccionado = null;
+  }
+  renderizarCarrito();
+}
+
+/* ---------- Modal: fecha de entrega especifica por item ---------- */
+let indiceItemFechaModal = null;
+
+function abrirModalFechaItem(i) {
+  indiceItemFechaModal = i;
+  document.getElementById('fechaItemInput').value = carrito[i].fechaEntregaOverride || '';
+  document.getElementById('modalFechaItem').style.display = 'flex';
+}
+
+function cerrarModalFechaItem() {
+  document.getElementById('modalFechaItem').style.display = 'none';
+  indiceItemFechaModal = null;
+}
+
+function guardarFechaItem() {
+  const valor = document.getElementById('fechaItemInput').value;
+  if (indiceItemFechaModal !== null) {
+    carrito[indiceItemFechaModal].fechaEntregaOverride = valor || null;
+    renderizarCarrito();
+  }
+  cerrarModalFechaItem();
+}
+
+function quitarFechaItem() {
+  if (indiceItemFechaModal !== null) {
+    carrito[indiceItemFechaModal].fechaEntregaOverride = null;
+    renderizarCarrito();
+  }
+  cerrarModalFechaItem();
+}
+
+document.getElementById('descuentoGlobal').addEventListener('input', renderizarCarrito);
+
+// Un solo listener para el tipo de cambio: recalcula los totales y, si hay
+// un articulo elegido pero no agregado, actualiza su precio sugerido en USD.
+document.getElementById('tipoCambio').addEventListener('input', function () {
+  if (articuloSeleccionado && document.getElementById('monedaCarga').value === 'USD') {
+    seleccionarArticulo(articuloSeleccionado, INDICE_STOCK[articuloSeleccionado.CodigoConcatenado]);
+  }
+  renderizarCarrito();
+});
+
+document.getElementById('monedaCarga').addEventListener('change', function () {
+  document.getElementById('labelPrecioUnitario').textContent = this.value === 'USD' ? 'Precio unitario (US$)' : 'Precio unitario ($)';
+
+  const esUsd = (this.value === 'USD');
+  document.getElementById('bloqueTipoCambio').style.display = esUsd ? 'block' : 'none';
+  if (!esUsd) {
+    // En ARS no hace falta tipo de cambio -- se limpia para que no quede un
+    // valor viejo pesando en validaciones que ya no aplican.
+    document.getElementById('tipoCambio').value = '';
+  } else if (!document.getElementById('tipoCambio').value && DATOS.cotizacionUSD) {
+    document.getElementById('tipoCambio').value = DATOS.cotizacionUSD.valor || '';
+  }
+
+  // Si hay un articulo elegido pero todavia no agregado al carrito, se
+  // recalcula el precio sugerido en la nueva moneda para no dejar un valor
+  // de la moneda anterior cargado por error.
+  if (articuloSeleccionado) {
+    seleccionarArticulo(articuloSeleccionado, INDICE_STOCK[articuloSeleccionado.CodigoConcatenado]);
+  }
+  renderizarCarrito();
+});
+
+document.getElementById('motivoDescuentoGlobal').addEventListener('change', function () {
+  const inputPct = document.getElementById('descuentoGlobal');
+  const inputOtro = document.getElementById('motivoOtroDetalle');
+
+  if (!this.value) {
+    inputPct.disabled = true;
+    setPorcentaje('descuentoGlobal', 0);
+    inputOtro.style.display = 'none';
+    inputOtro.value = '';
+  } else {
+    inputPct.disabled = false;
+  }
+
+  inputOtro.style.display = (this.value === 'Otro') ? 'block' : 'none';
+  if (this.value !== 'Otro') inputOtro.value = '';
+
+  renderizarCarrito();
+});
+
+/* =========================================================================
+   VALIDACION Y ENVIO DEL PEDIDO
+   ========================================================================= */
+function marcarValido(campoId) { document.getElementById(campoId).classList.remove('invalido'); }
+function marcarInvalido(campoId) { document.getElementById(campoId).classList.add('invalido'); }
+
+function validarFormulario() {
+  const errores = [];
+
+  const modalidadVal = modalidadEntregaSeleccionada();
+  if (!modalidadVal) { marcarInvalido('campoModalidadEntrega'); errores.push('Seleccioná la modalidad de entrega.'); } else marcarValido('campoModalidadEntrega');
+
+  if (modalidadVal === 'Entrega en Expreso' && !document.getElementById('nombreExpreso').value.trim()) {
+    errores.push('Ingresá el nombre del expreso.');
+  }
+
+  if (requiereDireccionEntrega()) {
+    const provincia = document.getElementById('provinciaEntrega');
+    if (!provincia.value) { marcarInvalido('campoProvincia'); errores.push('Seleccioná la provincia de entrega.'); } else marcarValido('campoProvincia');
+
+    if (!localidadSeleccionada) { marcarInvalido('campoLocalidad'); errores.push('Seleccioná la localidad de entrega de la lista.'); } else marcarValido('campoLocalidad');
+
+    const lugar = document.getElementById('lugarEntrega');
+    if (!lugar.value.trim()) { marcarInvalido('campoLugar'); errores.push('Ingresá la dirección de entrega.'); } else marcarValido('campoLugar');
+  }
+
+  // Fecha, horario y observaciones son siempre visibles y siempre obligatorios
+  // (salvo observaciones, que es opcional), independientemente de la modalidad.
+  const fecha = document.getElementById('fechaEntrega');
+  if (!fecha.value) { marcarInvalido('campoFecha'); errores.push('Seleccioná la fecha de entrega.'); } else marcarValido('campoFecha');
+
+  const horario = document.getElementById('horarioEntrega');
+  if (!horario.value) { marcarInvalido('campoHorario'); errores.push('Seleccioná el horario de entrega.'); } else marcarValido('campoHorario');
+
+  const vendedor = document.getElementById('vendedor');
+  if (!vendedor.value) { marcarInvalido('campoVendedor'); errores.push('Seleccioná un vendedor.'); } else marcarValido('campoVendedor');
+
+  if (!clienteSeleccionado) { marcarInvalido('campoCliente'); errores.push('Seleccioná un cliente de la lista.'); } else marcarValido('campoCliente');
+
+  const moneda = document.getElementById('monedaCarga').value;
+  if (moneda === 'USD') {
+    const tc = document.getElementById('tipoCambio');
+    if (!(Number(tc.value) > 0)) { marcarInvalido('campoTipoCambio'); errores.push('Ingresá un tipo de cambio válido.'); } else marcarValido('campoTipoCambio');
+  }
+
+  const cond = document.getElementById('condicionVenta');
+  if (!cond.value) { marcarInvalido('campoCondVta'); errores.push('Seleccioná una condición de venta.'); } else marcarValido('campoCondVta');
+
+  if (carrito.length === 0) {
+    errores.push('Agregá al menos un artículo al pedido.');
+  }
+
+  const descGlobalPct = valorPorcentaje('descuentoGlobal');
+  const motivoDescGlobal = document.getElementById('motivoDescuentoGlobal').value;
+  if (descGlobalPct > 0 && !motivoDescGlobal) {
+    errores.push('Si cargaste un Descuento General / Canal, indicá el motivo.');
+  }
+  if (motivoDescGlobal === 'Otro' && !document.getElementById('motivoOtroDetalle').value.trim()) {
+    errores.push('Aclará el motivo del Descuento General / Canal (elegiste "Otro").');
+  }
+
+  const facturacion = obtenerFacturacionActual();
+  if (Math.round(facturacion.pctBejerman + facturacion.pctV2) !== 100) {
+    errores.push('Los porcentajes de Bejerman y V2 tienen que sumar 100%.');
+  }
+
+  return errores;
+}
+
+document.getElementById('btnConfirmar').addEventListener('click', () => {
+  ocultarBanner();
+  const errores = validarFormulario();
+  if (errores.length > 0) {
+    mostrarBanner('fallo', '⚠ ' + errores.join(' · '));
+    window.scrollTo({top: 0, behavior: 'smooth'});
+    return;
+  }
+  // En vez de enviar directo, se muestra un resumen para revisar y confirmar.
+  mostrarResumenConfirmacion();
+});
+
+/* ---------- Resumen de confirmación antes de enviar (evita envíos por error) ---------- */
+function mostrarResumenConfirmacion() {
+  const vendedorSel = document.getElementById('vendedor');
+  const moneda = document.getElementById('monedaCarga').value || 'ARS';
+  const modalidadVal = modalidadEntregaSeleccionada();
+
+  let subtotal = 0;
+  carrito.forEach(it => { subtotal += it.cantidad * it.precioNeto; });
+  const descuentoGlobalPct = valorPorcentaje('descuentoGlobal');
+  const totalConIva = (subtotal - subtotal * descuentoGlobalPct / 100) * 1.21;
+
+  const totalUnidades = carrito.reduce((acc, it) => acc + Number(it.cantidad), 0);
+  const fact = obtenerFacturacionActual();
+  const factTexto = fact.pctV2 > 0
+    ? `Bejerman ${formatoPorcentaje(fact.pctBejerman)} / V2 ${formatoPorcentaje(fact.pctV2)}`
+    : 'Bejerman 100,00%';
+
+  const entregaTexto = requiereDireccionEntrega()
+    ? `${modalidadVal} — ${document.getElementById('lugarEntrega').value || '(sin dirección)'}`
+    : modalidadVal;
+
+  // Validacion de stock al confirmar (#9)
+  const itemsSinStock = carrito.filter(it => {
+    const st = INDICE_STOCK[it.ancho && it.largo && it.micColor
+      ? Object.keys(INDICE_STOCK).find(k => {
+          const a = DATOS.articulos.find(a => a.CodigoConcatenado === k);
+          return a && a.CodItem.trim() === it.codItem && a.Ancho === it.ancho && a.Largo === it.largo && a.MicColor === it.micColor;
+        })
+      : null] || INDICE_STOCK[DATOS.articulos.find(a => a.CodItem.trim()===it.codItem && a.Ancho===it.ancho && a.Largo===it.largo && a.MicColor===it.micColor)?.CodigoConcatenado];
+    return st && Number(st.StockUnidades || 0) < it.cantidad;
+  });
+
+  const alertaStock = itemsSinStock.length > 0
+    ? `<div style="background:#fff3cd; border:1px solid #f0ad4e; border-radius:6px; padding:10px 12px; margin-bottom:10px; font-size:13px">
+        ⚠️ <b>${itemsSinStock.length} ítem(s) superan el stock disponible:</b><br>
+        ${itemsSinStock.map(it => `• ${it.descripcion} (solicitado: ${it.cantidad})`).join('<br>')}
+        <br><small>Podés confirmar igual — quedará registrado para que administración lo gestione.</small>
+       </div>`
+    : '';
+
+  const cont = document.getElementById('contenidoResumen');
+  cont.innerHTML = `
+    ${alertaStock}
+    <div style="font-size:14px; line-height:1.7">
+      <div><b>Vendedor:</b> ${vendedorSel.options[vendedorSel.selectedIndex]?.textContent || '-'}</div>
+      <div><b>Cliente:</b> ${clienteSeleccionado.RazonSocial}</div>
+      <div><b>Artículos:</b> ${carrito.length} ítem(s) · ${totalUnidades} unidades en total</div>
+      <div><b>Moneda:</b> ${moneda} &nbsp;|&nbsp; <b>Facturación:</b> ${factTexto}</div>
+      <div><b>Entrega:</b> ${entregaTexto}</div>
+      <div><b>Fecha de entrega:</b> ${document.getElementById('fechaEntrega').value || '-'} ${document.getElementById('horarioEntrega').value || ''}</div>
+      <div style="margin-top:8px; padding-top:8px; border-top:2px solid var(--azul-claro); font-size:17px; font-weight:700; color:var(--azul-oscuro)">
+        Total con IVA: ${formatoEnMoneda(totalConIva, moneda)}
+      </div>
+    </div>
+  `;
+  document.getElementById('modalResumen').style.display = 'flex';
+}
+
+function cerrarModalResumen() {
+  document.getElementById('modalResumen').style.display = 'none';
+}
+
+async function enviarPedidoConfirmado() {
+  cerrarModalResumen();
+
+  const vendedorSel = document.getElementById('vendedor');
+  const condSel = document.getElementById('condicionVenta');
+  const btn = document.getElementById('btnConfirmar');
+  const modalidadVal = modalidadEntregaSeleccionada();
+  const tieneDireccion = requiereDireccionEntrega();
+  const provinciaSel = document.getElementById('provinciaEntrega');
+  const moneda = document.getElementById('monedaCarga').value;
+
+  let motivoDescuentoGlobal = document.getElementById('motivoDescuentoGlobal').value;
+  if (motivoDescuentoGlobal === 'Otro') {
+    motivoDescuentoGlobal = 'Otro: ' + document.getElementById('motivoOtroDetalle').value.trim();
+  }
+
+  btn.disabled = true;
+  mostrarBanner('cargando', 'Preparando adjuntos y enviando pedido...');
+
+  let archivosAdjuntos;
+  try {
+    archivosAdjuntos = await prepararAdjuntosParaEnvio();
+  } catch (err) {
+    mostrarBanner('fallo', 'No se pudo procesar alguno de los archivos adjuntos. Probá quitarlo y volver a intentar.');
+    console.error(err);
+    btn.disabled = false;
+    return;
+  }
+
+  const facturacionPedido = obtenerFacturacionActual();
+
+  const payload = {
+    vendedor: vendedorSel.options[vendedorSel.selectedIndex].textContent,
+    codVendedor: vendedorSel.value,
+    codCliente: clienteSeleccionado.CodCliente,
+    cliente: clienteSeleccionado.RazonSocial,
+    monedaCarga: moneda,
+    tipoCambioUSD: moneda === 'USD' ? document.getElementById('tipoCambio').value : '',
+    tipoCotizacionBCRA: moneda === 'USD' ? (document.querySelector('input[name="tipoCotizacionBCRA"]:checked')?.value || 'Billete') : '',
+    condicionVenta: condSel.value,
+    diasPlazo: condSel.options[condSel.selectedIndex].dataset.diasPlazo || '',
+    pctBejerman: facturacionPedido.pctBejerman,
+    pctV2: facturacionPedido.pctV2,
+    modalidadEntrega: modalidadVal,
+    nombreExpreso: modalidadVal === 'Entrega en Expreso' ? document.getElementById('nombreExpreso').value.trim() : '',
+    provincia: tieneDireccion ? (provinciaSel.options[provinciaSel.selectedIndex]?.textContent || '') : '',
+    localidad: tieneDireccion && localidadSeleccionada ? localidadSeleccionada.nombre : '',
+    lugarEntrega: tieneDireccion ? document.getElementById('lugarEntrega').value.trim() : '',
+    fechaEntrega: document.getElementById('fechaEntrega').value,
+    horarioEntrega: document.getElementById('horarioEntrega').value,
+    observaciones: document.getElementById('observaciones').value.trim(),
+    nombreFantasia: document.getElementById('nombreFantasia').value.trim(),
+    descuentoGlobalPct: valorPorcentaje('descuentoGlobal'),
+    motivoDescuentoGlobal: motivoDescuentoGlobal,
+    items: carrito,
+    ordenCompra: archivosAdjuntos.ordenCompra,
+    anexos: archivosAdjuntos.anexos,
+  };
+
+  mostrarBanner('cargando', 'Enviando pedido...');
+
+  try {
+    const resp = await fetch(WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // evita preflight CORS en Apps Script
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+
+    if (data.ok) {
+      mostrarBanner('exito', `Pedido enviado con éxito (N° ${data.nroPedido}). Se notificó por correo a administración.`);
+      borrarBorrador(); // el pedido se envio, ya no hay borrador que conservar
+      resetearFormulario();
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    } else {
+      mostrarBanner('fallo', 'No se pudo confirmar el pedido: ' + (data.error || 'error desconocido'));
+    }
+  } catch (err) {
+    mostrarBanner('fallo', 'No se pudo enviar el pedido. Revisá tu conexión a internet e intentá nuevamente.');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function resetearFormulario() {
+  document.getElementById('vendedor').value = '';
+  document.getElementById('buscarCliente').value = '';
+  document.getElementById('infoCliente').classList.remove('visible');
+  document.getElementById('btnLupaCliente').disabled = true;
+  document.getElementById('btnPredecirCompra').disabled = true;
+  clienteSeleccionado = null;
+  document.getElementById('monedaCarga').value = 'ARS';
+  document.getElementById('bloqueTipoCambio').style.display = 'none';
+  document.getElementById('tipoCambio').value = '';
+  document.querySelector('input[name="tipoCotizacionBCRA"][value="Billete"]').checked = true;
+  document.getElementById('labelPrecioUnitario').textContent = 'Precio unitario ($)';
+  document.getElementById('condicionVenta').value = '';
+  document.getElementById('lugarEntrega').value = '';
+  document.getElementById('horarioEntrega').value = '08:00';
+  // Vuelve al plazo por defecto (10 dias habiles) y recalcula la fecha sugerida.
+  const radioPlazoDefault = document.querySelector('input[name="plazoEntrega"][value="10h"]');
+  if (radioPlazoDefault) radioPlazoDefault.checked = true;
+  aplicarPlazoEntrega('10h');
+  document.getElementById('observaciones').value = '';
+  document.getElementById('nombreFantasia').value = '';
+  setPorcentaje('descuentoGlobal', 0);
+  document.getElementById('descuentoGlobal').disabled = true;
+  document.getElementById('motivoDescuentoGlobal').value = '';
+  document.getElementById('motivoOtroDetalle').value = '';
+  document.getElementById('motivoOtroDetalle').style.display = 'none';
+  // Vuelve al default: "Entrega Directa a Cliente" marcada, con el bloque
+  // de direccion visible (coincide con lo que se ve al abrir el formulario).
+  document.querySelectorAll('input[name="modalidadEntrega"]').forEach(r => {
+    r.checked = (r.value === 'Entrega Directa a Cliente');
+  });
+  document.getElementById('nombreExpreso').value = '';
+  document.getElementById('nombreExpreso').style.display = 'none';
+  document.getElementById('bloqueDireccionEntrega').style.display = 'block';
+  document.getElementById('provinciaEntrega').value = '';
+  document.getElementById('buscarLocalidad').value = '';
+  document.getElementById('buscarLocalidad').disabled = true;
+  document.getElementById('buscarLocalidad').placeholder = 'Elegí una provincia primero...';
+  provinciaIdActual = '';
+  localidadSeleccionada = null;
+  document.getElementById('chkBejerman').checked = true;
+  document.getElementById('chkV2').checked = false;
+  document.getElementById('bloquePctFacturacion').style.display = 'none';
+  setPorcentaje('pctBejerman', 50);
+  setPorcentaje('pctV2', 50);
+  document.getElementById('archivoOrdenCompra').value = '';
+  document.getElementById('nombreOrdenCompra').textContent = '';
+  document.getElementById('archivosAnexos').value = '';
+  document.getElementById('listaAnexos').innerHTML = '';
+  document.getElementById('observacionItem').value = '';
+  ['filtroCodigo', 'filtroAncho', 'filtroLargo', 'filtroMicColor'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  actualizarFiltrosDependientes();
+  // Refresca el texto visible de todos los combos buscables tras el reset.
+  ['vendedor', 'monedaCarga', 'condicionVenta', 'motivoDescuentoGlobal', 'provinciaEntrega',
+   'filtroCodigo', 'filtroAncho', 'filtroLargo', 'filtroMicColor'].forEach(resyncCombo);
+  itemEnEdicion = null;
+  document.getElementById('btnAgregarItem').textContent = '+ Agregar al pedido';
+  carrito = [];
+  renderizarCarrito();
+}
+
+/* =========================================================================
+   UTILIDADES
+   ========================================================================= */
+function formatoMoneda(n) {
+  return '$ ' + Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/* ---------- Campos de porcentaje (formato "2,50%", con coma y 2 decimales) ---------- */
+function formatoPorcentaje(n) {
+  return Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+}
+function parsearPorcentaje(texto) {
+  if (texto === null || texto === undefined || texto === '') return 0;
+  const limpio = String(texto).replace('%', '').trim().replace(',', '.');
+  const n = parseFloat(limpio);
+  return isNaN(n) ? 0 : n;
+}
+// Lee el valor numerico actual de un campo de porcentaje (sirve tanto si
+// esta formateado "2,50%" como si el usuario lo esta escribiendo en ese momento).
+function valorPorcentaje(id) {
+  return parsearPorcentaje(document.getElementById(id).value);
+}
+function setPorcentaje(id, n) {
+  document.getElementById(id).value = formatoPorcentaje(n);
+}
+// Deja el campo editable "en limpio" (sin simbolo %, con punto decimal) al
+// enfocarlo, y lo vuelve a formatear "2,50%" al salir. Asi se puede escribir
+// comodo sin pelear con el simbolo, pero siempre se ve prolijo en reposo.
+function inicializarCampoPorcentaje(id) {
+  const el = document.getElementById(id);
+  el.addEventListener('focus', function () {
+    const n = parsearPorcentaje(this.value);
+    this.value = n === 0 ? '' : String(n).replace('.', ',');
+    this.select();
+  });
+  el.addEventListener('blur', function () {
+    setPorcentaje(id, parsearPorcentaje(this.value));
+  });
+}
+['descuentoItem', 'descuentoGlobal', 'pctBejerman', 'pctV2', 'pctBejermanItem', 'pctV2Item']
+  .forEach(inicializarCampoPorcentaje);
+
+function mostrarBanner(tipo, texto) {
+  const b = document.getElementById('bannerGlobal');
+  b.className = `banner visible ${tipo}`;
+  b.textContent = texto;
+}
+function ocultarBanner() {
+  document.getElementById('bannerGlobal').className = 'banner';
+}
+
+/* =========================================================================
+   AVISO ANTES DE CERRAR/SALIR CON UN PEDIDO A MEDIO CARGAR
+   ========================================================================= */
+window.addEventListener('beforeunload', (e) => {
+  if (carrito.length > 0) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+/* =========================================================================
+   PROVINCIAS Y LOCALIDADES (API Georef - datos.gob.ar)
+   ========================================================================= */
+let provinciaIdActual = '';
+let localidadSeleccionada = null;
+let debounceLocalidad = null;
+
+async function cargarProvincias() {
+  const sel = document.getElementById('provinciaEntrega');
+  try {
+    const resp = await fetch('https://apis.datos.gob.ar/georef/api/provincias?campos=id,nombre&orden=nombre&max=30');
+    const data = await resp.json();
+    sel.innerHTML = '<option value="">Seleccioná...</option>';
+    (data.provincias || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.nombre;
+      sel.appendChild(opt);
+    });
+    crearComboBuscable('provinciaEntrega', { placeholder: 'Tocá o escribí la provincia...' });
+  } catch (err) {
+    sel.innerHTML = '<option value="">No se pudieron cargar (cargá manualmente en Observaciones)</option>';
+    console.error('Error cargando provincias:', err);
+  }
+}
+
+document.getElementById('provinciaEntrega').addEventListener('change', function () {
+  const inputLoc = document.getElementById('buscarLocalidad');
+  inputLoc.value = '';
+  localidadSeleccionada = null;
+  provinciaIdActual = this.value;
+
+  if (!this.value) {
+    inputLoc.disabled = true;
+    inputLoc.placeholder = 'Elegí una provincia primero...';
+    return;
+  }
+  inputLoc.disabled = false;
+  inputLoc.placeholder = 'Escribí para buscar la localidad...';
+});
+
+/**
+ * Busqueda en vivo contra la API de Georef (en vez de precargar toda la
+ * provincia -- Buenos Aires o Córdoba tienen miles de localidades, lo que
+ * hacía lenta la carga en conexiones moviles). Se espera una pausa de
+ * escritura (debounce) para no disparar una consulta por cada tecla.
+ */
+document.getElementById('buscarLocalidad').addEventListener('input', function () {
+  const q = this.value.trim();
+  localidadSeleccionada = null;
+  const lista = document.getElementById('listaLocalidades');
+
+  clearTimeout(debounceLocalidad);
+
+  if (q.length < 3 || !provinciaIdActual) {
+    lista.classList.remove('abierta');
+    return;
+  }
+
+  debounceLocalidad = setTimeout(async () => {
+    try {
+      const url = `https://apis.datos.gob.ar/georef/api/localidades?nombre=${encodeURIComponent(q)}&provincia=${provinciaIdActual}&campos=id,nombre&orden=nombre&max=15`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+      const resultados = data.localidades || [];
+
+      lista.innerHTML = '';
+      if (resultados.length === 0) {
+        lista.innerHTML = '<div class="opcion">Sin resultados</div>';
+      } else {
+        resultados.forEach(l => {
+          const div = document.createElement('div');
+          div.className = 'opcion';
+          div.textContent = l.nombre;
+          let yaSelLoc = false;
+          div.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); if (!yaSelLoc) { yaSelLoc = true; localidadSeleccionada = l; document.getElementById('buscarLocalidad').value = l.nombre; marcarValido('campoLocalidad'); lista.classList.remove('abierta'); } }, { passive: false });
+          div.addEventListener('mousedown', (e) => { e.preventDefault(); if (!yaSelLoc) { yaSelLoc = true; localidadSeleccionada = l; document.getElementById('buscarLocalidad').value = l.nombre; marcarValido('campoLocalidad'); lista.classList.remove('abierta'); } });
+          lista.appendChild(div);
+        });
+      }
+      lista.classList.add('abierta');
+    } catch (err) {
+      lista.innerHTML = '<div class="opcion">No se pudo buscar (revisá tu conexión)</div>';
+      lista.classList.add('abierta');
+      console.error('Error buscando localidades:', err);
+    }
+  }, 350);
+});
+
+document.addEventListener('click', (e) => {
+  const input = document.getElementById('buscarLocalidad');
+  const lista = document.getElementById('listaLocalidades');
+  if (!input.contains(e.target) && !lista.contains(e.target)) lista.classList.remove('abierta');
+});
+
+/* =========================================================================
+   MODALIDAD DE ENTREGA
+   ========================================================================= */
+document.querySelectorAll('input[name="modalidadEntrega"]').forEach(radio => {
+  radio.addEventListener('change', function () {
+    marcarValido('campoModalidadEntrega');
+    const inputExpreso = document.getElementById('nombreExpreso');
+    inputExpreso.style.display = (this.value === 'Entrega en Expreso') ? 'block' : 'none';
+    if (this.value !== 'Entrega en Expreso') inputExpreso.value = '';
+
+    const requiereDireccion = (this.value === 'Entrega Directa a Cliente' || this.value === 'Entrega en Expreso');
+    document.getElementById('bloqueDireccionEntrega').style.display = requiereDireccion ? 'block' : 'none';
+  });
+});
+
+function modalidadEntregaSeleccionada() {
+  const radio = document.querySelector('input[name="modalidadEntrega"]:checked');
+  return radio ? radio.value : '';
+}
+
+function requiereDireccionEntrega() {
+  const v = modalidadEntregaSeleccionada();
+  return v === 'Entrega Directa a Cliente' || v === 'Entrega en Expreso';
+}
+
+/* =========================================================================
+   VISTA (PC / Tablet / Celular) Y MODO OSCURO -- se guardan en localStorage
+   ========================================================================= */
+function aplicarVista(vista) {
+  const main = document.getElementById('mainContenido');
+  main.classList.remove('vista-tablet', 'vista-celular');
+  if (vista === 'tablet') main.classList.add('vista-tablet');
+  if (vista === 'celular') main.classList.add('vista-celular');
+
+  ['btnVistaPc', 'btnVistaTablet', 'btnVistaCelular'].forEach(id => document.getElementById(id).classList.remove('activo'));
+  const mapaBtn = { pc: 'btnVistaPc', tablet: 'btnVistaTablet', celular: 'btnVistaCelular' };
+  document.getElementById(mapaBtn[vista]).classList.add('activo');
+
+  localStorage.setItem('vistaPedidos', vista);
+}
+
+document.getElementById('btnVistaPc').addEventListener('click', () => aplicarVista('pc'));
+document.getElementById('btnVistaTablet').addEventListener('click', () => aplicarVista('tablet'));
+document.getElementById('btnVistaCelular').addEventListener('click', () => aplicarVista('celular'));
+
+function aplicarTema(oscuro) {
+  document.body.classList.toggle('tema-oscuro', oscuro);
+  document.getElementById('btnTema').textContent = oscuro ? '☀️' : '🌙';
+  localStorage.setItem('temaOscuroPedidos', oscuro ? '1' : '0');
+}
+
+document.getElementById('btnTema').addEventListener('click', () => {
+  aplicarTema(!document.body.classList.contains('tema-oscuro'));
+});
+
+(function inicializarPreferencias() {
+  try {
+    aplicarVista(localStorage.getItem('vistaPedidos') || 'pc');
+    aplicarTema(localStorage.getItem('temaOscuroPedidos') === '1');
+  } catch (err) {
+    // Si el navegador bloquea localStorage (modo privado extremo, etc.),
+    // simplemente arranca con los valores por defecto sin romper nada.
+    aplicarVista('pc');
+  }
+})();
+
+/* =========================================================================
+   IMPRESION DE LA ORDEN DE PEDIDO
+   ========================================================================= */
+/* Genera un N° de pedido con el MISMO formato que usa el backend al
+   confirmar (PED-fecha-hora-Ccliente-Vvendedor), para mostrarlo en la
+   impresión previa a confirmar. Es una vista previa: el numero real se fija
+   recien en el momento de Confirmar, con la hora exacta de ese instante. */
+function generarNroPedidoPreview() {
+  const ahora = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const fecha = `${ahora.getFullYear()}${pad(ahora.getMonth() + 1)}${pad(ahora.getDate())}`;
+  const hora = `${pad(ahora.getHours())}${pad(ahora.getMinutes())}${pad(ahora.getSeconds())}`;
+  const codCliente = clienteSeleccionado ? clienteSeleccionado.CodCliente : '';
+  const codVendedor = document.getElementById('vendedor').value || '';
+  return `PED-${fecha}-${hora}-C${codCliente}-V${codVendedor}`;
+}
+
+document.getElementById('btnAnular').addEventListener('click', () => {
+  const tieneCarrito = carrito.length > 0;
+  const tieneCliente = !!clienteSeleccionado;
+  if (!tieneCarrito && !tieneCliente) {
+    mostrarBanner('cargando', 'El formulario ya está vacío.');
+    return;
+  }
+  if (confirm('¿Seguro que querés anular toda la carga y empezar de nuevo? Se perderán todos los datos ingresados.')) {
+    borrarBorrador();
+    resetearFormulario();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    mostrarBanner('exito', 'Formulario reiniciado. Podés comenzar una nueva carga.');
+  }
+});
+
+document.getElementById('btnImprimir').addEventListener('click', () => {
+  if (!clienteSeleccionado) { mostrarBanner('fallo', 'Seleccioná un cliente antes de imprimir.'); return; }
+  if (carrito.length === 0) { mostrarBanner('fallo', 'Agregá al menos un artículo antes de imprimir.'); return; }
+
+  const vendedorSel = document.getElementById('vendedor');
+  const condSel = document.getElementById('condicionVenta');
+  const moneda = document.getElementById('monedaCarga').value || 'ARS';
+  const modalidadVal = modalidadEntregaSeleccionada();
+  const vendedorNombre = vendedorSel.options[vendedorSel.selectedIndex]
+    ? vendedorSel.options[vendedorSel.selectedIndex].textContent
+    : '(sin seleccionar)';
+  const descuentoGlobalPct = valorPorcentaje('descuentoGlobal');
+  const facturacionGeneral = obtenerFacturacionActual();
+
+  // El N° de Pedido real lo genera el servidor recien al Confirmar (usa la
+  // hora exacta de esa confirmacion). Como se imprime ANTES de confirmar,
+  // acá se arma una vista previa con el mismo formato -- puede no coincidir
+  // al segundo con el que termine quedando si el pedido se confirma despues.
+  const nroPedidoPreview = generarNroPedidoPreview();
+
+  const entregaTexto = requiereDireccionEntrega()
+    ? `${document.getElementById('provinciaEntrega').options[document.getElementById('provinciaEntrega').selectedIndex]?.textContent || ''} - ${localidadSeleccionada ? localidadSeleccionada.nombre : ''} - ${document.getElementById('lugarEntrega').value}`
+    : 'Retira el cliente en fábrica';
+
+  function filaArticulo(it, cantidadMostrada, notaExtra) {
+    const importe = cantidadMostrada * it.precioNeto;
+    const obsHtml = it.observacionItem ? `<br><small>📝 ${it.observacionItem}</small>` : '';
+    return { html: `<tr>
+      <td>${it.codItem}</td>
+      <td>${it.descripcion} (${it.ancho}/${it.largo}/${it.micColor})${obsHtml}${notaExtra || ''}</td>
+      <td>${cantidadMostrada}</td>
+      <td>${formatoEnMoneda(it.precioNeto, moneda)}</td>
+      <td>${formatoEnMoneda(importe, moneda)}</td>
+    </tr>`, importe };
+  }
+
+  /* ---------- Pagina 1: total del pedido (como siempre) ---------- */
+  let subtotal = 0;
+  const filasHtmlTotal = carrito.map(it => {
+    const f = filaArticulo(it, it.cantidad);
+    subtotal += f.importe;
+    return f.html;
+  }).join('');
+  const total = subtotal - (subtotal * descuentoGlobalPct / 100);
+  const totalConIva = total * 1.21;
+  const facturacionTexto = facturacionGeneral.pctV2 > 0
+    ? `Bejerman ${formatoPorcentaje(facturacionGeneral.pctBejerman)} / V2 ${formatoPorcentaje(facturacionGeneral.pctV2)}`
+    : 'Bejerman 100,00%';
+
+  /* ---------- Reparto de unidades por sistema de facturacion, item a item ----------
+     Regla: Bejerman = floor(cantidad * %Bejerman/100); V2 = cantidad - Bejerman.
+     Asi el total de unidades del pedido nunca se pierde ni se duplica, y el
+     redondeo siempre "favorece" a Bejerman hacia abajo (ej: 5u al 70/30% ->
+     Bejerman 3, V2 2). Cada item usa su propia facturacion reconfigurada si la
+     tiene (🧾 del carrito); si no, usa la general del pedido. */
+  let totalBejUnid = 0, totalV2Unid = 0;
+  const reparto = carrito.map(it => {
+    const fact = it.facturacionOverride || facturacionGeneral;
+    const bejQty = Math.floor(it.cantidad * fact.pctBejerman / 100);
+    const v2Qty = it.cantidad - bejQty;
+    totalBejUnid += bejQty;
+    totalV2Unid += v2Qty;
+    return { it, fact, bejQty, v2Qty };
+  });
+  // Solo se desdobla en 3 paginas si el pedido de verdad usa los DOS sistemas
+  // (a nivel general o por alguna reconfiguracion puntual de item). Si todo
+  // el pedido factura por un solo sistema, se imprime una sola pagina.
+  const esDual = totalBejUnid > 0 && totalV2Unid > 0;
+
+  function construirPaginaFacturacion(nombreSistema, campoQty, pctGeneralSistema) {
+    let subtotalPag = 0;
+    const filasPag = reparto
+      .filter(r => r[campoQty] > 0)
+      .map(r => {
+        const notaOverride = r.it.facturacionOverride
+          ? ` <small>(este ítem usa Bejerman ${formatoPorcentaje(r.it.facturacionOverride.pctBejerman)} / V2 ${formatoPorcentaje(r.it.facturacionOverride.pctV2)})</small>`
+          : '';
+        const f = filaArticulo(r.it, r[campoQty], notaOverride);
+        subtotalPag += f.importe;
+        return f.html;
+      }).join('');
+    const descMontoPag = subtotalPag * descuentoGlobalPct / 100;
+    const totalPagSinIva = subtotalPag - descMontoPag;
+    const totalConIvaPag = totalPagSinIva * 1.21;
+
+    return `
+    <div class="pagina-impresion pagina-salto">
+      <h1>Orden de Pedido — FACTURACIÓN ${nombreSistema.toUpperCase()}</h1>
+      <div class="banda-sistema">📌 Esta página corresponde exclusivamente al sistema de facturación ${nombreSistema.toUpperCase()} — ${formatoPorcentaje(pctGeneralSistema)} del pedido</div>
+      <div class="fila-datos"><span><b>N° de Pedido (previsto):</b> ${nroPedidoPreview}</span></div>
+      <div class="fila-datos"><span>Vendedor: <b>${vendedorNombre}</b></span><span>Cliente: <b>${clienteSeleccionado.RazonSocial}</b></span></div>
+
+      <h2>Artículos asignados a ${nombreSistema}</h2>
+      <table>
+        <thead><tr><th>Código</th><th>Descripción</th><th>Cant.</th><th>P. Neto</th><th>Importe</th></tr></thead>
+        <tbody>${filasPag}</tbody>
+      </table>
+
+      <div class="fila-datos" style="margin-top:6px;"><span>Total sin IVA (${nombreSistema}):</span><span>${formatoEnMoneda(totalPagSinIva, moneda)}</span></div>
+      <div class="total-final">Total con IVA (${nombreSistema}): ${formatoEnMoneda(totalConIvaPag, moneda)}</div>
+    </div>`;
+  }
+
+  const pagina1 = `
+    <div class="pagina-impresion">
+      <h1>Orden de Pedido</h1>
+      ${esDual ? '<div class="subnota-impresion">Página 1 de 3 — Total consolidado del pedido (ambos sistemas de facturación juntos)</div>' : ''}
+      <div class="fila-datos"><span><b>N° de Pedido (previsto):</b> ${nroPedidoPreview}</span><span><b>Fecha de impresión:</b> ${new Date().toLocaleString('es-AR')}</span></div>
+
+      <h2>Datos del pedido</h2>
+      <div class="fila-datos"><span>Vendedor: <b>${vendedorNombre}</b></span><span>Cliente: <b>${clienteSeleccionado.RazonSocial}</b></span></div>
+      <div class="fila-datos"><span>Moneda: <b>${moneda}</b></span><span>Condición de venta: <b>${condSel.value || '-'}</b></span></div>
+      <div class="fila-datos"><span>Tipo de facturación: <b>${facturacionTexto}</b></span></div>
+
+      <h2>Entrega</h2>
+      <div class="fila-datos"><span>Modalidad: <b>${modalidadVal || '-'}</b></span></div>
+      <div class="fila-datos"><span>${entregaTexto}</span></div>
+      <div class="fila-datos"><span>Fecha: <b>${document.getElementById('fechaEntrega').value || '-'}</b></span><span>Horario: <b>${document.getElementById('horarioEntrega').value || '-'}</b></span></div>
+
+      <h2>Artículos</h2>
+      <table>
+        <thead><tr><th>Código</th><th>Descripción</th><th>Cant.</th><th>P. Neto</th><th>Importe</th></tr></thead>
+        <tbody>${filasHtmlTotal}</tbody>
+      </table>
+
+      <div class="fila-datos" style="margin-top:6px;"><span>Total sin IVA:</span><span>${formatoEnMoneda(total, moneda)}</span></div>
+      <div class="total-final">Total con IVA: ${formatoEnMoneda(totalConIva, moneda)}</div>
+
+      <h2>Observaciones</h2>
+      <div class="fila-datos"><span>${document.getElementById('observaciones').value || '-'}</span></div>
+    </div>`;
+
+  const paginasExtra = esDual
+    ? construirPaginaFacturacion('Bejerman', 'bejQty', facturacionGeneral.pctBejerman)
+      + construirPaginaFacturacion('V2', 'v2Qty', facturacionGeneral.pctV2)
+    : '';
+
+  document.getElementById('areaImpresion').innerHTML = pagina1 + paginasExtra;
+  window.print();
+});
+
+/* =========================================================================
+   INICIO
+   ========================================================================= */
+// El botón Confirmar de la barra sticky redirige al mismo handler del botón principal
+// (barra eliminada — el resumen ahora está integrado sobre los botones finales)
+
+cargarProvincias();
+cargarDatos();
+
+// Combos buscables de campos con opciones fijas (los de datos dinamicos se
+// crean cuando se pueblan, dentro de cargarDatos / cargarProvincias).
+crearComboBuscable('monedaCarga', { placeholder: 'Elegí la moneda...' });
+crearComboBuscable('motivoDescuentoGlobal', { placeholder: 'Sin descuento / elegí motivo...' });
+
+// Sugerencia inicial de fecha de entrega segun el plazo por defecto (10 dias
+// habiles). El horario ya arranca en 08:00 por el value del input.
+aplicarPlazoEntrega('10h');
+</script>
+
+</body>
+</html>
