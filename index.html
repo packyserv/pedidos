@@ -123,9 +123,25 @@
     text-transform:uppercase;
     letter-spacing:.6px;
     color:var(--azul);
-    margin:0 0 14px 0;
+    margin:0;
     padding-bottom:8px;
     border-bottom:2px solid var(--azul-claro);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    cursor:pointer;
+    user-select:none;
+  }
+  .card h2 .btn-colapsar{
+    background:none; border:none; color:var(--azul);
+    font-size:18px; font-weight:700; cursor:pointer;
+    padding:0 4px; line-height:1;
+  }
+  .card-body{
+    margin-top:14px;
+  }
+  .card-body.colapsado{
+    display:none;
   }
   body.tema-oscuro .card h2{color:#7fb3e0;}
   label{
@@ -365,7 +381,8 @@
   <div id="bannerGlobal" class="banner"></div>
 
   <div class="card">
-    <h2>Datos del pedido <span class="check-seccion" id="chkDatos" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2>
+    <h2 onclick="toggleCard('bodyDatos')">Datos del pedido<span class="check-seccion" id="chkDatos" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2><button type="button" class="btn-colapsar" id="btnbodyDatos" tabindex="-1">+</button></h2>
+    <div class="card-body colapsado" id="bodyDatos">
 
     <div class="campo" id="campoVendedor">
       <label for="vendedor">Vendedor *</label>
@@ -398,6 +415,7 @@
     </div>
 
   </div>
+    </div>
 
   <!-- ============ MODAL NUEVO CLIENTE ============ -->
   <div id="modalNuevoCliente" style="display:none; position:fixed; inset:0; background:rgba(18,41,63,.55); z-index:50; align-items:center; justify-content:center; padding:16px;">
@@ -563,7 +581,8 @@
 
   <!-- ============ CONDICIONES ============ -->
   <div class="card">
-    <h2>Agregar artículos</h2>
+    <h2 onclick="toggleCard('bodyAgregar')">Agregar artículos</h2><button type="button" class="btn-colapsar" id="btnbodyAgregar" tabindex="-1">+</button></h2>
+    <div class="card-body colapsado" id="bodyAgregar">
 
     <div class="grid-filtros">
       <div class="campo">
@@ -629,10 +648,12 @@
 
     <button type="button" class="btn btn-secundario" id="btnAgregarItem" style="width:100%">+ Agregar al pedido</button>
   </div>
+    </div>
 
   <!-- ============ CARRITO ============ -->
   <div class="card">
-    <h2>🛒 Artículos cargados <span class="check-seccion" id="chkArticulos" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2>
+    <h2 onclick="toggleCard('bodyCarrito')">🛒 Artículos cargados<span class="check-seccion" id="chkArticulos" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2><button type="button" class="btn-colapsar" id="btnbodyCarrito" tabindex="-1">−</button></h2>
+    <div class="card-body" id="bodyCarrito">
     <div id="carritoContenedor">
       <div class="vacio-carrito">Todavía no agregaste artículos</div>
     </div>
@@ -663,10 +684,12 @@
       </div>
     </div>
   </div>
+    </div>
 
   <!-- ============ ADJUNTOS ============ -->
   <div class="card">
-    <h2>Condiciones de venta <span class="check-seccion" id="chkCondiciones" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2>
+    <h2 onclick="toggleCard('bodyCondiciones')">Condiciones de venta<span class="check-seccion" id="chkCondiciones" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2><button type="button" class="btn-colapsar" id="btnbodyCondiciones" tabindex="-1">+</button></h2>
+    <div class="card-body colapsado" id="bodyCondiciones">
 
     <div class="fila">
       <div class="campo" id="campoMoneda">
@@ -751,10 +774,12 @@
       <div class="subnota">Aplica a todo el pedido. Si no tocás nada, el 100% factura por Bejerman. Si activás uno solo, ese factura el 100%. Si activás los dos, cargás a mano cuánto va a cada uno (deben sumar 100%).</div>
     </div>
   </div>
+    </div>
 
   <!-- ============ ENTREGA DE LA MERCADERIA ============ -->
   <div class="card">
-    <h2>Entrega de la mercadería <span class="check-seccion" id="chkEntrega" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2>
+    <h2 onclick="toggleCard('bodyEntrega')">Entrega de la mercadería<span class="check-seccion" id="chkEntrega" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2><button type="button" class="btn-colapsar" id="btnbodyEntrega" tabindex="-1">+</button></h2>
+    <div class="card-body colapsado" id="bodyEntrega">
 
     <div class="campo" id="campoModalidadEntrega">
       <label>Modalidad de entrega *</label>
@@ -771,9 +796,14 @@
           <input type="radio" name="modalidadEntrega" value="Retiro por Fábrica">
           <span>Retiro por Fábrica</span>
         </label>
+        <label class="pill">
+          <input type="radio" name="modalidadEntrega" value="Otra">
+          <span>Otra</span>
+        </label>
       </div>
       <div class="msg-error">Seleccioná una modalidad de entrega</div>
       <input type="text" id="nombreExpreso" placeholder="Nombre del expreso..." style="display:none; margin-top:8px">
+      <input type="text" id="otraModalidad" placeholder="Describí la modalidad especial..." style="display:none; margin-top:8px">
     </div>
 
     <div id="bloqueDireccionEntrega" style="display:block">
@@ -819,8 +849,10 @@
           <input type="radio" name="plazoEntrega" value="30c">
           <span>30 días</span>
         </label>
+        <button type="button" class="pill" style="cursor:pointer" onclick="setTurno('manana')">🌅 Turno Mañana</button>
+        <button type="button" class="pill" style="cursor:pointer" onclick="setTurno('tarde')">🌆 Turno Tarde</button>
       </div>
-      <div class="subnota">Calcula automáticamente la fecha sugerida. Si cae sábado o domingo, pasa al lunes siguiente. Podés ajustarla a mano abajo.</div>
+      <div class="subnota">Calcula automáticamente la fecha sugerida. "Turno Mañana" = 08:00 hs, "Turno Tarde" = 14:00 hs. Podés ajustar a mano abajo.</div>
     </div>
 
     <div class="fila">
@@ -841,10 +873,12 @@
       <textarea id="observaciones" rows="3" placeholder="Cualquier aclaración adicional sobre el pedido..."></textarea>
     </div>
   </div>
+    </div>
 
   <!-- ============ AGREGAR ARTICULOS ============ -->
   <div class="card">
-    <h2>Adjuntos</h2>
+    <h2 onclick="toggleCard('bodyAdjuntos')">Adjuntos</h2><button type="button" class="btn-colapsar" id="btnbodyAdjuntos" tabindex="-1">+</button></h2>
+    <div class="card-body colapsado" id="bodyAdjuntos">
 
     <div class="campo">
       <label for="archivoOrdenCompra">Orden de Compra (PDF)</label>
@@ -857,8 +891,17 @@
       <input type="file" id="archivosAnexos" multiple accept=".pdf,.jpg,.jpeg,.bmp,.png,.ai,.xls,.xlsx,.doc,.docx">
       <div id="listaAnexos"></div>
     </div>
+
+    <div class="campo vista-tablet vista-celular" id="campoFoto" style="display:none">
+      <label>Foto (cámara)</label>
+      <input type="file" id="archivoCamara" accept="image/*" capture="environment" style="display:none">
+      <button type="button" class="btn btn-secundario" onclick="document.getElementById('archivoCamara').click()">📷 Sacar foto</button>
+      <div id="listaFotos" class="subnota" style="margin-top:6px"></div>
+    </div>
+
     <div class="subnota">Evitá adjuntar archivos muy pesados (ideal: menos de 5 MB en total) para que el envío no falle.</div>
   </div>
+    </div>
 
   <!-- Resumen + botones finales: el resumen va arriba como contexto,
        los botones debajo en una sola fila equilibrada. -->
@@ -1389,8 +1432,10 @@ let coincidenciasClienteActuales = [];
 
 // Devuelve los clientes filtrados por el vendedor seleccionado (cascada)
 function clientesFiltradosPorVendedor() {
-  const codVendedor = document.getElementById('vendedor').value;
+  const codVendedor = _codVendedorLogueado || document.getElementById('vendedor').value;
   if (!codVendedor) return DATOS.clientes;
+  // DIRECCIÓN y MARKETING ven todos los clientes
+  if (VENDEDORES_SIN_FILTRO.includes(codVendedor)) return DATOS.clientes;
   return DATOS.clientes.filter(c => String(c.CodVendedor) === String(codVendedor));
 }
 
@@ -1472,6 +1517,28 @@ document.getElementById('vendedor').addEventListener('change', function () {
     ? `Clientes de ${vendedorNombre} (↓ para ver todos)`
     : 'Buscar por nombre o código...';
 });
+
+function setTurno(turno) {
+  const horario = document.getElementById('horarioEntrega');
+  horario.value = turno === 'manana' ? '08:00' : '14:00';
+  abrirCard('bodyEntrega');
+}
+
+function toggleCard(bodyId) {
+  const body = document.getElementById(bodyId);
+  const btn = document.getElementById('btn' + bodyId);
+  if (!body) return;
+  const colapsado = body.classList.toggle('colapsado');
+  if (btn) btn.textContent = colapsado ? '+' : '−';
+}
+
+function abrirCard(bodyId) {
+  const body = document.getElementById(bodyId);
+  const btn = document.getElementById('btn' + bodyId);
+  if (!body) return;
+  body.classList.remove('colapsado');
+  if (btn) btn.textContent = '−';
+}
 
 function actualizarIndicadoresProgreso() {
   // Datos del pedido: vendedor + cliente seleccionados
@@ -2701,6 +2768,17 @@ document.getElementById('archivosAnexos').addEventListener('change', function ()
   renderizarListaAnexos();
 });
 
+// Cámara — agrega la foto a la lista de anexos
+document.getElementById('archivoCamara').addEventListener('change', function () {
+  const fotos = Array.from(this.files || []);
+  archivosAnexosSeleccionados = [...archivosAnexosSeleccionados, ...fotos];
+  renderizarListaAnexos();
+  const lista = document.getElementById('listaFotos');
+  lista.textContent = archivosAnexosSeleccionados.filter(f => f.type.startsWith('image/')).length
+    ? `📷 ${archivosAnexosSeleccionados.filter(f => f.type.startsWith('image/')).length} foto(s) adjunta(s)`
+    : '';
+});
+
 function renderizarListaAnexos() {
   const cont = document.getElementById('listaAnexos');
   if (archivosAnexosSeleccionados.length === 0) { cont.innerHTML = ''; return; }
@@ -3561,12 +3639,22 @@ document.addEventListener('click', (e) => {
 document.querySelectorAll('input[name="modalidadEntrega"]').forEach(radio => {
   radio.addEventListener('change', function () {
     marcarValido('campoModalidadEntrega');
+
     const inputExpreso = document.getElementById('nombreExpreso');
     inputExpreso.style.display = (this.value === 'Entrega en Expreso') ? 'block' : 'none';
     if (this.value !== 'Entrega en Expreso') inputExpreso.value = '';
 
+    const inputOtra = document.getElementById('otraModalidad');
+    inputOtra.style.display = (this.value === 'Otra') ? 'block' : 'none';
+    if (this.value !== 'Otra') inputOtra.value = '';
+
     const requiereDireccion = (this.value === 'Entrega Directa a Cliente' || this.value === 'Entrega en Expreso');
     document.getElementById('bloqueDireccionEntrega').style.display = requiereDireccion ? 'block' : 'none';
+
+    // Auto-abrir el detalle de entrega al elegir una modalidad (salvo Retiro por Fábrica)
+    if (this.value !== 'Retiro por Fábrica') {
+      abrirCard('bodyEntrega');
+    }
   });
 });
 
@@ -3592,6 +3680,10 @@ function aplicarVista(vista) {
   ['btnVistaPc', 'btnVistaTablet', 'btnVistaCelular'].forEach(id => document.getElementById(id).classList.remove('activo'));
   const mapaBtn = { pc: 'btnVistaPc', tablet: 'btnVistaTablet', celular: 'btnVistaCelular' };
   document.getElementById(mapaBtn[vista]).classList.add('activo');
+
+  // Mostrar botón de cámara solo en tablet y celular
+  const campoFoto = document.getElementById('campoFoto');
+  if (campoFoto) campoFoto.style.display = (vista === 'tablet' || vista === 'celular') ? 'block' : 'none';
 
   localStorage.setItem('vistaPedidos', vista);
 }
@@ -3814,10 +3906,16 @@ let vendedoresLogin = [];
 
 // Carga los vendedores en el select del login antes de que el usuario ingrese nada
 async function cargarVendedoresLogin() {
+  // Vendedores especiales que se agregan siempre al login
+  const ESPECIALES = [
+    { CodVendedor: 'DIRECCION', Vendedor: 'DIRECCIÓN' },
+    { CodVendedor: 'MARKETING', Vendedor: 'MARKETING' },
+  ];
+
   try {
     const resp = await fetch(URL_VENDEDORES_LOGIN);
     const data = await resp.json();
-    vendedoresLogin = data.vendedores || [];
+    vendedoresLogin = [...(data.vendedores || []), ...ESPECIALES];
 
     const sel = document.getElementById('loginVendedor');
     sel.innerHTML = '<option value="">Seleccioná tu nombre...</option>';
@@ -3921,11 +4019,20 @@ function pedirCambioClaveObligatorio(codVendedor) {
   autenticarVendedor(codVendedor);
 }
 
+// Vendedores especiales que ven TODOS los clientes (no filtran por CodVendedor)
+const VENDEDORES_SIN_FILTRO = ['DIRECCION', 'MARKETING'];
+let _codVendedorLogueado = null;
+
 function autenticarVendedor(codVendedor) {
+  _codVendedorLogueado = codVendedor;
+
   // Ocultar pantalla de login, mostrar app
   document.getElementById('pantallaLogin').style.display = 'none';
   document.getElementById('appHeader').style.display = '';
   document.getElementById('mainContenido').style.display = '';
+
+  // Ocultar el campo Vendedor del formulario — ya está fijo por el login
+  document.getElementById('campoVendedor').style.display = 'none';
 
   // Pre-seleccionar el vendedor en el formulario
   window._vendedorPreseleccionado = codVendedor;
