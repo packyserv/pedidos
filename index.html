@@ -299,10 +299,14 @@
   @media (max-width:560px){
     main{padding:12px;}
     .fila, .grid-2, .grid-3{grid-template-columns:1fr;}
-    .grid-filtros{grid-template-columns:1.6fr 1fr 1fr 1fr; gap:6px;}
-    .grid-filtros select{padding:8px 4px; font-size:13px;}
+    /* Filtros de artículo: 2 columnas en vez de 4 apretadas */
+    .grid-filtros{grid-template-columns:1fr 1fr; gap:8px;}
+    .grid-filtros select{padding:8px 6px; font-size:13px;}
     .info-box.visible{grid-template-columns:1fr;}
     .card{padding:14px;}
+    /* Pills de modalidad en columna en celular */
+    .pills-modalidad{flex-direction:column; gap:6px;}
+    .pill{justify-content:flex-start;}
   }
 
   /* ---------- Impresion de la Orden de Pedido ---------- */
@@ -378,8 +382,6 @@
 </header>
 
 <main id="mainContenido" style="display:none">
-  <div id="bannerGlobal" class="banner"></div>
-
   <div class="card">
     <h2>Datos del pedido <span class="check-seccion" id="chkDatos" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2>
     <div class="card-body" id="bodyDatos">
@@ -581,113 +583,6 @@
 
   <!-- ============ CONDICIONES ============ -->
   <div class="card">
-    <h2 onclick="toggleCard('bodyAgregar')">Agregar artículos<button type="button" class="btn-colapsar" id="btnbodyAgregar" tabindex="-1">+</button></h2>
-    <div class="card-body colapsado" id="bodyAgregar">
-
-    <div class="grid-filtros">
-      <div class="campo">
-        <label for="filtroCodigo">Artículo (código base)</label>
-        <select id="filtroCodigo"><option value="">Todos...</option></select>
-      </div>
-      <div class="campo">
-        <label for="filtroAncho">Ancho</label>
-        <select id="filtroAncho"><option value="">Todos...</option></select>
-      </div>
-      <div class="campo">
-        <label for="filtroLargo">Largo</label>
-        <select id="filtroLargo"><option value="">Todos...</option></select>
-      </div>
-      <div class="campo">
-        <label for="filtroMicColor">Mic/Color</label>
-        <select id="filtroMicColor"><option value="">Todos...</option></select>
-      </div>
-    </div>
-
-    <div class="campo autocomplete" id="campoArticulo">
-      <label for="buscarArticulo">O buscar directamente por descripción</label>
-      <input type="text" id="buscarArticulo" placeholder="Escribí para buscar..." autocomplete="off">
-      <div class="autocomplete-lista" id="listaArticulos"></div>
-      <div class="info-box" id="infoArticulo"></div>
-    </div>
-
-    <div class="campo" id="campoResultadosFiltro" style="display:none">
-      <label>Resultados del filtro</label>
-      <select id="resultadosFiltro" size="6"></select>
-    </div>
-
-    <div class="grid-3">
-      <div class="campo">
-        <label for="cantidad">Cantidad (unidades)</label>
-        <input type="number" id="cantidad" min="1" step="1" placeholder="0">
-        <div id="chipsCantistad" style="display:flex; gap:4px; flex-wrap:wrap; margin-top:5px"></div>
-      </div>
-      <div class="campo">
-        <label for="precioUnitario" id="labelPrecioUnitario">Precio unitario ($)</label>
-        <input type="number" id="precioUnitario" min="0.01" step="0.01" placeholder="0.00">
-      </div>
-      <div class="campo">
-        <label for="descuentoItem">Descuento ítem (%)</label>
-        <input type="text" inputmode="decimal" id="descuentoItem" class="campo-porcentaje" value="0,00%">
-      </div>
-    </div>
-    <div class="grid-2">
-      <div class="campo">
-        <label>M2 total (Um2)</label>
-        <input type="text" id="m2TotalCalc" readonly style="background:#f4f6f7">
-      </div>
-      <div class="campo">
-        <label>Precio neto (con descuento)</label>
-        <input type="text" id="precioNetoCalc" readonly style="background:#f4f6f7">
-      </div>
-    </div>
-
-    <div class="campo">
-      <label for="observacionItem">Observación adicional del ítem (opcional)</label>
-      <input type="text" id="observacionItem" placeholder="Ej: Impresión Logo, fondo Blanco">
-    </div>
-
-    <button type="button" class="btn btn-secundario" id="btnAgregarItem" style="width:100%">+ Agregar al pedido</button>
-  </div>
-    </div>
-
-  <!-- ============ CARRITO ============ -->
-  <div class="card">
-    <h2 onclick="toggleCard('bodyCarrito')">🛒 Artículos cargados<span class="check-seccion" id="chkArticulos" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="btn-colapsar" id="btnbodyCarrito" tabindex="-1">−</button></h2>
-    <div class="card-body" id="bodyCarrito">
-    <div id="carritoContenedor">
-      <div class="vacio-carrito">Todavía no agregaste artículos</div>
-    </div>
-    <div class="total-pedido" id="totalPedido" style="display:none; flex-direction:column; align-items:stretch; gap:4px; margin-top:10px">
-      <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:400; color:var(--gris-texto)">
-        <span>Subtotal (con descuentos de ítem)</span>
-        <span id="subtotalPedidoValor">$ 0</span>
-      </div>
-      <div id="lineaDescuentoGlobal" style="display:none; justify-content:space-between; font-size:14px; font-weight:400; color:var(--rojo)">
-        <span>Descuento General / Canal</span>
-        <span id="descuentoGlobalValor">- $ 0</span>
-      </div>
-      <div style="display:flex; justify-content:space-between">
-        <span>Total del pedido</span>
-        <span id="totalPedidoValor">$ 0</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:400; color:var(--gris-texto); padding-top:4px; border-top:1px dashed var(--gris-borde); margin-top:4px">
-        <span>+ IVA (21%)</span>
-        <span id="ivaValor">$ 0</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; font-weight:700; color:var(--naranja-oscuro)">
-        <span>Total con IVA</span>
-        <span id="totalConIvaValor">$ 0</span>
-      </div>
-      <div id="lineaReferenciaOtraMoneda" style="display:none; justify-content:space-between; font-size:13px; font-weight:400; color:var(--gris-texto); padding-top:4px; border-top:1px dashed var(--gris-borde); margin-top:4px">
-        <span id="labelReferenciaOtraMoneda">Referencia</span>
-        <span id="totalReferenciaOtraMoneda">-</span>
-      </div>
-    </div>
-  </div>
-    </div>
-
-  <!-- ============ ADJUNTOS ============ -->
-  <div class="card">
     <h2 onclick="toggleCard('bodyCondiciones')">Condiciones de venta<span class="check-seccion" id="chkCondiciones" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="btn-colapsar" id="btnbodyCondiciones" tabindex="-1">+</button></h2>
     <div class="card-body colapsado" id="bodyCondiciones">
 
@@ -777,6 +672,113 @@
     </div>
 
   <!-- ============ ENTREGA DE LA MERCADERIA ============ -->
+  <div class="card">
+    <h2 onclick="toggleCard('bodyAgregar')">Agregar artículos<button type="button" class="btn-colapsar" id="btnbodyAgregar" tabindex="-1">+</button></h2>
+    <div class="card-body colapsado" id="bodyAgregar">
+
+    <div class="grid-filtros">
+      <div class="campo">
+        <label for="filtroCodigo">Artículo (código base)</label>
+        <select id="filtroCodigo"><option value="">Todos...</option></select>
+      </div>
+      <div class="campo">
+        <label for="filtroAncho">Ancho</label>
+        <select id="filtroAncho"><option value="">Todos...</option></select>
+      </div>
+      <div class="campo">
+        <label for="filtroLargo">Largo</label>
+        <select id="filtroLargo"><option value="">Todos...</option></select>
+      </div>
+      <div class="campo">
+        <label for="filtroMicColor">Mic/Color</label>
+        <select id="filtroMicColor"><option value="">Todos...</option></select>
+      </div>
+    </div>
+
+    <div class="campo autocomplete" id="campoArticulo">
+      <label for="buscarArticulo">O buscar directamente por descripción</label>
+      <input type="text" id="buscarArticulo" placeholder="Escribí para buscar..." autocomplete="off">
+      <div class="autocomplete-lista" id="listaArticulos"></div>
+      <div class="info-box" id="infoArticulo"></div>
+    </div>
+
+    <div class="campo" id="campoResultadosFiltro" style="display:none">
+      <label>Resultados del filtro</label>
+      <select id="resultadosFiltro" size="6"></select>
+    </div>
+
+    <div class="grid-3">
+      <div class="campo">
+        <label for="cantidad">Cantidad (unidades)</label>
+        <input type="number" id="cantidad" min="1" step="1" placeholder="0">
+        <div id="chipsCantistad" style="display:flex; gap:4px; flex-wrap:wrap; margin-top:5px"></div>
+      </div>
+      <div class="campo">
+        <label for="precioUnitario" id="labelPrecioUnitario">Precio unitario ($)</label>
+        <input type="number" id="precioUnitario" min="0.01" step="0.01" placeholder="0.00">
+      </div>
+      <div class="campo">
+        <label for="descuentoItem">Descuento ítem (%)</label>
+        <input type="text" inputmode="decimal" id="descuentoItem" class="campo-porcentaje" value="0,00%">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="campo">
+        <label>M2 total (Um2)</label>
+        <input type="text" id="m2TotalCalc" readonly style="background:#f4f6f7">
+      </div>
+      <div class="campo">
+        <label>Precio neto (con descuento)</label>
+        <input type="text" id="precioNetoCalc" readonly style="background:#f4f6f7">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="observacionItem">Observación adicional del ítem (opcional)</label>
+      <input type="text" id="observacionItem" placeholder="Ej: Impresión Logo, fondo Blanco">
+    </div>
+
+    <button type="button" class="btn btn-secundario" id="btnAgregarItem" style="width:100%">+ Agregar al pedido</button>
+  </div>
+    </div>
+
+  <!-- ============ CARRITO ============ -->
+  <div class="card">
+    <h2 onclick="toggleCard('bodyCarrito')">🛒 Artículos cargados<span class="check-seccion" id="chkArticulos" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="btn-colapsar" id="btnbodyCarrito" tabindex="-1">+</button></h2>
+    <div class="card-body colapsado" id="bodyCarrito">
+    <div id="carritoContenedor">
+      <div class="vacio-carrito">Todavía no agregaste artículos</div>
+    </div>
+    <div class="total-pedido" id="totalPedido" style="display:none; flex-direction:column; align-items:stretch; gap:4px; margin-top:10px">
+      <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:400; color:var(--gris-texto)">
+        <span>Subtotal (con descuentos de ítem)</span>
+        <span id="subtotalPedidoValor">$ 0</span>
+      </div>
+      <div id="lineaDescuentoGlobal" style="display:none; justify-content:space-between; font-size:14px; font-weight:400; color:var(--rojo)">
+        <span>Descuento General / Canal</span>
+        <span id="descuentoGlobalValor">- $ 0</span>
+      </div>
+      <div style="display:flex; justify-content:space-between">
+        <span>Total del pedido</span>
+        <span id="totalPedidoValor">$ 0</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:400; color:var(--gris-texto); padding-top:4px; border-top:1px dashed var(--gris-borde); margin-top:4px">
+        <span>+ IVA (21%)</span>
+        <span id="ivaValor">$ 0</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-weight:700; color:var(--naranja-oscuro)">
+        <span>Total con IVA</span>
+        <span id="totalConIvaValor">$ 0</span>
+      </div>
+      <div id="lineaReferenciaOtraMoneda" style="display:none; justify-content:space-between; font-size:13px; font-weight:400; color:var(--gris-texto); padding-top:4px; border-top:1px dashed var(--gris-borde); margin-top:4px">
+        <span id="labelReferenciaOtraMoneda">Referencia</span>
+        <span id="totalReferenciaOtraMoneda">-</span>
+      </div>
+    </div>
+  </div>
+    </div>
+
+  <!-- ============ ADJUNTOS ============ -->
   <div class="card">
     <h2 onclick="toggleCard('bodyEntrega')">Entrega de la mercadería<span class="check-seccion" id="chkEntrega" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="btn-colapsar" id="btnbodyEntrega" tabindex="-1">+</button></h2>
     <div class="card-body colapsado" id="bodyEntrega">
@@ -1981,7 +1983,15 @@ document.getElementById('btnRecompra').addEventListener('click', async () => {
     try {
       const resp = await fetch(URL_RECOMPRA);
       const data = await resp.json();
-      DATOS_RECOMPRA = (data.frecuencia || []).filter(esOportunidadRecompra);
+      DATOS_RECOMPRA = (data.frecuencia || []).filter(f => {
+        if (!esOportunidadRecompra(f)) return false;
+        // Si no es DIRECCIÓN ni MARKETING, filtrar solo los clientes del vendedor logueado
+        if (!VENDEDORES_SIN_FILTRO.includes(_codVendedorLogueado)) {
+          const cli = DATOS.clientes.find(c => String(c.CodCliente) === String(f.CodCliente));
+          if (!cli || String(cli.CodVendedor) !== String(_codVendedorLogueado)) return false;
+        }
+        return true;
+      });
     } catch (err) {
       cont.innerHTML = '<p style="color:var(--rojo)">No se pudo cargar la información de recompra.</p>';
       console.error('Error recompra:', err);
@@ -2811,20 +2821,29 @@ async function prepararAdjuntosParaEnvio() {
 
 function agregarItemAlCarrito() {
   const cantidad = Number(document.getElementById('cantidad').value);
-  const precio = Number(document.getElementById('precioUnitario').value);
+  const precioEnMonedaActual = Number(document.getElementById('precioUnitario').value);
   const descuentoItemPct = valorPorcentaje('descuentoItem');
+  const monedaActual = document.getElementById('monedaCarga').value || 'ARS';
+  const tipoCambio = Number(document.getElementById('tipoCambio').value || 0);
 
   if (!articuloSeleccionado) { mostrarBanner('fallo', 'Buscá y seleccioná un artículo antes de agregarlo.'); return; }
   if (!(cantidad > 0)) { mostrarBanner('fallo', 'Ingresá una cantidad mayor a cero.'); return; }
-  if (!(precio > 0)) { mostrarBanner('fallo', 'Ingresá un precio unitario mayor a cero.'); return; }
+  if (!(precioEnMonedaActual > 0)) { mostrarBanner('fallo', 'Ingresá un precio unitario mayor a cero.'); return; }
   if (descuentoItemPct < 0 || descuentoItemPct > 100) { mostrarBanner('fallo', 'El descuento del ítem tiene que estar entre 0 y 100.'); return; }
+
+  // Siempre guardar el precio en ARS internamente.
+  // Si el pedido está en USD, convertir a ARS para almacenar.
+  // Así, cambiar la moneda después reconvierte todo correctamente.
+  let precioUnitarioARS;
+  if (monedaActual === 'USD' && tipoCambio > 0) {
+    precioUnitarioARS = precioEnMonedaActual * tipoCambio;
+  } else {
+    precioUnitarioARS = precioEnMonedaActual;
+  }
+  const precioNetoARS = precioUnitarioARS * (1 - (descuentoItemPct / 100));
 
   const m2Texto = document.getElementById('m2TotalCalc').value;
   const m2Total = m2Texto && m2Texto !== '-' ? parseFloat(m2Texto) : '';
-  const precioNeto = precio * (1 - (descuentoItemPct / 100));
-
-  const stockInfo = INDICE_STOCK[articuloSeleccionado.CodigoConcatenado];
-  const stockDisp = stockInfo ? Number(stockInfo.StockUnidades || 0) : 0;
 
   const datosItem = {
     codItem: articuloSeleccionado.CodItem.trim(),
@@ -2832,7 +2851,14 @@ function agregarItemAlCarrito() {
     ancho: articuloSeleccionado.Ancho,
     largo: articuloSeleccionado.Largo,
     micColor: articuloSeleccionado.MicColor,
-    cantidad, precioUnitario: precio, descuentoItemPct, precioNeto, m2Total,
+    cantidad,
+    precioUnitarioARS,
+    descuentoItemPct,
+    precioNetoARS,
+    // precioUnitario y precioNeto se calculan al renderizar según moneda actual
+    precioUnitario: precioUnitarioARS,
+    precioNeto: precioNetoARS,
+    m2Total,
     observacionItem: document.getElementById('observacionItem').value.trim(),
   };
 
@@ -2947,9 +2973,16 @@ function formatoEnMoneda(n, moneda) {
   return moneda === 'USD' ? formatoUSD(n) : formatoMoneda(n);
 }
 
+function precioEnMoneda(precioARS, moneda, tipoCambio) {
+  if (moneda === 'USD' && tipoCambio > 0) return precioARS / tipoCambio;
+  return precioARS;
+}
+
 function renderizarCarrito() {
   guardarBorrador();
   actualizarIndicadoresProgreso();
+  // Abrir el carrito automáticamente cuando hay ítems
+  if (carrito.length > 0) abrirCard('bodyCarrito');
   const cont = document.getElementById('carritoContenedor');
   const totalBox = document.getElementById('totalPedido');
 
@@ -2960,11 +2993,17 @@ function renderizarCarrito() {
   }
 
   const moneda = document.getElementById('monedaCarga').value || 'ARS';
+  const tipoCambioActual = Number(document.getElementById('tipoCambio').value || 0);
 
   let subtotal = 0;
   let filas = '';
   carrito.forEach((it, i) => {
-    const importe = it.cantidad * it.precioNeto;
+    // Siempre calcular desde ARS con conversión dinámica según moneda actual
+    const precioUnitARS = it.precioUnitarioARS || it.precioUnitario || 0;
+    const precioNetoARS = precioUnitARS * (1 - (it.descuentoItemPct || 0) / 100);
+    const precioUnitMostrar = precioEnMoneda(precioUnitARS, moneda, tipoCambioActual);
+    const precioNetoMostrar = precioEnMoneda(precioNetoARS, moneda, tipoCambioActual);
+    const importe = it.cantidad * precioNetoMostrar;
     subtotal += importe;
     const descTexto = it.descuentoItemPct > 0 ? ` <small style="color:var(--verde)">(-${formatoPorcentaje(it.descuentoItemPct)})</small>` : '';
     const fechaTexto = it.fechaEntregaOverride
@@ -2980,7 +3019,7 @@ function renderizarCarrito() {
     const m2Texto = (it.m2Total !== '' && it.m2Total !== undefined && it.m2Total !== null)
       ? ` · M2 (Um2): ${Number(it.m2Total).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       : '';
-    const detalleTexto = `<br><small style="color:#888">${it.codItem}${medidas ? ' · ' + medidas : ''} · P.Unit: ${formatoEnMoneda(it.precioUnitario, moneda)}${m2Texto}</small>`;
+    const detalleTexto = `<br><small style="color:#888">${it.codItem}${medidas ? ' · ' + medidas : ''} · P.Unit: ${formatoEnMoneda(precioUnitMostrar, moneda)}${m2Texto}</small>`;
     filas += `<tr>
       <td><b>${it.descripcion}</b>${detalleTexto}${fechaTexto}${facturacionTexto}${observacionTexto}</td>
       <td>
@@ -2990,7 +3029,7 @@ function renderizarCarrito() {
           onchange="editarCantidadEnCarrito(${i}, this.value)"
           onclick="this.select()">
       </td>
-      <td>${formatoEnMoneda(it.precioNeto, moneda)}${descTexto}</td>
+      <td>${formatoEnMoneda(precioNetoMostrar, moneda)}${descTexto}</td>
       <td>${formatoEnMoneda(importe, moneda)}</td>
       <td style="white-space:nowrap">
         <button type="button" class="quitar" style="font-size:15px" title="Fecha de entrega de este ítem" onclick="abrirModalFechaItem(${i})">📅</button>
@@ -3028,19 +3067,20 @@ function renderizarCarrito() {
   document.getElementById('ivaValor').textContent = formatoEnMoneda(iva, moneda);
   document.getElementById('totalConIvaValor').textContent = formatoEnMoneda(totalConIva, moneda);
 
-  // Referencia en la otra moneda
+  // Referencia en la otra moneda — siempre calculada desde ARS base
   const lineaRef = document.getElementById('lineaReferenciaOtraMoneda');
-  const tipoCambioManual = Number(document.getElementById('tipoCambio').value || 0);
-  const tipoCambioParaReferencia = tipoCambioManual > 0
-    ? tipoCambioManual
+  const tipoCambioParaReferencia = tipoCambioActual > 0
+    ? tipoCambioActual
     : (DATOS.cotizacionUSD && DATOS.cotizacionUSD.valor ? Number(DATOS.cotizacionUSD.valor) : 0);
 
   if (tipoCambioParaReferencia > 0) {
     lineaRef.style.display = 'flex';
     if (moneda === 'USD') {
+      // Estamos en USD — referencia en ARS: multiplicar el total USD por el tipo de cambio
       document.getElementById('labelReferenciaOtraMoneda').textContent = 'Referencia en ARS';
       document.getElementById('totalReferenciaOtraMoneda').textContent = formatoMoneda(totalConIva * tipoCambioParaReferencia);
     } else {
+      // Estamos en ARS — referencia en USD: dividir el total ARS por el tipo de cambio
       document.getElementById('labelReferenciaOtraMoneda').textContent = 'Referencia en USD';
       document.getElementById('totalReferenciaOtraMoneda').textContent = formatoUSD(totalConIva / tipoCambioParaReferencia);
     }
@@ -3274,9 +3314,15 @@ function mostrarResumenConfirmacion() {
   const modalidadVal = modalidadEntregaSeleccionada();
 
   let subtotal = 0;
-  carrito.forEach(it => { subtotal += it.cantidad * it.precioNeto; });
+  carrito.forEach(it => {
+    const precioUnitARS = it.precioUnitarioARS || it.precioUnitario || 0;
+    const precioNetoARS = precioUnitARS * (1 - (it.descuentoItemPct || 0) / 100);
+    subtotal += it.cantidad * precioNetoARS;
+  });
   const descuentoGlobalPct = valorPorcentaje('descuentoGlobal');
-  const totalConIva = (subtotal - subtotal * descuentoGlobalPct / 100) * 1.21;
+  const totalConIvaARS = (subtotal - subtotal * descuentoGlobalPct / 100) * 1.21;
+  const tipoCambioResumen = Number(document.getElementById('tipoCambio').value || 0);
+  const totalConIva = precioEnMoneda(totalConIvaARS, moneda, tipoCambioResumen);
 
   const totalUnidades = carrito.reduce((acc, it) => acc + Number(it.cantidad), 0);
   const fact = obtenerFacturacionActual();
