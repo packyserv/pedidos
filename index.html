@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<!-- saved from url=(0045)file:///C:/Users/herna/Downloads/index_2.html -->
-<html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
+<html lang="es">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Carga de Pedidos</title>
 <style>
@@ -352,7 +352,9 @@
 
     <div class="campo">
       <label for="loginVendedor">Tu nombre</label>
-      <select id="loginVendedor"><option value="">Error cargando — recargá la página</option></select>
+      <select id="loginVendedor">
+        <option value="">Cargando vendedores...</option>
+      </select>
     </div>
 
     <div class="campo" id="campoClave" style="display:none">
@@ -361,7 +363,7 @@
       <div class="subnota" id="subnotaClave"></div>
     </div>
 
-    <button type="button" class="btn btn-naranja btn-ancho" id="btnIngresar" style="margin-top:8px" disabled="">Ingresar</button>
+    <button type="button" class="btn btn-naranja btn-ancho" id="btnIngresar" style="margin-top:8px" disabled>Ingresar</button>
   </div>
 </div>
 
@@ -369,7 +371,7 @@
   <div style="display:flex; align-items:center; gap:10px"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFkAAAAnCAYAAABkI+QeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAABDOSURBVGhD7ZhpcF3FlYC/032fnp4ka5es3bJlybKxsWVjY8AYKDCYLSwJSVHUQEgyWZgkkwpTlclUAkwqM0VChiEkqWRIIJnMJBAgYEgCBGMbrzg2tvEiyatsa7dWa9d7794+8+PKw6CAganEv/RVvR/vvq7u01/f131Oi/5tgTLFXxUz+cEUf3mmJJ8DpiSfA6YknwOmJJ8DpiSfA6YknwOmJJ8DpiSfA+SDVHyqSjI9H8rn4uWVgRfBDfejJ/bi9bciqiiQTM2Ckhrs9FmYSBSXjONaG7CtDRgNAPCjGWjlImxBBYjFH+wO+xk8heSVI3MvRXuakaZdEB/GL5iJmbEQSYkhR7eT7D8FxTWYoipsagbqJwjaD2PbGjDJcQACMQTlC/DKz0OshxsdxG9txOtuQoCgqAbJK8U7sQcd7CYZy0ZL5+EVlIdxJ8ZwLQ3Y9kaMOkDxbRRXPh+vZA7iRQhGBwma9+N1n8BOzO29+ECSE7WXwoo7oagSk5mP2Ag6Noxr3o9Z91O8pjfx51yMW/YxtKQak1OC8SKon8S1HUJefxy7by3BzCXo0luR6mWYnOkoBh0ZwDW9iTzzTVh8A97N/4Tb8Rzmhe/i55aiV30OW3sJNG6GN9egyz+BK6jA5JZgUmIQBLjuk7D+Z3j7XiVIz8NdejtSuxIpnIEYi8ZHCY7txrz2E4z1CK75IgJ4L36HZEYuXPhxKJuHZBVgPA/1E7jWQ8imX+C99Qr+9Cp02a3I3MuRgrJw4eKjuJZ6zDP3E+lpnqzsHdgHlqQ/MPnhZPxbv0FK3XXQWo9Z/1Pk+G7IKsTOuxznJ5CW/VA2D5ORixzcjN2/Fjm4FU3Pwc5dCaMDuIFuWP1lvCXXIce2I9uegoYNyEAXxo9jm/agS2/BzFyMHt6KGz0N1/493sKr4dAWzLrHUHV4s5eijRvx9q+Fxo2oMdj5VyJjAwSdx9CrPotd+TeYsdPoKz/CNKzDdR7DBj407URmLcFecTfScRgOrMNdfjeR5R+FrmOYDY8jR/8E+eV41cshPoJ/6hhyxafDPvtakM3/hexfC53H8KIxzN6XkWRisrJ34E1+MBnfCKb2YiRIwp6XMDteAGMJFLRyMVI4E0nLwuxbS3BgHX7SJ7AeEk1HimpJnXcZaiMw/wrs/Mtx9Rswr/wIc6oJVCGSCtZDU9LQkhrc2AB+YRX2Y5cQmVlH8NZL2JceQTqPIZEU3G++iYuPMWY81ItgMqYTXSbg+7h5l+GdvwrGh+HJr+O1NAKK8SLgpeBU0bxyJBJDu44TuABbOgfxoridz5Oy/VmIppPMq8DMXIKKgdnLMIuvh54T8NIjmOO7wTmMlwIpMRgdmqzsz3jfg8/lz8JLz4fAh5b9ECTR5DjqJxHjIfFRAt9nfMEq3OefIHL/emLf2kzsG68SvfxOdHQQDZJIxQKIpKIH1iGdx8BPQJCE8SEY6UeDOK5pF4lTx/EWXo2dfQFEoqhJgfgozvmMVyzG//SP8O5bR+q3NpH2wOuk3vDV8Ezoa8WU1mKyi3D16zEdRyFIoC7BeDJJfGwIjWWhueXhXHqb0Yw8JJaNE0WO7QxjQtHsIhgfxo0PISVzMdlFaOMWpO0gJOO4wGc8kSQ+cnqyrnflfSVTuRAQgvgwtB8GQDNy0aJq8FLQ9gb8umuJ3PYAtqgK3fA47ulvEvzue7jkGDLSj4z0Q2YhGh/FDPeH/4oziCGIpBKfcQF2wZXEqpciTTtwu15Ex4eRWYsJ0nNIVl9C6pd+iTf7Atj9Iu6Z+/Ff+QFBVxM61IuODWAychAvBXpawfkAJPNm4H3vLeynfoBm5kJ+Oe50BzLQhRTNhtQM3EAntq81nFskFSk7Dx0ZQEZOY7IKAYGBU5AYC/usvpCUR+oxdzz49jzOwvtK1spFiAhBfxtMy8PPKydZdz1myQ3Q3og27cZWLcZkFhBs/Q1mx/OYg1twHQeRtEx0uA9aG5HEGCaaRjBjEX7hLIKcYsaLahlb+UmCe58j9Qs/xSuZizvyBjx9P7LtGehpweYU4UrnwvKPIdF03NGd6Nr/wBzajHQeCbeivjaktwUSo6gLcDUXkSyoxGUXwZyV2EgaDJxC0nMgtwztbYWhHpiQrCcOYAIHQJA6DVNYCSOnw5cqPgoornIJfskcgpzpULsCE8uC7pOTdb0rZ92TVQSZsRAAr6ga9w9rwDkiqekweApd/3NM0y504arwb3/hLQQlNTgvgs0qwgz14XqbMUe3Q1EVlM0jctVnCC74COocKdE01B9HRvrQ4R5MJIYc3o5pO4gbHUS6mpDiaqR6OWZsEMYGsZV1JO96GCcWmZaPzchBD27GdB2Hxk1QtoDonOUEX3maYLgPLy0L7WtD2w/DtELstBy0cRNuuB8pqMBEUnDNe0EDEIMW1+AZiw53YY6/CbF0mHMRKXXXENRciI4OYtOz0IFO5MRbk5W9K2fNLoL0HMz1X0FSM9Btv8E73Yo53QEHtyIbfo7Ur8eMj0JfK5IYwSTHsUEC29+BObQFrV+PNO/DNu+H7hPIwCmID2FGT2N7TyKHNqGb/xvz+i/BBUhXE9S/jvS2IPER8CLI+CDS34688TQkhjFjA1gXYAc6MUd3IAe3wLGdSGsjpuMwOtABY0OYkT7scE8oYvfv4fA2TGo6BofWb0A7jmKzC5GhXnTX7zB9bQBIfjniAji8DTm0DelpQXubkfGwTzN4CjnxJrpzDdKwCfHPnlnwfnlysmw+3t3fR1NS0e/ehBkZABEIkogqyNttVQwaiYaHUDIxUXxI2B4FDb+qFwXrgZ9EggSKIghqPEAQDUDDvy5iwxMeRQIfFQnHQMBPhG3DhuEYZ2IxEYhEUAVJjE+0E9QYMBbcxBjGC+NzfjifM/MQi6ibiGUibhsBm4JqgCTjyP8Z7/04q+QgqxCpWEhgLXJ0ZxigKqoaDqKKiQ9jJlYzEItaCypIkMBOCsQhOBtBxWCCxESlFK6UTuh2xgOxoA7jfAxKIGZiKXhHdfX2c4dRh2LDlG1iXEVxYlEbQZxDXHLiNwl/w07EGH4UIbAREIMJkhPV3ts4BLURVAQCH6v+RFRn56ySVZVkUTWsvAuTXQApqeHqBwlwDhcfxW78T2hpIKi9FOZeipmWF5auA11o8z68I9sxA134RdXogivDPdZLCffJHc8RaT2AeqkkF38EKZmDzSxAvRTwEwRtjdg9v0fPvwYpm4c73UHK7/8NgCC7iOCyuzBp2WjjRnR8NDyQDryGd3wXvhcjWLAKU70MScuGxBhBVxOmcSMy2EMw/0okPZvI9qfRgS6CivPRBaswhZWIGILeVmTfWryTb4EL8Itr0AWrsMXVYXzxEYKu48jRnUSadp71zT6r5GT+DOTOh7GzLiDxwoPYkjnYRavxdz6PelFMXhmy5kGC2cuRFbeHKdTYIJKajkbTcO1H0TXfAWvRa/4OW1iJJEYhNg0i6QSdR+CRj0NGAebe34Z78Ol2RAyaU4wD3GuPIcXV2POvxR/pJfL1pUgklcSyj+J94p/Rtkbcll/BvMuQeZfDE/egJ/bjbrsPO2clNj0LcQkwKfiDPegffwjxUeT6r0J7A+aZB0jWrsRe+RkkpxgzPgSRVIJIDNe0C3n5+2H+vPpLSNUSbHwMRJC0bILkOG7H83hP33fW9/k9UzhFcVd8Elu1NKzKphXAnpdwfa1o0y5Iy4LjuwjEYOtW4xVV4T91H/rwbQQP3og+9gXMrjVoEEev/hy2pBrd8AT66O0Ej30eRk7jVdZB1TK0fD4mpxjtPIz++FPoD+/EbX8WE8vC5M9AB7rDu4acIvxIlCAjD664G4IADqxHBnswRTUw3I8M9+NWfR5v8Y1INErwxBfx/+U6gkfvwPzhe0jzXiiejSmYAV0nSFYswLv2S5jSGnjlB+hDN6OPfxEZ6MSruQiqL4IFV2PnXYEeeZPgx5/GPXQT/kM3Iy9/H7P/tbMK5mySnfHwai5BIlFEBLtoNdp5DNewEfF9JKcYObEHK4TlpRjMTV9j/CNfJz7vKvyeVoINv4D8GXjVK1AHydkXkbj+ayRX3o2mZSFikEgKWrkQTSZwPa240RESsUxcdnH4xnQcRFrqIUhibArkzyC59Ga88nnQsg/eeBoyCyC7GE4dxY9l4S1ajY1m4F54CPPWH/C6mrBHtmPeeAYGujF5FWAs2n4IFt+IyS3HndyHvPoTTF870nUc13Uc8aKYtCxMWibiRbBzLyN5633EV9xJIrMIt+XXmMbNk9X9Ge8pGWPBvL1GkpWPK6qCnc/hai/G9LZgTh7ANO3BbH0STuzBi0ZJq7uG2B3fxrv3WYKltyJl5yHWYqMxUstrSa29kNjsOsz4AK6jEZp2QWUdJiVKZPktRB7eS8r967CLr0P3vozsew1aGyZKXkNQWYe95gvo6U7c1qdgsBvyyjHT8qDjMJJXisQyUVXY/xpGz8xh4qDOKoKcUnTwFG5sEG/6LLARtGHL/x50LiWKZhejY4PQ1wrbnkTfXIOMdBOdMZ/o6ntI/cqvCT75KPDOw/HdeE/Jxo+jLQ1oEJankhjDVC6C1ExMZR007UJPt+NyignqXyf56B0k/uVa/MfvQcdHMCkxvJIaxIuAKsmdLzL+3VuJf3s18QdvIv7oXfj//gl0pA9TPi/cJw9sgPoNMDoMYyO43X9Auo4jvc1oMixpufFebFo2euQNzO7fIVmFSP4M1AVw6hgSBIixAAS5pQRp2fiZhSQLKwmmFaA5xZBXip5qwiRGkTNZZjQNPxrDT8/Br74Yr2QOrr0R19WEGxsieOZbJP71WvyHPxrejSDYstqJFPPsvGcxIgg63A9VS9D0bNyO56C/Ha25GBONYTb9ChLj6C3/iFt1D37BTMguISiqJlK9DLqa0PU/C3Pq6guR6bNw+RW46bPRRdfirfosEh/Cxcfxrvos2teG+8WX0UPboKQWU1KL62xCmvcjYwO4JTcguaXYtCzoboLffhvb345Or0aX3gTGYP70W+g+AXMvRTIL0Krl+DlluKU3Y1bcjgZJSMvC1F2HHtqM2fMyFFUhRTW4otkkAofOvQx71WeQoR7Y/OswZ7jtAYKaFbicYjSnFJmzAomloZt/hT24dbK6P+M9JQOYvjZ0qJdAHQ5BiqrwsgqQrU8hhzZDWjZkFmBT0/GKq/CqFmNzpsOhNzDbnkT2rUWGeyEZR6yHV1ARfpzDtB2Eho2YabnYwpnQUg/bn8Ukx9HUdCQtE/rbMa31mLEhXFoWpqAc6WmBTb/E7v1jGGReGZSdB62NmIaNmI5D4dbiFJM+Da+gHM8loXlvWP2lZ2Gm5cJbr2BO7AlfBg2vQyOz6rCZecjx3eF99441SEYOkpmPl5VHZMZCvPLzMP1tsPePyKs/RpLxydr+jLOmcGdwGXmYORdBNIa2HUaa94cVkyrOWMiajhRWILEsdHQQ11KPHX/7nlW9FMirQPJKIUjielqgvxMJEkhuKeQWh/eyHYfD4iRrOuSXhpcz3SchPorGMpG5K9CRPjiyMyx9ATJyoaACxoahtxWS4+Hbl1MKZdUIBu1twXW3YFwAuSVIZn7Y72BPOD8vipTWIpn56HAf2nE0TOXOlCmp05CCCiR7OopCZxN0n3zfrOIMH0jyB2Oi/vyr82HG+TBtPygfvs/337U/MB9u4P8/H2acD9P2g/Lh+/wLSp7ivZiSfA6YknwOmJJ8DpiSfA6YknwOmJJ8DvgfYeOR1ekNpMoAAAAASUVORK5CYII=" alt="Packaging y Servicios" style="height:32px; border-radius:4px"><h1 style="font-size:17px; margin:0">Carga de Pedidos</h1></div>
   <div class="barra-vista">
     <div class="grupo-vista" title="Ancho de la pantalla">
-      <button type="button" class="btn-vista activo" id="btnVistaPc" title="Vista PC">🖥️</button>
+      <button type="button" class="btn-vista" id="btnVistaPc" title="Vista PC">🖥️</button>
       <button type="button" class="btn-vista" id="btnVistaTablet" title="Vista Tablet">📱</button>
       <button type="button" class="btn-vista" id="btnVistaCelular" title="Vista Celular">📲</button>
     </div>
@@ -399,8 +401,8 @@
           <input type="text" id="buscarCliente" placeholder="Buscar por nombre o código..." autocomplete="off">
           <div class="autocomplete-lista" id="listaClientes"></div>
         </div>
-        <button type="button" class="btn btn-secundario" id="btnLupaCliente" title="Ver última compra" disabled="" style="padding:9px 12px">🔍</button>
-        <button type="button" class="btn btn-secundario" id="btnPredecirCompra" title="Predecir próxima compra" disabled="" style="padding:9px 12px">🔮</button>
+        <button type="button" class="btn btn-secundario" id="btnLupaCliente" title="Ver última compra" disabled style="padding:9px 12px">🔍</button>
+        <button type="button" class="btn btn-secundario" id="btnPredecirCompra" title="Predecir próxima compra" disabled style="padding:9px 12px">🔮</button>
         <button type="button" class="btn btn-secundario" id="btnNuevoCliente" title="Solicitar alta de nuevo cliente" style="padding:9px 12px; font-size:13px">➕</button>
         <button type="button" class="btn btn-secundario" id="btnToggleFantasia" title="Agregar Nombre de Fantasía" style="padding:9px 12px; font-size:13px">🏷️</button>
       </div>
@@ -552,7 +554,7 @@
         <label>Tipo de facturación para este artículo</label>
         <div class="pills-modalidad">
           <label class="pill">
-            <input type="checkbox" id="chkBejermanItem" checked="">
+            <input type="checkbox" id="chkBejermanItem" checked>
             <span>Bejerman</span>
           </label>
           <label class="pill">
@@ -581,16 +583,16 @@
 
   <!-- ============ CONDICIONES ============ -->
   <div class="card">
-    <h2 onclick="toggleCard(&#39;bodyCondiciones&#39;)">Condiciones de venta<span class="check-seccion" id="chkCondiciones" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="btn-colapsar" id="btnbodyCondiciones" tabindex="-1">+</button></h2>
+    <h2 onclick="toggleCard('bodyCondiciones')">Condiciones de venta<span class="check-seccion" id="chkCondiciones" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="btn-colapsar" id="btnbodyCondiciones" tabindex="-1">+</button></h2>
     <div class="card-body colapsado" id="bodyCondiciones">
 
     <div class="fila">
       <div class="campo" id="campoMoneda">
         <label for="monedaCarga">Moneda en la que se carga el pedido *</label>
-        <select id="monedaCarga" data-combo-listo="1" style="display: none;">
+        <select id="monedaCarga">
           <option value="ARS">Pesos argentinos (ARS)</option>
           <option value="USD">Dólares (USD)</option>
-        </select><div class="combo-buscable"><input type="text" autocomplete="off" placeholder="Elegí la moneda..."><div class="autocomplete-lista combo-lista"></div></div>
+        </select>
         <div class="subnota">A partir de acá, todo el pedido se carga y se muestra en la moneda elegida.</div>
       </div>
       <div class="campo" id="campoCondVta">
@@ -613,7 +615,7 @@
         <label>Tipo de cotización</label>
         <div class="pills-modalidad">
           <label class="pill">
-            <input type="radio" name="tipoCotizacionBCRA" value="Billete" checked="">
+            <input type="radio" name="tipoCotizacionBCRA" value="Billete" checked>
             <span>Billete</span>
           </label>
           <label class="pill">
@@ -628,7 +630,7 @@
     <div class="campo">
       <label for="motivoDescuentoGlobal">Descuento General / Canal sobre el pedido</label>
       <div class="grid-2">
-        <select id="motivoDescuentoGlobal" data-combo-listo="1" style="display: none;">
+        <select id="motivoDescuentoGlobal">
           <option value="">Sin Descuento General / Canal</option>
           <option value="Pronto pago">Pronto pago</option>
           <option value="Volumen">Volumen</option>
@@ -636,8 +638,8 @@
           <option value="Liquidación">Liquidación</option>
           <option value="Sobrestock">Sobrestock</option>
           <option value="Otro">Otro</option>
-        </select><div class="combo-buscable"><input type="text" autocomplete="off" placeholder="Sin descuento / elegí motivo..."><div class="autocomplete-lista combo-lista"></div></div>
-        <input type="text" inputmode="decimal" id="descuentoGlobal" class="campo-porcentaje" value="0,00%" disabled="">
+        </select>
+        <input type="text" inputmode="decimal" id="descuentoGlobal" class="campo-porcentaje" value="0,00%" disabled>
       </div>
       <input type="text" id="motivoOtroDetalle" placeholder="Aclará el motivo del descuento..." style="display:none; margin-top:8px">
     </div>
@@ -646,7 +648,7 @@
       <label>Tipo de facturación</label>
       <div class="pills-modalidad">
         <label class="pill">
-          <input type="checkbox" id="chkBejerman" checked="">
+          <input type="checkbox" id="chkBejerman" checked>
           <span>Bejerman</span>
         </label>
         <label class="pill">
@@ -671,7 +673,7 @@
 
   <!-- ============ ENTREGA DE LA MERCADERIA ============ -->
   <div class="card">
-    <h2 onclick="toggleCard(&#39;bodyAgregar&#39;)">Agregar artículos<button type="button" class="btn-colapsar" id="btnbodyAgregar" tabindex="-1">+</button></h2>
+    <h2 onclick="toggleCard('bodyAgregar')">Agregar artículos<button type="button" class="btn-colapsar" id="btnbodyAgregar" tabindex="-1">+</button></h2>
     <div class="card-body colapsado" id="bodyAgregar">
 
     <div class="grid-filtros">
@@ -723,11 +725,11 @@
     <div class="grid-2">
       <div class="campo">
         <label>M2 total (Um2)</label>
-        <input type="text" id="m2TotalCalc" readonly="" style="background:#f4f6f7">
+        <input type="text" id="m2TotalCalc" readonly style="background:#f4f6f7">
       </div>
       <div class="campo">
         <label>Precio neto (con descuento)</label>
-        <input type="text" id="precioNetoCalc" readonly="" style="background:#f4f6f7">
+        <input type="text" id="precioNetoCalc" readonly style="background:#f4f6f7">
       </div>
     </div>
 
@@ -742,7 +744,7 @@
 
   <!-- ============ CARRITO ============ -->
   <div class="card">
-    <h2 onclick="toggleCard(&#39;bodyCarrito&#39;)">🛒 Artículos cargados<span class="check-seccion" id="chkArticulos" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="btn-colapsar" id="btnbodyCarrito" tabindex="-1">+</button></h2>
+    <h2 onclick="toggleCard('bodyCarrito')">🛒 Artículos cargados<span class="check-seccion" id="chkArticulos" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="btn-colapsar" id="btnbodyCarrito" tabindex="-1">+</button></h2>
     <div class="card-body colapsado" id="bodyCarrito">
     <div id="carritoContenedor">
       <div class="vacio-carrito">Todavía no agregaste artículos</div>
@@ -778,14 +780,14 @@
 
   <!-- ============ ADJUNTOS ============ -->
   <div class="card">
-    <h2 onclick="toggleCard(&#39;bodyEntrega&#39;)">Entrega de la mercadería<span class="check-seccion" id="chkEntrega" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="btn-colapsar" id="btnbodyEntrega" tabindex="-1">+</button></h2>
+    <h2 onclick="toggleCard('bodyEntrega')">Entrega de la mercadería<span class="check-seccion" id="chkEntrega" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="btn-colapsar" id="btnbodyEntrega" tabindex="-1">+</button></h2>
     <div class="card-body colapsado" id="bodyEntrega">
 
     <div class="campo" id="campoModalidadEntrega">
       <label>Modalidad de entrega *</label>
       <div class="pills-modalidad">
         <label class="pill">
-          <input type="radio" name="modalidadEntrega" value="Entrega Directa a Cliente" checked="">
+          <input type="radio" name="modalidadEntrega" value="Entrega Directa a Cliente" checked>
           <span>Entrega Directa a Cliente</span>
         </label>
         <label class="pill">
@@ -817,7 +819,7 @@
         </div>
         <div class="campo autocomplete" id="campoLocalidad">
           <label for="buscarLocalidad">Partido, Localidad o Barrio *</label>
-          <input type="text" id="buscarLocalidad" placeholder="Elegí una provincia primero..." autocomplete="off" disabled="">
+          <input type="text" id="buscarLocalidad" placeholder="Elegí una provincia primero..." autocomplete="off" disabled>
           <div class="autocomplete-lista" id="listaLocalidades"></div>
           <div class="msg-error">Seleccioná una localidad de la lista</div>
         </div>
@@ -838,7 +840,7 @@
           <span>5 días hábiles</span>
         </label>
         <label class="pill">
-          <input type="radio" name="plazoEntrega" value="10h" checked="">
+          <input type="radio" name="plazoEntrega" value="10h" checked>
           <span>10 días hábiles</span>
         </label>
         <label class="pill">
@@ -849,8 +851,8 @@
           <input type="radio" name="plazoEntrega" value="30c">
           <span>30 días</span>
         </label>
-        <button type="button" class="pill" style="cursor:pointer" onclick="setTurno(&#39;manana&#39;)">🌅 Turno Mañana</button>
-        <button type="button" class="pill" style="cursor:pointer" onclick="setTurno(&#39;tarde&#39;)">🌆 Turno Tarde</button>
+        <button type="button" class="pill" style="cursor:pointer" onclick="setTurno('manana')">🌅 Turno Mañana</button>
+        <button type="button" class="pill" style="cursor:pointer" onclick="setTurno('tarde')">🌆 Turno Tarde</button>
       </div>
       <div class="subnota">Calcula automáticamente la fecha sugerida. "Turno Mañana" = 08:00 hs, "Turno Tarde" = 14:00 hs. Podés ajustar a mano abajo.</div>
     </div>
@@ -877,7 +879,7 @@
 
   <!-- ============ AGREGAR ARTICULOS ============ -->
   <div class="card">
-    <h2 onclick="toggleCard(&#39;bodyAdjuntos&#39;)">Adjuntos<button type="button" class="btn-colapsar" id="btnbodyAdjuntos" tabindex="-1">+</button></h2>
+    <h2 onclick="toggleCard('bodyAdjuntos')">Adjuntos<button type="button" class="btn-colapsar" id="btnbodyAdjuntos" tabindex="-1">+</button></h2>
     <div class="card-body colapsado" id="bodyAdjuntos">
 
     <div class="campo">
@@ -888,14 +890,14 @@
 
     <div class="campo">
       <label for="archivosAnexos">Otros anexos (PDF, imágenes, Excel, Word, etc.)</label>
-      <input type="file" id="archivosAnexos" multiple="" accept=".pdf,.jpg,.jpeg,.bmp,.png,.ai,.xls,.xlsx,.doc,.docx">
+      <input type="file" id="archivosAnexos" multiple accept=".pdf,.jpg,.jpeg,.bmp,.png,.ai,.xls,.xlsx,.doc,.docx">
       <div id="listaAnexos"></div>
     </div>
 
     <div class="campo vista-tablet vista-celular" id="campoFoto" style="display:none">
       <label>Foto (cámara)</label>
       <input type="file" id="archivoCamara" accept="image/*" capture="environment" style="display:none">
-      <button type="button" class="btn btn-secundario" onclick="document.getElementById(&#39;archivoCamara&#39;).click()">📷 Sacar foto</button>
+      <button type="button" class="btn btn-secundario" onclick="document.getElementById('archivoCamara').click()">📷 Sacar foto</button>
       <div id="listaFotos" class="subnota" style="margin-top:6px"></div>
     </div>
 
@@ -4131,6 +4133,5 @@ crearComboBuscable('motivoDescuentoGlobal', { placeholder: 'Sin descuento / eleg
 aplicarPlazoEntrega('10h');
 </script>
 
-
-
-</body></html>
+</body>
+</html>
