@@ -382,6 +382,7 @@
 </header>
 
 <main id="mainContenido" style="display:none">
+  <div id="bannerGlobal" class="banner"></div>
   <div class="card">
     <h2>Datos del pedido <span class="check-seccion" id="chkDatos" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2>
     <div class="card-body" id="bodyDatos">
@@ -3594,11 +3595,14 @@ function inicializarCampoPorcentaje(id) {
 
 function mostrarBanner(tipo, texto) {
   const b = document.getElementById('bannerGlobal');
+  if (!b) return;
   b.className = `banner visible ${tipo}`;
   b.textContent = texto;
 }
 function ocultarBanner() {
-  document.getElementById('bannerGlobal').className = 'banner';
+  const b = document.getElementById('bannerGlobal');
+  if (!b) return;
+  b.className = 'banner';
 }
 
 /* =========================================================================
