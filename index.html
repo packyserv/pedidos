@@ -1300,19 +1300,26 @@ async function cargarDatos(intento) {
     });
     crearComboBuscable('condicionVenta', { placeholder: 'Tocá o escribí para elegir...' });
 
+    // Abrir todas las cards momentáneamente para que los combos
+    // se inicialicen correctamente aunque estén colapsadas por default
+    ['bodyDatos','bodyCondiciones','bodyAgregar','bodyCarrito','bodyEntrega','bodyAdjuntos'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('colapsado');
+    });
+
     inicializarFiltrosArticulo();
-    // Abrir momentáneamente la card de artículos para que los combos
-    // se inicialicen correctamente aunque esté colapsada por default
-    const bodyAgregar = document.getElementById('bodyAgregar');
-    const btnAgregar = document.getElementById('btnbodyAgregar');
-    if (bodyAgregar) bodyAgregar.classList.remove('colapsado');
     crearComboBuscable('filtroCodigo', { placeholder: 'Todos / buscar código...' });
     crearComboBuscable('filtroAncho', { placeholder: 'Todos...' });
     crearComboBuscable('filtroLargo', { placeholder: 'Todos...' });
     crearComboBuscable('filtroMicColor', { placeholder: 'Todos...' });
-    // Volver a colapsar
-    if (bodyAgregar) bodyAgregar.classList.add('colapsado');
-    if (btnAgregar) btnAgregar.textContent = '+';
+
+    // Volver a colapsar todo (excepto Datos del pedido que siempre está abierto)
+    ['bodyCondiciones','bodyAgregar','bodyCarrito','bodyEntrega','bodyAdjuntos'].forEach(id => {
+      const el = document.getElementById(id);
+      const btn = document.getElementById('btn' + id);
+      if (el) el.classList.add('colapsado');
+      if (btn) btn.textContent = '+';
+    });
 
     // Resync por si esta fue una recarga (reintento manual): los combos ya
     // existian y hay que refrescar su texto visible con las opciones nuevas.
