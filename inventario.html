@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inventario — Packaging y Servicios</title>
+<style>
+  :root{--azul-oscuro:#12293f;--azul:#1a6fa8;--azul-claro:#e8f4fd;--verde:#2e7d4f;--amarillo:#f1c40f;--rojo:#c0392b;--naranja:#e67e22;--gris-texto:#555;--gris-borde:#dde3ea;--superficie:#fff;--fondo:#f0f4f8;--sombra:rgba(0,0,0,.08);--radio:10px;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--fondo);color:#222;font-size:15px;}
+  header{background:var(--azul-oscuro);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:40;}
+  main{max-width:1100px;margin:0 auto;padding:20px 16px;}
+  .card{background:var(--superficie);border-radius:var(--radio);border:1px solid var(--gris-borde);padding:18px;margin-bottom:16px;}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--azul);margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--azul-claro);}
+  input,select{width:100%;padding:9px 12px;border:1px solid var(--gris-borde);border-radius:6px;font-size:14px;background:var(--superficie);}
+  .btn{padding:9px 18px;border-radius:6px;border:none;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn-azul{background:var(--azul);color:#fff;}
+  .btn-verde{background:var(--verde);color:#fff;}
+  .btn-gris{background:#eee;color:#444;border:1px solid var(--gris-borde);}
+  .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end;}
+  .filtros input,.filtros select{width:auto;flex:1;min-width:140px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{background:var(--azul-oscuro);color:#fff;padding:8px 10px;text-align:left;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;}
+  td{padding:8px 10px;border-bottom:1px solid var(--gris-borde);vertical-align:middle;}
+  tr:hover td{background:#f7fafd;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
+  .badge-ok{background:#d4edda;color:#155724;}
+  .badge-bajo{background:#fff3cd;color:#856404;}
+  .badge-critico{background:#f8d7da;color:#721c24;}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(18,41,63,.55);z-index:50;align-items:center;justify-content:center;padding:16px;}
+  .modal-overlay.abierto{display:flex;}
+  .modal{background:#fff;border-radius:var(--radio);padding:24px;max-width:480px;width:100%;}
+  .campo{margin-bottom:12px;}
+  .campo label{display:block;font-size:13px;font-weight:600;color:var(--gris-texto);margin-bottom:4px;}
+  .pills{display:flex;gap:8px;flex-wrap:wrap;}
+  .pill-tipo{padding:8px 18px;border-radius:20px;border:2px solid var(--gris-borde);cursor:pointer;font-size:13px;font-weight:600;background:none;}
+  .pill-tipo.activa-entrada{border-color:var(--verde);background:var(--verde);color:#fff;}
+  .pill-tipo.activa-salida{border-color:var(--rojo);background:var(--rojo);color:#fff;}
+  .resumen-alertas{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+  .stat-box{flex:1;min-width:120px;background:var(--superficie);border-radius:8px;border:1px solid var(--gris-borde);padding:14px;text-align:center;}
+  .stat-box .num{font-size:28px;font-weight:700;}
+  .stat-box .lab{font-size:12px;color:var(--gris-texto);margin-top:4px;}
+  .tab-bar{display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--gris-borde);}
+  .tab{padding:8px 18px;border:none;background:none;font-size:14px;font-weight:600;color:var(--gris-texto);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;}
+  .tab.activa{color:var(--azul);border-bottom-color:var(--azul);}
+  .panel{display:none;}
+  .panel.activo{display:block;}
+  #bannerInv{padding:10px 16px;border-radius:6px;margin-bottom:12px;display:none;font-size:13px;font-weight:600;}
+  #bannerInv.exito{display:block;background:#d4edda;color:#155724;}
+  #bannerInv.fallo{display:block;background:#f8d7da;color:#721c24;}
+  #bannerInv.cargando{display:block;background:#d1ecf1;color:#0c5460;}
+  .comprometido{color:var(--naranja);font-size:12px;font-weight:600;}
+  @media(max-width:600px){.filtros{flex-direction:column;}.resumen-alertas{flex-direction:column;}th,td{padding:6px 8px;font-size:12px;}}
+</style>
+</head>
+<body>
+
+<div id="pantallaLogin" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--fondo);padding:20px;">
+  <div style="background:#fff;border-radius:var(--radio);border:1px solid var(--gris-borde);padding:32px 28px;max-width:360px;width:100%;box-shadow:0 4px 24px var(--sombra)">
+    <div style="text-align:center;margin-bottom:24px">
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFkAAAAnCAYAAABkI+QeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAABDOSURBVGhD7ZhpcF3FlYC/032fnp4ka5es3bJlybKxsWVjY8AYKDCYLSwJSVHUQEgyWZgkkwpTlclUAkwqM0VChiEkqWRIIJnMJBAgYEgCBGMbrzg2tvEiyatsa7dWa9d7794+8+PKw6CAganEv/RVvR/vvq7u01/f131Oi/5tgTLFXxUz+cEUf3mmJJ8DpiSfA6YknwOmJJ8DpiSfA6YknwOmJJ8DpiSfA+SDVHyqSjI9H8rn4uWVgRfBDfejJ/bi9bciqiiQTM2Ckhrs9FmYSBSXjONaG7CtDRgNAPCjGWjlImxBBYjFH+wO+xk8heSVI3MvRXuakaZdEB/GL5iJmbEQSYkhR7eT7D8FxTWYoipsagbqJwjaD2PbGjDJcQACMQTlC/DKz0OshxsdxG9txOtuQoCgqAbJK8U7sQcd7CYZy0ZL5+EVlIdxJ8ZwLQ3Y9kaMOkDxbRRXPh+vZA7iRQhGBwma9+N1n8BOzO29+ECSE7WXwoo7oagSk5mP2Ag6Noxr3o9Z91O8pjfx51yMW/YxtKQak1OC8SKon8S1HUJefxy7by3BzCXo0luR6mWYnOkoBh0ZwDW9iTzzTVh8A97N/4Tb8Rzmhe/i55aiV30OW3sJNG6GN9egyz+BK6jA5JZgUmIQBLjuk7D+Z3j7XiVIz8NdejtSuxIpnIEYi8ZHCY7txrz2E4z1CK75IgJ4L36HZEYuXPhxKJuHZBVgPA/1E7jWQ8imX+C99Qr+9Cp02a3I3MuRgrJw4eKjuJZ6zDP3E+lpnqzsHdgHlqQ/MPnhZPxbv0FK3XXQWo9Z/1Pk+G7IKsTOuxznJ5CW/VA2D5ORixzcjN2/Fjm4FU3Pwc5dCaMDuIFuWP1lvCXXIce2I9uegoYNyEAXxo9jm/agS2/BzFyMHt6KGz0N1/493sKr4dAWzLrHUHV4s5eijRvx9q+Fxo2oMdj5VyJjAwSdx9CrPotd+TeYsdPoKz/CNKzDdR7DBj407URmLcFecTfScRgOrMNdfjeR5R+FrmOYDY8jR/8E+eV41cshPoJ/6hhyxafDPvtakM3/hexfC53H8KIxzN6XkWRisrJ34E1+MBnfCKb2YiRIwp6XMDteAGMJFLRyMVI4E0nLwuxbS3BgHX7SJ7AeEk1HimpJnXcZaiMw/wrs/Mtx9Rswr/wIc6oJVCGSCtZDU9LQkhrc2AB+YRX2Y5cQmVlH8NZL2JceQTqPIZEU3G++iYuPMWY81ItgMqYTXSbg+7h5l+GdvwrGh+HJr+O1NAKK8SLgpeBU0bxyJBJDu44TuABbOgfxoridz5Oy/VmIppPMq8DMXIKKgdnLMIuvh54T8NIjmOO7wTmMlwIpMRgdmqzsz3jfg8/lz8JLz4fAh5b9ECTR5DjqJxHjIfFRAt9nfMEq3OefIHL/emLf2kzsG68SvfxOdHQQDZJIxQKIpKIH1iGdx8BPQJCE8SEY6UeDOK5pF4lTx/EWXo2dfQFEoqhJgfgozvmMVyzG//SP8O5bR+q3NpH2wOuk3vDV8Ezoa8WU1mKyi3D16zEdRyFIoC7BeDJJfGwIjWWhueXhXHqb0Yw8JJaNE0WO7QxjQtHsIhgfxo0PISVzMdlFaOMWpO0gJOO4wGc8kSQ+cnqyrnflfSVTuRAQgvgwtB8GQDNy0aJq8FLQ9gb8umuJ3PYAtqgK3fA47ulvEvzue7jkGDLSj4z0Q2YhGh/FDPeH/4oziCGIpBKfcQF2wZXEqpciTTtwu15Ex4eRWYsJ0nNIVl9C6pd+iTf7Atj9Iu6Z+/Ff+QFBVxM61IuODWAychAvBXpawfkAJPNm4H3vLeynfoBm5kJ+Oe50BzLQhRTNhtQM3EAntq81nFskFSk7Dx0ZQEZOY7IKAYGBU5AYC/usvpCUR+oxdzz49jzOwvtK1spFiAhBfxtMy8PPKydZdz1myQ3Q3og27cZWLcZkFhBs/Q1mx/OYg1twHQeRtEx0uA9aG5HEGCaaRjBjEX7hLIKcYsaLahlb+UmCe58j9Qs/xSuZizvyBjx9P7LtGehpweYU4UrnwvKPIdF03NGd6Nr/wBzajHQeCbeivjaktwUSo6gLcDUXkSyoxGUXwZyV2EgaDJxC0nMgtwztbYWhHpiQrCcOYAIHQJA6DVNYCSOnw5cqPgoornIJfskcgpzpULsCE8uC7pOTdb0rZ92TVQSZsRAAr6ga9w9rwDkiqekweApd/3NM0y504arwb3/hLQQlNTgvgs0qwgz14XqbMUe3Q1EVlM0jctVnCC74COocKdE01B9HRvrQ4R5MJIYc3o5pO4gbHUS6mpDiaqR6OWZsEMYGsZV1JO96GCcWmZaPzchBD27GdB2Hxk1QtoDonOUEX3maYLgPLy0L7WtD2w/DtELstBy0cRNuuB8pqMBEUnDNe0EDEIMW1+AZiw53YY6/CbF0mHMRKXXXENRciI4OYtOz0IFO5MRbk5W9K2fNLoL0HMz1X0FSM9Btv8E73Yo53QEHtyIbfo7Ur8eMj0JfK5IYwSTHsUEC29+BObQFrV+PNO/DNu+H7hPIwCmID2FGT2N7TyKHNqGb/xvz+i/BBUhXE9S/jvS2IPER8CLI+CDS34688TQkhjFjA1gXYAc6MUd3IAe3wLGdSGsjpuMwOtABY0OYkT7scE8oYvfv4fA2TGo6BofWb0A7jmKzC5GhXnTX7zB9bQBIfjniAji8DTm0DelpQXubkfGwTzN4CjnxJrpzDdKwCfHPnlnwfnlysmw+3t3fR1NS0e/ehBkZABEIkogqyNttVQwaiYaHUDIxUXxI2B4FDb+qFwXrgZ9EggSKIghqPEAQDUDDvy5iwxMeRQIfFQnHQMBPhG3DhuEYZ2IxEYhEUAVJjE+0E9QYMBbcxBjGC+NzfjifM/MQi6ibiGUibhsBm4JqgCTjyP8Z7/04q+QgqxCpWEhgLXJ0ZxigKqoaDqKKiQ9jJlYzEItaCypIkMBOCsQhOBtBxWCCxESlFK6UTuh2xgOxoA7jfAxKIGZiKXhHdfX2c4dRh2LDlG1iXEVxYlEbQZxDXHLiNwl/w07EGH4UIbAREIMJkhPV3ts4BLURVAQCH6v+RFRn56ySVZVkUTWsvAuTXQApqeHqBwlwDhcfxW78T2hpIKi9FOZeipmWF5auA11o8z68I9sxA134RdXogivDPdZLCffJHc8RaT2AeqkkF38EKZmDzSxAvRTwEwRtjdg9v0fPvwYpm4c73UHK7/8NgCC7iOCyuzBp2WjjRnR8NDyQDryGd3wXvhcjWLAKU70MScuGxBhBVxOmcSMy2EMw/0okPZvI9qfRgS6CivPRBaswhZWIGILeVmTfWryTb4EL8Itr0AWrsMXVYXzxEYKu48jRnUSadp71zT6r5GT+DOTOh7GzLiDxwoPYkjnYRavxdz6PelFMXhmy5kGC2cuRFbeHKdTYIJKajkbTcO1H0TXfAWvRa/4OW1iJJEYhNg0i6QSdR+CRj0NGAebe34Z78Ol2RAyaU4wD3GuPIcXV2POvxR/pJfL1pUgklcSyj+J94p/Rtkbcll/BvMuQeZfDE/egJ/bjbrsPO2clNj0LcQkwKfiDPegffwjxUeT6r0J7A+aZB0jWrsRe+RkkpxgzPgSRVIJIDNe0C3n5+2H+vPpLSNUSbHwMRJC0bILkOG7H83hP33fW9/k9UzhFcVd8Elu1NKzKphXAnpdwfa1o0y5Iy4LjuwjEYOtW4xVV4T91H/rwbQQP3og+9gXMrjVoEEev/hy2pBrd8AT66O0Ej30eRk7jVdZB1TK0fD4mpxjtPIz++FPoD+/EbX8WE8vC5M9AB7rDu4acIvxIlCAjD664G4IADqxHBnswRTUw3I8M9+NWfR5v8Y1INErwxBfx/+U6gkfvwPzhe0jzXiiejSmYAV0nSFYswLv2S5jSGnjlB+hDN6OPfxEZ6MSruQiqL4IFV2PnXYEeeZPgx5/GPXQT/kM3Iy9/H7P/tbMK5mySnfHwai5BIlFEBLtoNdp5DNewEfF9JKcYObEHK4TlpRjMTV9j/CNfJz7vKvyeVoINv4D8GXjVK1AHydkXkbj+ayRX3o2mZSFikEgKWrkQTSZwPa240RESsUxcdnH4xnQcRFrqIUhibArkzyC59Ga88nnQsg/eeBoyCyC7GE4dxY9l4S1ajY1m4F54CPPWH/C6mrBHtmPeeAYGujF5FWAs2n4IFt+IyS3HndyHvPoTTF870nUc13Uc8aKYtCxMWibiRbBzLyN5633EV9xJIrMIt+XXmMbNk9X9Ge8pGWPBvL1GkpWPK6qCnc/hai/G9LZgTh7ANO3BbH0STuzBi0ZJq7uG2B3fxrv3WYKltyJl5yHWYqMxUstrSa29kNjsOsz4AK6jEZp2QWUdJiVKZPktRB7eS8r967CLr0P3vozsew1aGyZKXkNQWYe95gvo6U7c1qdgsBvyyjHT8qDjMJJXisQyUVXY/xpGz8xh4qDOKoKcUnTwFG5sEG/6LLARtGHL/x50LiWKZhejY4PQ1wrbnkTfXIOMdBOdMZ/o6ntI/cqvCT75KPDOw/HdeE/Jxo+jLQ1oEJankhjDVC6C1ExMZR007UJPt+NyignqXyf56B0k/uVa/MfvQcdHMCkxvJIaxIuAKsmdLzL+3VuJf3s18QdvIv7oXfj//gl0pA9TPi/cJw9sgPoNMDoMYyO43X9Auo4jvc1oMixpufFebFo2euQNzO7fIVmFSP4M1AVw6hgSBIixAAS5pQRp2fiZhSQLKwmmFaA5xZBXip5qwiRGkTNZZjQNPxrDT8/Br74Yr2QOrr0R19WEGxsieOZbJP71WvyHPxrejSDYstqJFPPsvGcxIgg63A9VS9D0bNyO56C/Ha25GBONYTb9ChLj6C3/iFt1D37BTMguISiqJlK9DLqa0PU/C3Pq6guR6bNw+RW46bPRRdfirfosEh/Cxcfxrvos2teG+8WX0UPboKQWU1KL62xCmvcjYwO4JTcguaXYtCzoboLffhvb345Or0aX3gTGYP70W+g+AXMvRTIL0Krl+DlluKU3Y1bcjgZJSMvC1F2HHtqM2fMyFFUhRTW4otkkAofOvQx71WeQoR7Y/OswZ7jtAYKaFbicYjSnFJmzAomloZt/hT24dbK6P+M9JQOYvjZ0qJdAHQ5BiqrwsgqQrU8hhzZDWjZkFmBT0/GKq/CqFmNzpsOhNzDbnkT2rUWGeyEZR6yHV1ARfpzDtB2Eho2YabnYwpnQUg/bn8Ukx9HUdCQtE/rbMa31mLEhXFoWpqAc6WmBTb/E7v1jGGReGZSdB62NmIaNmI5D4dbiFJM+Da+gHM8loXlvWP2lZ2Gm5cJbr2BO7AlfBg2vQyOz6rCZecjx3eF99441SEYOkpmPl5VHZMZCvPLzMP1tsPePyKs/RpLxydr+jLOmcGdwGXmYORdBNIa2HUaa94cVkyrOWMiajhRWILEsdHQQ11KPHX/7nlW9FMirQPJKIUjielqgvxMJEkhuKeQWh/eyHYfD4iRrOuSXhpcz3SchPorGMpG5K9CRPjiyMyx9ATJyoaACxoahtxWS4+Hbl1MKZdUIBu1twXW3YFwAuSVIZn7Y72BPOD8vipTWIpn56HAf2nE0TOXOlCmp05CCCiR7OopCZxN0n3zfrOIMH0jyB2Oi/vyr82HG+TBtPygfvs/337U/MB9u4P8/H2acD9P2g/Lh+/wLSp7ivZiSfA6YknwOmJJ8DpiSfA6YknwOmJJ8DvgfYeOR1ekNpMoAAAAASUVORK5CYII=" alt="Logo" style="height:48px;border-radius:6px;margin-bottom:12px">
+      <h2 style="font-size:20px;color:var(--azul-oscuro)">Modulo Inventario</h2>
+      <p style="color:var(--gris-texto);font-size:13px;margin-top:4px">Packaging y Servicios</p>
+    </div>
+    <div id="loginError" style="display:none;background:#f8d7da;color:var(--rojo);border-radius:6px;padding:10px 12px;font-size:13px;margin-bottom:14px"></div>
+    <div class="campo">
+      <label>Usuario</label>
+      <select id="loginUsuario">
+        <option value="">Selecciona tu nombre...</option>
+        <option value="DIRECCION">DIRECCION</option>
+        <option value="DEPOSITO">DEPOSITO</option>
+        <option value="ADMINISTRACION">ADMINISTRACION</option>
+      </select>
+    </div>
+    <div class="campo" id="campoClave" style="display:none">
+      <label>Clave (4 digitos)</label>
+      <input type="password" id="loginClave" maxlength="4" inputmode="numeric" placeholder="****" autocomplete="off">
+    </div>
+    <button type="button" class="btn btn-azul" id="btnIngresar" style="width:100%;margin-top:8px" disabled>Ingresar</button>
+  </div>
+</div>
+
+<header id="appHeader" style="display:none">
+  <div style="display:flex;align-items:center;gap:10px">
+    <img src="data:image/png;base64,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" alt="Logo" style="height:28px;border-radius:4px">
+    <span style="font-size:17px;font-weight:600">Inventario - Packaging y Servicios</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span id="usuarioLogueado" style="font-size:13px;opacity:.8"></span>
+    <button type="button" class="btn btn-gris" style="font-size:12px;padding:6px 12px" onclick="location.reload()">Salir</button>
+  </div>
+</header>
+
+<main id="appMain" style="display:none">
+  <div id="bannerInv"></div>
+  <div class="tab-bar">
+    <button class="tab activa" onclick="cambiarTab('stock')">Inventario</button>
+    <button class="tab" onclick="cambiarTab('movimientos')">Movimientos</button>
+    <button class="tab" onclick="cambiarTab('alertas')">Alertas</button>
+  </div>
+
+  <div class="panel activo" id="panelStock">
+    <div class="card">
+      <div class="filtros">
+        <input type="text" id="buscarStock" placeholder="Buscar por codigo o descripcion..." oninput="renderizarTabla()">
+        <select id="filtroEstado" onchange="renderizarTabla()">
+          <option value="">Todos</option>
+          <option value="ok">Stock OK</option>
+          <option value="bajo">Stock bajo</option>
+          <option value="critico">Sin stock / critico</option>
+          <option value="comprometido">Con comprometido</option>
+        </select>
+        <button type="button" class="btn btn-gris" onclick="recargarDatos()">Actualizar</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="ordenarPor('descripcion')">Articulo</th>
+              <th onclick="ordenarPor('stockReal')" style="text-align:right">Stock real</th>
+              <th style="text-align:right">Comprometido</th>
+              <th onclick="ordenarPor('stockDisponible')" style="text-align:right">Disponible</th>
+              <th onclick="ordenarPor('stockMinimo')" style="text-align:right">Minimo</th>
+              <th onclick="ordenarPor('diasDeStock')" style="text-align:right">Dias stock</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="cuerpoTabla">
+            <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="pieDatos" style="font-size:12px;color:var(--gris-texto);margin-top:10px;text-align:right"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panelMovimientos">
+    <div class="card">
+      <h2>Registrar movimiento</h2>
+      <p style="font-size:13px;color:var(--gris-texto);margin-bottom:14px">Los movimientos registrados son sugerencias de ajuste para el ERP. No modifican el stock real hasta ingresarlos en el sistema.</p>
+      <div class="campo">
+        <label>Tipo</label>
+        <div class="pills">
+          <button type="button" class="pill-tipo" id="pillEntrada" onclick="seleccionarTipo('entrada')">Entrada</button>
+          <button type="button" class="pill-tipo" id="pillSalida" onclick="seleccionarTipo('salida')">Salida</button>
+        </div>
+      </div>
+      <div class="campo">
+        <label>Articulo</label>
+        <input type="text" id="buscarArticuloMov" placeholder="Buscar..." oninput="filtrarArticulosMov()">
+        <select id="selectArticuloMov" size="5" style="margin-top:6px;height:100px" onchange="seleccionarArticuloMov()"></select>
+      </div>
+      <div id="artSeleccionadoDiv" style="display:none;background:var(--azul-claro);padding:10px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
+      <div class="campo">
+        <label>Cantidad</label>
+        <input type="number" id="cantidadMov" min="1" placeholder="0">
+      </div>
+      <div class="campo">
+        <label>Motivo</label>
+        <select id="motivoMov">
+          <option value="">Selecciona el motivo...</option>
+          <optgroup label="Entradas">
+            <option value="Compra">Compra</option>
+            <option value="Produccion">Produccion</option>
+            <option value="Devolucion cliente">Devolucion de cliente</option>
+            <option value="Ajuste positivo">Ajuste positivo</option>
+          </optgroup>
+          <optgroup label="Salidas">
+            <option value="Venta">Venta / despacho</option>
+            <option value="Merma">Merma / dano</option>
+            <option value="Devolucion proveedor">Devolucion a proveedor</option>
+            <option value="Ajuste negativo">Ajuste negativo</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="campo">
+        <label>Observacion (opcional)</label>
+        <input type="text" id="observacionMov" placeholder="Detalle adicional...">
+      </div>
+      <button type="button" class="btn btn-verde" onclick="registrarMovimiento()" style="width:100%">Registrar movimiento</button>
+    </div>
+    <div class="card">
+      <h2>Historial</h2>
+      <div id="historialMovimientos" style="font-size:13px;color:var(--gris-texto)">Los movimientos quedan registrados en la hoja <b>Movimientos_Stock</b> de Google Sheets.</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panelAlertas">
+    <div class="resumen-alertas" id="resumenAlertas"></div>
+    <div class="card">
+      <h2>Articulos bajo stock minimo</h2>
+      <div id="listaAlertas" style="font-size:13px;color:var(--gris-texto)">Cargando...</div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-overlay" id="modalMinimo">
+  <div class="modal">
+    <h3>Configurar stock minimo</h3>
+    <div id="infoArticuloMin" style="font-size:13px;color:var(--gris-texto);margin-bottom:14px"></div>
+    <div class="campo">
+      <label>Stock minimo (unidades)</label>
+      <input type="number" id="inputStockMinimo" min="0" placeholder="0">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button type="button" class="btn btn-gris" style="flex:1" onclick="cerrarModalMinimo()">Cancelar</button>
+      <button type="button" class="btn btn-azul" style="flex:2" onclick="guardarStockMinimo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwjDU1jXdqW7WQxaR8SBHfKPRBdXKkqKDtvGkP7Y4_tUfYroF6UHOL67GFhAtpOs6cCug/exec";
+const URL_INV = WEB_APP_URL + "?action=inventario";
+const CLAVE_DEFAULT_INV = "1234";
+const CLAVE_MAESTRA_INV = "3232";
+const CLAVE_RESET_INV = "0000";
+
+let DATOS_INV = [];
+let articuloMovSeleccionado = null;
+let tipoMovActual = "entrada";
+let ordenActual = { col: "descripcion", asc: true };
+let usuarioActual = "";
+let articuloMinimoActual = null;
+
+// --- Login ---
+document.getElementById("loginUsuario").addEventListener("change", function() {
+  document.getElementById("campoClave").style.display = this.value ? "block" : "none";
+  document.getElementById("btnIngresar").disabled = !this.value;
+  document.getElementById("loginClave").value = "";
+});
+document.getElementById("loginClave").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") document.getElementById("btnIngresar").click();
+});
+document.getElementById("btnIngresar").addEventListener("click", function() {
+  const usuario = document.getElementById("loginUsuario").value;
+  const clave = document.getElementById("loginClave").value.trim();
+  if (!usuario) return;
+  if (!/^[0-9]{4}$/.test(clave)) { mostrarErrorLogin("La clave debe ser exactamente 4 digitos."); return; }
+  const claveGuardada = localStorage.getItem("claveInv_" + usuario) || CLAVE_DEFAULT_INV;
+  if (clave === CLAVE_RESET_INV) { localStorage.removeItem("claveInv_" + usuario); pedirNuevaClaveInv(usuario, true); return; }
+  if (clave !== CLAVE_MAESTRA_INV && clave !== claveGuardada) { mostrarErrorLogin("Clave incorrecta."); return; }
+  if (clave !== CLAVE_MAESTRA_INV && !localStorage.getItem("claveInv_" + usuario)) { pedirNuevaClaveInv(usuario, false); return; }
+  document.getElementById("loginError").style.display = "none";
+  autenticarInv(usuario);
+});
+function mostrarErrorLogin(msg) {
+  const d = document.getElementById("loginError");
+  d.textContent = msg; d.style.display = "block";
+  document.getElementById("loginClave").value = "";
+}
+function pedirNuevaClaveInv(usuario, esReset) {
+  const msg = esReset ? "Clave reseteada. Elegí una nueva de 4 digitos:" : "Primera vez. Elegí una clave de 4 digitos:";
+  const nueva = prompt(msg);
+  if (!nueva || !/^[0-9]{4}$/.test(nueva.trim())) { mostrarErrorLogin("Clave invalida."); return; }
+  if ([CLAVE_DEFAULT_INV, CLAVE_MAESTRA_INV, CLAVE_RESET_INV].includes(nueva.trim())) { mostrarErrorLogin("Esa clave no esta disponible."); return; }
+  const conf = prompt("Repetí la clave para confirmar:");
+  if (conf !== nueva.trim()) { mostrarErrorLogin("Las claves no coinciden."); return; }
+  localStorage.setItem("claveInv_" + usuario, nueva.trim());
+  autenticarInv(usuario);
+}
+function autenticarInv(usuario) {
+  usuarioActual = usuario;
+  document.getElementById("pantallaLogin").style.display = "none";
+  document.getElementById("appHeader").style.display = "flex";
+  document.getElementById("appMain").style.display = "block";
+  document.getElementById("usuarioLogueado").textContent = usuario;
+  cargarDatosInv();
+}
+
+// --- Datos ---
+async function cargarDatosInv() {
+  mostrarBannerInv("cargando", "Cargando datos de stock...");
+  try {
+    const resp = await fetch(URL_INV);
+    const data = await resp.json();
+    DATOS_INV = data.items || [];
+    renderizarTabla();
+    renderizarAlertas();
+    poblarSelectArticulosMov();
+    ocultarBannerInv();
+  } catch(err) {
+    mostrarBannerInv("fallo", "No se pudieron cargar los datos. Verifica la conexion.");
+  }
+}
+async function recargarDatos() { DATOS_INV = []; cargarDatosInv(); }
+
+// --- Tabla stock ---
+function estadoArticulo(it) {
+  if (it.stockDisponible <= 0) return "critico";
+  if (it.stockMinimo > 0 && it.stockDisponible <= it.stockMinimo) return "bajo";
+  return "ok";
+}
+function ordenarPor(col) {
+  if (ordenActual.col === col) ordenActual.asc = !ordenActual.asc;
+  else { ordenActual.col = col; ordenActual.asc = false; }
+  renderizarTabla();
+}
+function renderizarTabla() {
+  const q = (document.getElementById("buscarStock").value || "").trim().toLowerCase();
+  const fe = document.getElementById("filtroEstado").value;
+  let filas = DATOS_INV.filter(it => {
+    if (q && !((it.descripcion + " " + it.codItem + " " + it.codigoConcatenado).toLowerCase().includes(q))) return false;
+    const est = estadoArticulo(it);
+    if (fe === "ok" && est !== "ok") return false;
+    if (fe === "bajo" && est !== "bajo") return false;
+    if (fe === "critico" && est !== "critico") return false;
+    if (fe === "comprometido" && it.stockComprometido === 0) return false;
+    return true;
+  });
+  const col = ordenActual.col;
+  filas.sort((a, b) => {
+    if (col === "descripcion") return ordenActual.asc ? a.descripcion.localeCompare(b.descripcion) : b.descripcion.localeCompare(a.descripcion);
+    return ordenActual.asc ? a[col] - b[col] : b[col] - a[col];
+  });
+  const tbody = document.getElementById("cuerpoTabla");
+  if (!filas.length) { tbody.innerHTML = "<tr><td colspan='8' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
+  tbody.innerHTML = filas.map(it => {
+    const est = estadoArticulo(it);
+    const badge = est === "ok" ? "<span class='badge badge-ok'>OK</span>" : est === "bajo" ? "<span class='badge badge-bajo'>Bajo</span>" : "<span class='badge badge-critico'>Critico</span>";
+    const comp = it.stockComprometido > 0 ? "<span class='comprometido'>(" + (-it.stockComprometido) + " comp.)</span>" : "-";
+    const colorDisp = est === "critico" ? "var(--rojo)" : est === "bajo" ? "var(--naranja)" : "var(--verde)";
+    const artData = JSON.stringify(it).replace(/"/g, "&quot;");
+    return "<tr><td><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small></td>"
+      + "<td style='text-align:right;font-weight:700'>" + it.stockReal.toLocaleString("es-AR") + "</td>"
+      + "<td style='text-align:right'>" + comp + "</td>"
+      + "<td style='text-align:right;font-weight:700;color:" + colorDisp + "'>" + it.stockDisponible.toLocaleString("es-AR") + "</td>"
+      + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.stockMinimo > 0 ? it.stockMinimo.toLocaleString("es-AR") : "-") + "</td>"
+      + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.diasDeStock > 0 ? it.diasDeStock + "d" : "-") + "</td>"
+      + "<td>" + badge + "</td>"
+      + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 8px' onclick='abrirModalMinimo("" + artData + "")'>Min.</button></td></tr>";
+  }).join("");
+  document.getElementById("pieDatos").textContent = filas.length + " articulo(s) mostrados.";
+}
+
+// --- Modal minimo ---
+function abrirModalMinimo(itJson) {
+  articuloMinimoActual = typeof itJson === "string" ? JSON.parse(itJson) : itJson;
+  document.getElementById("infoArticuloMin").textContent = articuloMinimoActual.descripcion + " - Stock: " + articuloMinimoActual.stockReal + " u.";
+  document.getElementById("inputStockMinimo").value = articuloMinimoActual.stockMinimo || 0;
+  document.getElementById("modalMinimo").classList.add("abierto");
+}
+function cerrarModalMinimo() {
+  document.getElementById("modalMinimo").classList.remove("abierto");
+  articuloMinimoActual = null;
+}
+async function guardarStockMinimo() {
+  if (!articuloMinimoActual) return;
+  const val = Number(document.getElementById("inputStockMinimo").value) || 0;
+  try {
+    const url = WEB_APP_URL + "?action=guardarStockMinimo&codArticulo=" + encodeURIComponent(articuloMinimoActual.codigoConcatenado) + "&valor=" + val;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.ok) {
+      const idx = DATOS_INV.findIndex(x => x.codigoConcatenado === articuloMinimoActual.codigoConcatenado);
+      if (idx >= 0) DATOS_INV[idx].stockMinimo = val;
+      cerrarModalMinimo();
+      renderizarTabla();
+      renderizarAlertas();
+      mostrarBannerInv("exito", "Stock minimo guardado correctamente.");
+    } else {
+      mostrarBannerInv("fallo", "Error al guardar: " + (data.error || "desconocido"));
+    }
+  } catch(e) { mostrarBannerInv("fallo", "Error de conexion."); }
+}
+
+// --- Alertas ---
+function renderizarAlertas() {
+  const sinStock = DATOS_INV.filter(it => it.stockDisponible <= 0);
+  const bajoMin = DATOS_INV.filter(it => it.stockMinimo > 0 && it.stockDisponible > 0 && it.stockDisponible <= it.stockMinimo);
+  const conComp = DATOS_INV.filter(it => it.stockComprometido > 0);
+  document.getElementById("resumenAlertas").innerHTML =
+    "<div class='stat-box'><div class='num' style='color:var(--rojo)'>" + sinStock.length + "</div><div class='lab'>Sin stock</div></div>" +
+    "<div class='stat-box'><div class='num' style='color:var(--naranja)'>" + bajoMin.length + "</div><div class='lab'>Bajo minimo</div></div>" +
+    "<div class='stat-box'><div class='num' style='color:var(--azul)'>" + conComp.length + "</div><div class='lab'>Comprometido</div></div>" +
+    "<div class='stat-box'><div class='num' style='color:var(--verde)'>" + (DATOS_INV.length - sinStock.length - bajoMin.length) + "</div><div class='lab'>Stock OK</div></div>";
+  const lista = [...sinStock, ...bajoMin];
+  if (!lista.length) { document.getElementById("listaAlertas").innerHTML = "<p style='color:var(--verde);font-weight:600'>Todos los articulos tienen stock suficiente.</p>"; return; }
+  document.getElementById("listaAlertas").innerHTML = "<table><thead><tr><th>Articulo</th><th style='text-align:right'>Real</th><th style='text-align:right'>Comprometido</th><th style='text-align:right'>Disponible</th><th style='text-align:right'>Minimo</th><th>Estado</th></tr></thead><tbody>"
+    + lista.map(it => {
+        const est = estadoArticulo(it);
+        const badge = est === "critico" ? "<span class='badge badge-critico'>Sin stock</span>" : "<span class='badge badge-bajo'>Bajo minimo</span>";
+        return "<tr><td><b>" + it.descripcion + "</b><br><small>" + it.codItem + "</small></td><td style='text-align:right'>" + it.stockReal + "</td><td style='text-align:right'>" + (it.stockComprometido > 0 ? "-"+it.stockComprometido : "-") + "</td><td style='text-align:right;font-weight:700;color:var(--rojo)'>" + it.stockDisponible + "</td><td style='text-align:right'>" + it.stockMinimo + "</td><td>" + badge + "</td></tr>";
+      }).join("")
+    + "</tbody></table>";
+}
+
+// --- Movimientos ---
+function poblarSelectArticulosMov() {
+  const sel = document.getElementById("selectArticuloMov");
+  sel.innerHTML = "";
+  DATOS_INV.forEach(it => {
+    const opt = document.createElement("option");
+    opt.value = it.codigoConcatenado;
+    opt.textContent = it.descripcion + " (" + it.codItem + ") - Stock: " + it.stockReal;
+    opt.dataset.idx = DATOS_INV.indexOf(it);
+    sel.appendChild(opt);
+  });
+}
+function filtrarArticulosMov() {
+  const q = (document.getElementById("buscarArticuloMov").value || "").trim().toLowerCase();
+  Array.from(document.getElementById("selectArticuloMov").options).forEach(opt => {
+    opt.style.display = (!q || opt.textContent.toLowerCase().includes(q)) ? "" : "none";
+  });
+}
+function seleccionarArticuloMov() {
+  const sel = document.getElementById("selectArticuloMov");
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt || opt.dataset.idx === undefined) { articuloMovSeleccionado = null; document.getElementById("artSeleccionadoDiv").style.display = "none"; return; }
+  articuloMovSeleccionado = DATOS_INV[Number(opt.dataset.idx)];
+  const div = document.getElementById("artSeleccionadoDiv");
+  div.style.display = "block";
+  div.innerHTML = "<b>" + articuloMovSeleccionado.descripcion + "</b> - Stock real: <b>" + articuloMovSeleccionado.stockReal + "</b> u. - Disponible: <b>" + articuloMovSeleccionado.stockDisponible + "</b> u.";
+}
+function seleccionarTipo(tipo) {
+  tipoMovActual = tipo;
+  document.getElementById("pillEntrada").className = "pill-tipo" + (tipo === "entrada" ? " activa-entrada" : "");
+  document.getElementById("pillSalida").className = "pill-tipo" + (tipo === "salida" ? " activa-salida" : "");
+}
+async function registrarMovimiento() {
+  if (!articuloMovSeleccionado) { mostrarBannerInv("fallo", "Selecciona un articulo."); return; }
+  const cantidad = Number(document.getElementById("cantidadMov").value);
+  if (!(cantidad > 0)) { mostrarBannerInv("fallo", "Ingresa una cantidad mayor a cero."); return; }
+  const motivo = document.getElementById("motivoMov").value;
+  if (!motivo) { mostrarBannerInv("fallo", "Selecciona el motivo."); return; }
+  const observacion = document.getElementById("observacionMov").value;
+  try {
+    const url = WEB_APP_URL + "?action=registrarMovimiento&usuario=" + encodeURIComponent(usuarioActual)
+      + "&codArticulo=" + encodeURIComponent(articuloMovSeleccionado.codigoConcatenado)
+      + "&descripcion=" + encodeURIComponent(articuloMovSeleccionado.descripcion)
+      + "&tipo=" + tipoMovActual + "&cantidad=" + cantidad
+      + "&motivo=" + encodeURIComponent(motivo) + "&observacion=" + encodeURIComponent(observacion);
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.ok) {
+      mostrarBannerInv("exito", "Movimiento registrado: " + (tipoMovActual === "entrada" ? "Entrada" : "Salida") + " de " + cantidad + " u. de " + articuloMovSeleccionado.descripcion);
+      document.getElementById("cantidadMov").value = "";
+      document.getElementById("motivoMov").value = "";
+      document.getElementById("observacionMov").value = "";
+      articuloMovSeleccionado = null;
+      document.getElementById("artSeleccionadoDiv").style.display = "none";
+    } else {
+      mostrarBannerInv("fallo", "Error: " + (data.error || "desconocido"));
+    }
+  } catch(e) { mostrarBannerInv("fallo", "Error de conexion."); }
+}
+
+// --- Tabs ---
+function cambiarTab(tab) {
+  const tabs = ["stock", "movimientos", "alertas"];
+  document.querySelectorAll(".tab").forEach((t, i) => t.classList.toggle("activa", tabs[i] === tab));
+  tabs.forEach(t => {
+    const p = document.getElementById("panel" + t.charAt(0).toUpperCase() + t.slice(1));
+    if (p) p.classList.toggle("activo", t === tab);
+  });
+}
+
+// --- Banner ---
+function mostrarBannerInv(tipo, msg) {
+  const b = document.getElementById("bannerInv");
+  if (!b) return;
+  b.className = tipo;
+  b.textContent = msg;
+  if (tipo === "exito") setTimeout(() => { b.className = ""; }, 4000);
+}
+function ocultarBannerInv() {
+  const b = document.getElementById("bannerInv");
+  if (b) b.className = "";
+}
+</script>
+</body>
+</html>
