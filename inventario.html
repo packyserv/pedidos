@@ -326,12 +326,13 @@ function renderizarTabla() {
   });
   const tbody = document.getElementById("cuerpoTabla");
   if (!filas.length) { tbody.innerHTML = "<tr><td colspan='8' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
-  tbody.innerHTML = filas.map(it => {
+  tbody.innerHTML = filas.map((it, idx) => {
     const est = estadoArticulo(it);
     const badge = est === "ok" ? "<span class='badge badge-ok'>OK</span>" : est === "bajo" ? "<span class='badge badge-bajo'>Bajo</span>" : "<span class='badge badge-critico'>Critico</span>";
-    const comp = it.stockComprometido > 0 ? "<span class='comprometido'>(" + (-it.stockComprometido) + " comp.)</span>" : "-";
+    const comp = it.stockComprometido > 0 ? "<span class='comprometido'>(-" + it.stockComprometido + " comp.)</span>" : "-";
     const colorDisp = est === "critico" ? "var(--rojo)" : est === "bajo" ? "var(--naranja)" : "var(--verde)";
-    const artData = JSON.stringify(it).replace(/"/g, "&quot;");
+    // Guardamos el indice real en DATOS_INV para el modal
+    const idxReal = DATOS_INV.indexOf(it);
     return "<tr><td><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small></td>"
       + "<td style='text-align:right;font-weight:700'>" + it.stockReal.toLocaleString("es-AR") + "</td>"
       + "<td style='text-align:right'>" + comp + "</td>"
@@ -339,14 +340,15 @@ function renderizarTabla() {
       + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.stockMinimo > 0 ? it.stockMinimo.toLocaleString("es-AR") : "-") + "</td>"
       + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.diasDeStock > 0 ? it.diasDeStock + "d" : "-") + "</td>"
       + "<td>" + badge + "</td>"
-      + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 8px' onclick='abrirModalMinimo("" + artData + "")'>Min.</button></td></tr>";
+      + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 8px' onclick='abrirModalMinimo(" + idxReal + ")'>Min.</button></td></tr>";
   }).join("");
   document.getElementById("pieDatos").textContent = filas.length + " articulo(s) mostrados.";
 }
 
 // --- Modal minimo ---
-function abrirModalMinimo(itJson) {
-  articuloMinimoActual = typeof itJson === "string" ? JSON.parse(itJson) : itJson;
+function abrirModalMinimo(idx) {
+  articuloMinimoActual = DATOS_INV[idx];
+  if (!articuloMinimoActual) return;
   document.getElementById("infoArticuloMin").textContent = articuloMinimoActual.descripcion + " - Stock: " + articuloMinimoActual.stockReal + " u.";
   document.getElementById("inputStockMinimo").value = articuloMinimoActual.stockMinimo || 0;
   document.getElementById("modalMinimo").classList.add("abierto");
