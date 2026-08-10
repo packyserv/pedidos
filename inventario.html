@@ -129,7 +129,7 @@
             <tr>
               <th onclick="ordenarPor('descripcion')">Articulo ⇅</th>
               <th onclick="ordenarPor('tipo')">Tipo ⇅</th>
-              <th onclick="ordenarPor('stockReal')" style="text-align:right">Stock real ⇅</th>
+              <th onclick="ordenarPor('stockReal')" style="text-align:right">Stock teórico ⇅</th>
               <th onclick="ordenarPor('stockComprometido')" style="text-align:right">Comprometido ⇅</th>
               <th onclick="ordenarPor('stockDisponible')" style="text-align:right">Disponible ⇅</th>
               <th onclick="ordenarPor('minimoEfectivo')" style="text-align:right">Minimo ⇅</th>
@@ -151,7 +151,7 @@
   <div class="panel" id="panelMovimientos">
     <div class="card">
       <h2>Registrar movimiento</h2>
-      <p style="font-size:13px;color:var(--gris-texto);margin-bottom:14px">Los movimientos registrados son sugerencias de ajuste para el ERP. No modifican el stock real hasta ingresarlos en el sistema.</p>
+      <p style="font-size:13px;color:var(--gris-texto);margin-bottom:14px">Los movimientos registrados son sugerencias de ajuste para el ERP. No modifican el stock teórico del sistema hasta ingresarlos en el ERP.</p>
       <div class="campo">
         <label>Tipo</label>
         <div class="pills">
@@ -579,7 +579,7 @@ let tipoAlertaModalActual = "unidades";
 function abrirModalMinimo(idx) {
   articuloMinimoActual = DATOS_INV[idx];
   if (!articuloMinimoActual) return;
-  document.getElementById("infoArticuloMin").textContent = articuloMinimoActual.descripcion + " - Stock: " + articuloMinimoActual.stockReal + " u. - " + (articuloMinimoActual.diasDeStock > 0 ? Math.round(articuloMinimoActual.diasDeStock*10)/10 + " dias de cobertura actual" : "");
+  document.getElementById("infoArticuloMin").textContent = articuloMinimoActual.descripcion + " - Stock teórico: " + articuloMinimoActual.stockReal + " u. - " + (articuloMinimoActual.diasDeStock > 0 ? Math.round(articuloMinimoActual.diasDeStock*10)/10 + " dias de cobertura actual" : "");
   document.getElementById("inputStockMinimoUnidades").value = articuloMinimoActual.stockMinimoUnidades || 0;
   document.getElementById("inputStockMinimoDias").value = articuloMinimoActual.stockMinimoDias || 0;
   seleccionarTipoAlerta(articuloMinimoActual.tipoAlerta || "unidades");
@@ -672,7 +672,7 @@ function renderizarAlertas() {
   if (!lista.length) { document.getElementById("listaAlertas").innerHTML = "<p style='color:var(--verde);font-weight:600'>Todos los articulos tienen stock suficiente.</p>"; return; }
   document.getElementById("listaAlertas").innerHTML = "<table><thead><tr>"
     + "<th onclick='ordenarPorAlertas(\"descripcion\")' style='cursor:pointer'>Articulo ⇅</th>"
-    + "<th onclick='ordenarPorAlertas(\"stockReal\")' style='text-align:right;cursor:pointer'>Real ⇅</th>"
+    + "<th onclick='ordenarPorAlertas(\"stockReal\")' style='text-align:right;cursor:pointer'>Teórico ⇅</th>"
     + "<th onclick='ordenarPorAlertas(\"stockComprometido\")' style='text-align:right;cursor:pointer'>Comprometido ⇅</th>"
     + "<th onclick='ordenarPorAlertas(\"stockDisponible\")' style='text-align:right;cursor:pointer'>Disponible ⇅</th>"
     + "<th onclick='ordenarPorAlertas(\"minimoEfectivo\")' style='text-align:right;cursor:pointer'>Minimo ⇅</th>"
@@ -709,7 +709,7 @@ function filtrarArticulosMov() {
   filtrados.slice(0, 200).forEach(({ it, idx }) => {
     const opt = document.createElement("option");
     opt.value = idx;
-    opt.textContent = it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor + " (" + it.codItem + ") - Stock: " + it.stockReal;
+    opt.textContent = it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor + " (" + it.codItem + ") - Teórico: " + it.stockReal;
     sel.appendChild(opt);
   });
 }
@@ -720,7 +720,7 @@ function seleccionarArticuloMov() {
   articuloMovSeleccionado = DATOS_INV[Number(opt.value)];
   const div = document.getElementById("artSeleccionadoDiv");
   div.style.display = "block";
-  div.innerHTML = "<b>" + articuloMovSeleccionado.descripcion + " " + articuloMovSeleccionado.ancho + "x" + articuloMovSeleccionado.largo + " " + articuloMovSeleccionado.micColor + "</b> - Stock real: <b>" + articuloMovSeleccionado.stockReal + "</b> u. - Disponible: <b>" + articuloMovSeleccionado.stockDisponible + "</b> u.";
+  div.innerHTML = "<b>" + articuloMovSeleccionado.descripcion + " " + articuloMovSeleccionado.ancho + "x" + articuloMovSeleccionado.largo + " " + articuloMovSeleccionado.micColor + "</b> - Stock teórico: <b>" + articuloMovSeleccionado.stockReal + "</b> u. - Disponible: <b>" + articuloMovSeleccionado.stockDisponible + "</b> u.";
 }
 function seleccionarTipo(tipo) {
   tipoMovActual = tipo;
