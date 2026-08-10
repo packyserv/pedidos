@@ -75,6 +75,7 @@
     <div class="campo" id="campoClave" style="display:none">
       <label>Clave (4 digitos)</label>
       <input type="password" id="loginClave" maxlength="4" inputmode="numeric" placeholder="****" autocomplete="off">
+      <div id="subnotaClave" style="font-size:12px;color:var(--gris-texto);margin-top:4px"></div>
     </div>
     <button type="button" class="btn btn-azul" id="btnIngresar" style="width:100%;margin-top:8px" disabled>Ingresar</button>
   </div>
@@ -226,9 +227,17 @@ let articuloMinimoActual = null;
 
 // --- Login ---
 document.getElementById("loginUsuario").addEventListener("change", function() {
-  document.getElementById("campoClave").style.display = this.value ? "block" : "none";
-  document.getElementById("btnIngresar").disabled = !this.value;
-  document.getElementById("loginClave").value = "";
+  const tieneClaveGuardada = this.value && localStorage.getItem("claveInv_" + this.value);
+  const subDiv = document.getElementById("subnotaClave");
+  if (this.value) {
+    document.getElementById("campoClave").style.display = "block";
+    document.getElementById("btnIngresar").disabled = false;
+    document.getElementById("loginClave").value = "";
+    if (subDiv) subDiv.textContent = tieneClaveGuardada ? "" : "Primera vez: usa 1234 y te pedira cambiarla.";
+  } else {
+    document.getElementById("campoClave").style.display = "none";
+    document.getElementById("btnIngresar").disabled = true;
+  }
 });
 document.getElementById("loginClave").addEventListener("keydown", function(e) {
   if (e.key === "Enter") document.getElementById("btnIngresar").click();
@@ -237,7 +246,8 @@ document.getElementById("btnIngresar").addEventListener("click", function() {
   const usuario = document.getElementById("loginUsuario").value;
   const clave = document.getElementById("loginClave").value.trim();
   if (!usuario) return;
-  if (!/^[0-9]{4}$/.test(clave)) { mostrarErrorLogin("La clave debe ser exactamente 4 digitos."); return; }
+  if (!clave || clave.length < 4) { mostrarErrorLogin("Ingresa tu clave de 4 digitos."); return; }
+  if (!/^[0-9]{4}$/.test(clave)) { mostrarErrorLogin("La clave debe ser exactamente 4 digitos numericos."); return; }
   const claveGuardada = localStorage.getItem("claveInv_" + usuario) || CLAVE_DEFAULT_INV;
   if (clave === CLAVE_RESET_INV) { localStorage.removeItem("claveInv_" + usuario); pedirNuevaClaveInv(usuario, true); return; }
   if (clave !== CLAVE_MAESTRA_INV && clave !== claveGuardada) { mostrarErrorLogin("Clave incorrecta."); return; }
