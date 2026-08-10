@@ -111,6 +111,7 @@
           <option value="bajo">Stock bajo</option>
           <option value="critico">Sin stock / critico</option>
           <option value="comprometido">Con comprometido</option>
+          <option value="v2">⚠ V2 pendiente de ajuste manual</option>
         </select>
         <button type="button" class="btn btn-gris" onclick="recargarDatos()">Actualizar</button>
       </div>
@@ -125,15 +126,15 @@
         <table>
           <thead>
             <tr>
-              <th onclick="ordenarPor('descripcion')">Articulo</th>
-              <th>Tipo</th>
-              <th onclick="ordenarPor('stockReal')" style="text-align:right">Stock real</th>
-              <th style="text-align:right">Comprometido</th>
-              <th onclick="ordenarPor('stockDisponible')" style="text-align:right">Disponible</th>
-              <th style="text-align:right">Minimo</th>
-              <th onclick="ordenarPor('diasDeStock')" style="text-align:right">Dias stock</th>
-              <th>Frec. repos.</th>
-              <th>Estado</th>
+              <th onclick="ordenarPor('descripcion')">Articulo ⇅</th>
+              <th onclick="ordenarPor('tipo')">Tipo ⇅</th>
+              <th onclick="ordenarPor('stockReal')" style="text-align:right">Stock real ⇅</th>
+              <th onclick="ordenarPor('stockComprometido')" style="text-align:right">Comprometido ⇅</th>
+              <th onclick="ordenarPor('stockDisponible')" style="text-align:right">Disponible ⇅</th>
+              <th onclick="ordenarPor('minimoEfectivo')" style="text-align:right">Minimo ⇅</th>
+              <th onclick="ordenarPor('diasDeStock')" style="text-align:right">Dias stock ⇅</th>
+              <th onclick="ordenarPor('frecuenciaReposicionDias')">Frec. repos. ⇅</th>
+              <th onclick="ordenarPor('estadoOrden')">Estado ⇅</th>
               <th></th>
             </tr>
           </thead>
@@ -199,6 +200,11 @@
 
   <div class="panel" id="panelAlertas">
     <div class="resumen-alertas" id="resumenAlertas"></div>
+    <div class="card" style="border:2px solid var(--naranja)">
+      <h2 style="color:var(--naranja)">⚠ Ventas V2 pendientes de descuento manual</h2>
+      <p style="font-size:12px;color:var(--gris-texto);margin-bottom:10px">Estas ventas NO descuentan stock automáticamente en el ERP. Hacé la salida manual ahora, sin esperar el recuento semanal.</p>
+      <div id="listaV2" style="font-size:13px;color:var(--gris-texto)">Cargando...</div>
+    </div>
     <div class="card">
       <h2>Articulos bajo stock minimo</h2>
       <div id="listaAlertas" style="font-size:13px;color:var(--gris-texto)">Cargando...</div>
@@ -254,7 +260,13 @@
       <div style="overflow-x:auto">
         <table>
           <thead>
-            <tr><th>Articulo</th><th style="text-align:right">Teorico</th><th style="text-align:right">Fisico</th><th style="text-align:right">Diferencia</th><th></th></tr>
+            <tr>
+              <th onclick="ordenarPorRecuento('descripcion')" style="cursor:pointer">Articulo ⇅</th>
+              <th onclick="ordenarPorRecuento('stockTeorico')" style="text-align:right;cursor:pointer">Teorico ⇅</th>
+              <th onclick="ordenarPorRecuento('stockFisico')" style="text-align:right;cursor:pointer">Fisico ⇅</th>
+              <th onclick="ordenarPorRecuento('diferencia')" style="text-align:right;cursor:pointer">Diferencia ⇅</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody id="cuerpoListaRecuento"></tbody>
         </table>
@@ -373,6 +385,7 @@ async function cargarDatosInv() {
     renderizarTabla();
     renderizarAlertas();
     poblarSelectArticulosMov();
+    poblarSelectArticulosRec();
     ocultarBannerInv();
   } catch(err) {
     mostrarBannerInv("fallo", "No se pudieron cargar los datos. Verifica la conexion.");
@@ -392,6 +405,24 @@ function ordenarPor(col) {
   else { ordenActual.col = col; ordenActual.asc = false; }
   renderizarTabla();
 }
+// Devuelve el valor a comparar para ordenar, soporta columnas calculadas.
+function valorOrden(it, col) {
+  switch(col) {
+    case "descripcion": return it.descripcion;
+    case "tipo": return it.tipo;
+    case "stockReal": return it.stockReal;
+    case "stockComprometido": return it.stockComprometido;
+    case "stockDisponible": return it.stockDisponible;
+    case "minimoEfectivo": return it.tipoAlerta === "dias" ? it.stockMinimoDias : it.stockMinimoUnidades;
+    case "diasDeStock": return it.diasDeStock;
+    case "frecuenciaReposicionDias": return it.frecuenciaReposicionDias || -1;
+    case "estadoOrden": {
+      const est = estadoArticulo(it);
+      return est === "critico" ? 0 : est === "bajo" ? 1 : 2;
+    }
+    default: return it[col];
+  }
+}
 function renderizarTabla() {
   const q = (document.getElementById("buscarStock").value || "").trim().toLowerCase();
   const fe = document.getElementById("filtroEstado").value;
@@ -404,12 +435,14 @@ function renderizarTabla() {
     if (fe === "bajo" && est !== "bajo") return false;
     if (fe === "critico" && est !== "critico") return false;
     if (fe === "comprometido" && it.stockComprometido === 0) return false;
+    if (fe === "v2" && it.stockComprometidoV2 === 0) return false;
     return true;
   });
   const col = ordenActual.col;
   filas.sort((a, b) => {
-    if (col === "descripcion") return ordenActual.asc ? a.descripcion.localeCompare(b.descripcion) : b.descripcion.localeCompare(a.descripcion);
-    return ordenActual.asc ? a[col] - b[col] : b[col] - a[col];
+    const va = valorOrden(a, col), vb = valorOrden(b, col);
+    if (typeof va === "string") return ordenActual.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return ordenActual.asc ? va - vb : vb - va;
   });
   const tbody = document.getElementById("cuerpoTabla");
   if (!filas.length) { tbody.innerHTML = "<tr><td colspan='10' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
@@ -425,9 +458,14 @@ function renderizarTabla() {
       ? (it.stockMinimoDias > 0 ? it.stockMinimoDias + "d" : "-")
       : (it.stockMinimoUnidades > 0 ? it.stockMinimoUnidades.toLocaleString("es-AR") + "u" : "-");
     const frecTexto = it.frecuenciaReposicionDias ? Math.round(it.frecuenciaReposicionDias) + "d" : "<span style='color:#bbb'>Sin datos</span>";
+    const tieneV2 = it.stockComprometidoV2 > 0;
+    const filaEstilo = tieneV2 ? " style='background:#fff0e0'" : "";
+    const v2Badge = tieneV2
+      ? "<br><span style='background:var(--naranja);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;display:inline-block;margin-top:3px'>⚠ V2: descontar " + it.stockComprometidoV2 + " u. manual</span>"
+      : "";
     // Guardamos el indice real en DATOS_INV para el modal
     const idxReal = DATOS_INV.indexOf(it);
-    return "<tr><td><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small></td>"
+    return "<tr" + filaEstilo + "><td><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small>" + v2Badge + "</td>"
       + "<td>" + tipoTag + "</td>"
       + "<td style='text-align:right;font-weight:700'>" + it.stockReal.toLocaleString("es-AR") + "</td>"
       + "<td style='text-align:right'>" + comp + "</td>"
@@ -490,22 +528,64 @@ async function guardarConfigMinimo() {
 }
 
 // --- Alertas ---
+let ordenAlertas = { col: "estadoOrden", asc: true };
+function ordenarPorAlertas(col) {
+  if (ordenAlertas.col === col) ordenAlertas.asc = !ordenAlertas.asc;
+  else { ordenAlertas.col = col; ordenAlertas.asc = false; }
+  renderizarAlertas();
+}
 function renderizarAlertas() {
   const sinStock = DATOS_INV.filter(it => it.stockDisponible <= 0);
-  const bajoMin = DATOS_INV.filter(it => it.stockMinimoUnidades > 0 && it.stockDisponible > 0 && it.stockDisponible <= it.stockMinimoUnidades);
+  const bajoMin = DATOS_INV.filter(it => {
+    if (it.stockDisponible <= 0) return false;
+    if (it.tipoAlerta === "dias") return it.stockMinimoDias > 0 && it.diasDeStock > 0 && it.diasDeStock <= it.stockMinimoDias;
+    return it.stockMinimoUnidades > 0 && it.stockDisponible <= it.stockMinimoUnidades;
+  });
   const conComp = DATOS_INV.filter(it => it.stockComprometido > 0);
+  const conV2 = DATOS_INV.filter(it => it.stockComprometidoV2 > 0);
+
   document.getElementById("resumenAlertas").innerHTML =
     "<div class='stat-box'><div class='num' style='color:var(--rojo)'>" + sinStock.length + "</div><div class='lab'>Sin stock</div></div>" +
     "<div class='stat-box'><div class='num' style='color:var(--naranja)'>" + bajoMin.length + "</div><div class='lab'>Bajo minimo</div></div>" +
     "<div class='stat-box'><div class='num' style='color:var(--azul)'>" + conComp.length + "</div><div class='lab'>Comprometido</div></div>" +
     "<div class='stat-box'><div class='num' style='color:var(--verde)'>" + (DATOS_INV.length - sinStock.length - bajoMin.length) + "</div><div class='lab'>Stock OK</div></div>";
-  const lista = [...sinStock, ...bajoMin];
+
+  // --- Panel V2: destacado, requiere accion inmediata (no espera al recuento) ---
+  const divV2 = document.getElementById("listaV2");
+  if (conV2.length === 0) {
+    divV2.innerHTML = "<p style='color:var(--gris-texto)'>No hay ventas V2 pendientes de ajuste manual en este momento.</p>";
+  } else {
+    divV2.innerHTML = "<table><thead><tr><th>Articulo</th><th style='text-align:right'>A descontar</th><th>Pedido(s)</th></tr></thead><tbody>"
+      + conV2.map(it => {
+          return "<tr style='background:#fff0e0'><td><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + "</small></td>"
+            + "<td style='text-align:right;font-weight:700;color:var(--naranja)'>" + it.stockComprometidoV2 + " u.</td>"
+            + "<td style='font-size:12px'>" + (it.pedidosV2 || []).join(", ") + "</td></tr>";
+        }).join("")
+      + "</tbody></table>";
+  }
+
+  // --- Lista general de alertas (sin stock + bajo minimo), ordenable ---
+  let lista = [...sinStock, ...bajoMin];
+  const col = ordenAlertas.col;
+  lista.sort((a, b) => {
+    const va = valorOrden(a, col), vb = valorOrden(b, col);
+    if (typeof va === "string") return ordenAlertas.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return ordenAlertas.asc ? va - vb : vb - va;
+  });
+
   if (!lista.length) { document.getElementById("listaAlertas").innerHTML = "<p style='color:var(--verde);font-weight:600'>Todos los articulos tienen stock suficiente.</p>"; return; }
-  document.getElementById("listaAlertas").innerHTML = "<table><thead><tr><th>Articulo</th><th style='text-align:right'>Real</th><th style='text-align:right'>Comprometido</th><th style='text-align:right'>Disponible</th><th style='text-align:right'>Minimo</th><th>Estado</th></tr></thead><tbody>"
+  document.getElementById("listaAlertas").innerHTML = "<table><thead><tr>"
+    + "<th onclick='ordenarPorAlertas(\"descripcion\")' style='cursor:pointer'>Articulo ⇅</th>"
+    + "<th onclick='ordenarPorAlertas(\"stockReal\")' style='text-align:right;cursor:pointer'>Real ⇅</th>"
+    + "<th onclick='ordenarPorAlertas(\"stockComprometido\")' style='text-align:right;cursor:pointer'>Comprometido ⇅</th>"
+    + "<th onclick='ordenarPorAlertas(\"stockDisponible\")' style='text-align:right;cursor:pointer'>Disponible ⇅</th>"
+    + "<th onclick='ordenarPorAlertas(\"minimoEfectivo\")' style='text-align:right;cursor:pointer'>Minimo ⇅</th>"
+    + "<th onclick='ordenarPorAlertas(\"estadoOrden\")' style='cursor:pointer'>Estado ⇅</th></tr></thead><tbody>"
     + lista.map(it => {
         const est = estadoArticulo(it);
         const badge = est === "critico" ? "<span class='badge badge-critico'>Sin stock</span>" : "<span class='badge badge-bajo'>Bajo minimo</span>";
-        return "<tr><td><b>" + it.descripcion + "</b><br><small>" + it.codItem + "</small></td><td style='text-align:right'>" + it.stockReal + "</td><td style='text-align:right'>" + (it.stockComprometido > 0 ? "-"+it.stockComprometido : "-") + "</td><td style='text-align:right;font-weight:700;color:var(--rojo)'>" + it.stockDisponible + "</td><td style='text-align:right'>" + it.stockMinimo + "</td><td>" + badge + "</td></tr>";
+        const minTexto = it.tipoAlerta === "dias" ? (it.stockMinimoDias + "d") : (it.stockMinimoUnidades + "u");
+        return "<tr><td><b>" + it.descripcion + "</b><br><small>" + it.codItem + "</small></td><td style='text-align:right'>" + it.stockReal + "</td><td style='text-align:right'>" + (it.stockComprometido > 0 ? "-"+it.stockComprometido : "-") + "</td><td style='text-align:right;font-weight:700;color:var(--rojo)'>" + it.stockDisponible + "</td><td style='text-align:right'>" + minTexto + "</td><td>" + badge + "</td></tr>";
       }).join("")
     + "</tbody></table>";
 }
@@ -594,26 +674,35 @@ function cambiarModoRecuento(modo) {
 }
 
 function poblarSelectArticulosRec() {
+  filtrarArticulosRec();
+}
+function filtrarArticulosRec() {
   const sel = document.getElementById("selectArticuloRec");
   if (!sel) return;
+  const q = (document.getElementById("buscarArticuloRec").value || "").trim().toLowerCase();
+  const filtrados = DATOS_INV
+    .map((it, idx) => ({ it, idx }))
+    .filter(({ it }) => !q || (it.descripcion + " " + it.codItem + " " + it.codigoConcatenado).toLowerCase().includes(q));
+
   sel.innerHTML = "";
-  DATOS_INV.forEach((it, idx) => {
+  if (filtrados.length === 0) {
+    const opt = document.createElement("option");
+    opt.textContent = "Sin resultados";
+    opt.disabled = true;
+    sel.appendChild(opt);
+    return;
+  }
+  filtrados.slice(0, 200).forEach(({ it, idx }) => {
     const opt = document.createElement("option");
     opt.value = idx;
     opt.textContent = it.descripcion + " (" + it.codItem + ") - Teorico: " + it.stockReal;
     sel.appendChild(opt);
   });
 }
-function filtrarArticulosRec() {
-  const q = (document.getElementById("buscarArticuloRec").value || "").trim().toLowerCase();
-  Array.from(document.getElementById("selectArticuloRec").options).forEach(opt => {
-    opt.style.display = (!q || opt.textContent.toLowerCase().includes(q)) ? "" : "none";
-  });
-}
 function seleccionarArticuloRec() {
   const sel = document.getElementById("selectArticuloRec");
   const opt = sel.options[sel.selectedIndex];
-  if (!opt) { articuloRecSeleccionado = null; document.getElementById("recArtInfo").style.display = "none"; return; }
+  if (!opt || opt.disabled) { articuloRecSeleccionado = null; document.getElementById("recArtInfo").style.display = "none"; return; }
   articuloRecSeleccionado = DATOS_INV[Number(opt.value)];
   const div = document.getElementById("recArtInfo");
   div.style.display = "block";
@@ -668,21 +757,37 @@ function agregarAlRecuento(it, fisico, obs) {
   renderizarListaRecuento();
 }
 
+let ordenRecuento = { col: "descripcion", asc: true };
+function ordenarPorRecuento(col) {
+  if (ordenRecuento.col === col) ordenRecuento.asc = !ordenRecuento.asc;
+  else { ordenRecuento.col = col; ordenRecuento.asc = false; }
+  renderizarListaRecuento();
+}
 function renderizarListaRecuento() {
   const card = document.getElementById("cardListaRecuento");
   const tbody = document.getElementById("cuerpoListaRecuento");
   document.getElementById("cantidadEnRecuento").textContent = recuentoActual.length;
   if (recuentoActual.length === 0) { card.style.display = "none"; return; }
   card.style.display = "block";
-  tbody.innerHTML = recuentoActual.map((r, i) => {
-    const dif = r.stockFisico - r.stockTeorico;
+
+  // Guardamos el indice original en cada item para poder "Quitar" correctamente tras ordenar
+  const conIndice = recuentoActual.map((r, i) => ({ ...r, _i: i, diferencia: r.stockFisico - r.stockTeorico }));
+  const col = ordenRecuento.col;
+  conIndice.sort((a, b) => {
+    const va = a[col], vb = b[col];
+    if (typeof va === "string") return ordenRecuento.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return ordenRecuento.asc ? va - vb : vb - va;
+  });
+
+  tbody.innerHTML = conIndice.map(r => {
+    const dif = r.diferencia;
     const color = dif === 0 ? "var(--verde)" : dif > 0 ? "var(--azul)" : "var(--rojo)";
     const signo = dif > 0 ? "+" : "";
     return "<tr><td>" + r.descripcion + "</td>"
       + "<td style='text-align:right'>" + r.stockTeorico + "</td>"
       + "<td style='text-align:right'>" + r.stockFisico + "</td>"
       + "<td style='text-align:right;font-weight:700;color:" + color + "'>" + signo + dif + "</td>"
-      + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:2px 8px' onclick='quitarDelRecuento(" + i + ")'>Quitar</button></td></tr>";
+      + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:2px 8px' onclick='quitarDelRecuento(" + r._i + ")'>Quitar</button></td></tr>";
   }).join("");
 }
 function quitarDelRecuento(i) {
