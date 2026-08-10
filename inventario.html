@@ -338,7 +338,7 @@ function renderizarTabla() {
       + "<td style='text-align:right'>" + comp + "</td>"
       + "<td style='text-align:right;font-weight:700;color:" + colorDisp + "'>" + it.stockDisponible.toLocaleString("es-AR") + "</td>"
       + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.stockMinimo > 0 ? it.stockMinimo.toLocaleString("es-AR") : "-") + "</td>"
-      + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.diasDeStock > 0 ? it.diasDeStock + "d" : "-") + "</td>"
+      + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.diasDeStock > 0 ? Math.round(it.diasDeStock * 10) / 10 + "d" : "-") + "</td>"
       + "<td>" + badge + "</td>"
       + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 8px' onclick='abrirModalMinimo(" + idxReal + ")'>Min.</button></td></tr>";
   }).join("");
