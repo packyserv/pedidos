@@ -98,6 +98,7 @@
     <button class="tab activa" onclick="cambiarTab('stock')">Inventario</button>
     <button class="tab" onclick="cambiarTab('movimientos')">Movimientos</button>
     <button class="tab" onclick="cambiarTab('alertas')">Alertas</button>
+    <button class="tab" onclick="cambiarTab('recuento')">Recuento</button>
   </div>
 
   <div class="panel activo" id="panelStock">
@@ -113,22 +114,31 @@
         </select>
         <button type="button" class="btn btn-gris" onclick="recargarDatos()">Actualizar</button>
       </div>
+      <div class="filtros" style="margin-top:-4px">
+        <select id="filtroTipo" onchange="renderizarTabla()">
+          <option value="">Todos los tipos</option>
+          <option value="Producto Terminado">📦 Productos Terminados</option>
+          <option value="Insumo">🧱 Insumos</option>
+        </select>
+      </div>
       <div style="overflow-x:auto">
         <table>
           <thead>
             <tr>
               <th onclick="ordenarPor('descripcion')">Articulo</th>
+              <th>Tipo</th>
               <th onclick="ordenarPor('stockReal')" style="text-align:right">Stock real</th>
               <th style="text-align:right">Comprometido</th>
               <th onclick="ordenarPor('stockDisponible')" style="text-align:right">Disponible</th>
-              <th onclick="ordenarPor('stockMinimo')" style="text-align:right">Minimo</th>
+              <th style="text-align:right">Minimo</th>
               <th onclick="ordenarPor('diasDeStock')" style="text-align:right">Dias stock</th>
+              <th>Frec. repos.</th>
               <th>Estado</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="cuerpoTabla">
-            <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
+            <tr><td colspan="10" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
           </tbody>
         </table>
       </div>
@@ -194,19 +204,93 @@
       <div id="listaAlertas" style="font-size:13px;color:var(--gris-texto)">Cargando...</div>
     </div>
   </div>
+
+  <div class="panel" id="panelRecuento">
+    <div class="card">
+      <h2>Recuento fisico de stock</h2>
+      <p style="font-size:13px;color:var(--gris-texto);margin-bottom:14px">
+        Contá el stock físico y compará contra el teórico del sistema. Al finalizar podés exportar las diferencias a CSV para cargarlas en Bejerman.
+      </p>
+      <div class="pills" style="margin-bottom:16px">
+        <button type="button" class="pill-tipo activa-entrada" id="modoRecIndividual" onclick="cambiarModoRecuento('individual')">Articulo por articulo</button>
+        <button type="button" class="pill-tipo" id="modoRecPlanilla" onclick="cambiarModoRecuento('planilla')">Planilla completa</button>
+      </div>
+
+      <!-- Modo individual -->
+      <div id="recuentoIndividual">
+        <div class="campo">
+          <label>Buscar articulo</label>
+          <input type="text" id="buscarArticuloRec" placeholder="Buscar por codigo o descripcion..." oninput="filtrarArticulosRec()">
+          <select id="selectArticuloRec" size="5" style="margin-top:6px;height:100px" onchange="seleccionarArticuloRec()"></select>
+        </div>
+        <div id="recArtInfo" style="display:none;background:var(--azul-claro);padding:10px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
+        <div class="campo">
+          <label>Stock fisico contado</label>
+          <input type="number" id="inputFisicoRec" min="0" placeholder="0">
+        </div>
+        <div class="campo">
+          <label>Observacion (opcional)</label>
+          <input type="text" id="obsFisicoRec" placeholder="Ubicacion, novedad, etc...">
+        </div>
+        <button type="button" class="btn btn-verde" style="width:100%" onclick="agregarConteoIndividual()">Agregar al recuento</button>
+      </div>
+
+      <!-- Modo planilla -->
+      <div id="recuentoPlanilla" style="display:none">
+        <input type="text" id="buscarPlanillaRec" placeholder="Filtrar la lista..." oninput="renderizarPlanillaRecuento()" style="margin-bottom:10px">
+        <div style="overflow-x:auto; max-height:400px; overflow-y:auto; border:1px solid var(--gris-borde); border-radius:6px">
+          <table>
+            <thead>
+              <tr><th>Articulo</th><th style="text-align:right">Teorico</th><th style="text-align:center">Fisico contado</th></tr>
+            </thead>
+            <tbody id="cuerpoPlanillaRec"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="cardListaRecuento" style="display:none">
+      <h2>Recuento en curso (<span id="cantidadEnRecuento">0</span> items)</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr><th>Articulo</th><th style="text-align:right">Teorico</th><th style="text-align:right">Fisico</th><th style="text-align:right">Diferencia</th><th></th></tr>
+          </thead>
+          <tbody id="cuerpoListaRecuento"></tbody>
+        </table>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap">
+        <button type="button" class="btn btn-gris" onclick="limpiarRecuento()">Limpiar todo</button>
+        <button type="button" class="btn btn-azul" onclick="exportarRecuentoCSV()">Exportar CSV</button>
+        <button type="button" class="btn btn-verde" onclick="guardarRecuentoEnSheet()" style="flex:1">Guardar recuento en Google Sheets</button>
+      </div>
+    </div>
+  </div>
 </main>
 
 <div class="modal-overlay" id="modalMinimo">
   <div class="modal">
-    <h3>Configurar stock minimo</h3>
+    <h3>Configurar alerta de stock</h3>
     <div id="infoArticuloMin" style="font-size:13px;color:var(--gris-texto);margin-bottom:14px"></div>
     <div class="campo">
-      <label>Stock minimo (unidades)</label>
-      <input type="number" id="inputStockMinimo" min="0" placeholder="0">
+      <label>¿Qué criterio dispara la alerta para este artículo?</label>
+      <div class="pills">
+        <button type="button" class="pill-tipo" id="pillTipoUnidades" onclick="seleccionarTipoAlerta('unidades')">Unidades</button>
+        <button type="button" class="pill-tipo" id="pillTipoDias" onclick="seleccionarTipoAlerta('dias')">Días de cobertura</button>
+      </div>
+    </div>
+    <div class="campo">
+      <label>Stock mínimo (unidades)</label>
+      <input type="number" id="inputStockMinimoUnidades" min="0" placeholder="0">
+    </div>
+    <div class="campo">
+      <label>Días mínimos de cobertura</label>
+      <input type="number" id="inputStockMinimoDias" min="0" placeholder="0">
+      <div style="font-size:12px;color:var(--gris-texto);margin-top:4px">Se calcula con el ritmo de consumo/venta actual del artículo.</div>
     </div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button type="button" class="btn btn-gris" style="flex:1" onclick="cerrarModalMinimo()">Cancelar</button>
-      <button type="button" class="btn btn-azul" style="flex:2" onclick="guardarStockMinimo()">Guardar</button>
+      <button type="button" class="btn btn-azul" style="flex:2" onclick="guardarConfigMinimo()">Guardar</button>
     </div>
   </div>
 </div>
@@ -299,7 +383,8 @@ async function recargarDatos() { DATOS_INV = []; cargarDatosInv(); }
 // --- Tabla stock ---
 function estadoArticulo(it) {
   if (it.stockDisponible <= 0) return "critico";
-  if (it.stockMinimo > 0 && it.stockDisponible <= it.stockMinimo) return "bajo";
+  if (it.tipoAlerta === "dias" && it.stockMinimoDias > 0 && it.diasDeStock > 0 && it.diasDeStock <= it.stockMinimoDias) return "bajo";
+  if (it.tipoAlerta !== "dias" && it.stockMinimoUnidades > 0 && it.stockDisponible <= it.stockMinimoUnidades) return "bajo";
   return "ok";
 }
 function ordenarPor(col) {
@@ -310,8 +395,10 @@ function ordenarPor(col) {
 function renderizarTabla() {
   const q = (document.getElementById("buscarStock").value || "").trim().toLowerCase();
   const fe = document.getElementById("filtroEstado").value;
+  const ft = document.getElementById("filtroTipo").value;
   let filas = DATOS_INV.filter(it => {
     if (q && !((it.descripcion + " " + it.codItem + " " + it.codigoConcatenado).toLowerCase().includes(q))) return false;
+    if (ft && it.tipo !== ft) return false;
     const est = estadoArticulo(it);
     if (fe === "ok" && est !== "ok") return false;
     if (fe === "bajo" && est !== "bajo") return false;
@@ -325,20 +412,29 @@ function renderizarTabla() {
     return ordenActual.asc ? a[col] - b[col] : b[col] - a[col];
   });
   const tbody = document.getElementById("cuerpoTabla");
-  if (!filas.length) { tbody.innerHTML = "<tr><td colspan='8' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
+  if (!filas.length) { tbody.innerHTML = "<tr><td colspan='10' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
   tbody.innerHTML = filas.map((it, idx) => {
     const est = estadoArticulo(it);
     const badge = est === "ok" ? "<span class='badge badge-ok'>OK</span>" : est === "bajo" ? "<span class='badge badge-bajo'>Bajo</span>" : "<span class='badge badge-critico'>Critico</span>";
     const comp = it.stockComprometido > 0 ? "<span class='comprometido'>(-" + it.stockComprometido + " comp.)</span>" : "-";
     const colorDisp = est === "critico" ? "var(--rojo)" : est === "bajo" ? "var(--naranja)" : "var(--verde)";
+    const tipoTag = it.tipo === "Insumo"
+      ? "<span style='font-size:11px;color:var(--gris-texto)'>🧱 Insumo</span>"
+      : "<span style='font-size:11px;color:var(--azul)'>📦 Producto</span>";
+    const minTexto = it.tipoAlerta === "dias"
+      ? (it.stockMinimoDias > 0 ? it.stockMinimoDias + "d" : "-")
+      : (it.stockMinimoUnidades > 0 ? it.stockMinimoUnidades.toLocaleString("es-AR") + "u" : "-");
+    const frecTexto = it.frecuenciaReposicionDias ? Math.round(it.frecuenciaReposicionDias) + "d" : "<span style='color:#bbb'>Sin datos</span>";
     // Guardamos el indice real en DATOS_INV para el modal
     const idxReal = DATOS_INV.indexOf(it);
     return "<tr><td><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small></td>"
+      + "<td>" + tipoTag + "</td>"
       + "<td style='text-align:right;font-weight:700'>" + it.stockReal.toLocaleString("es-AR") + "</td>"
       + "<td style='text-align:right'>" + comp + "</td>"
       + "<td style='text-align:right;font-weight:700;color:" + colorDisp + "'>" + it.stockDisponible.toLocaleString("es-AR") + "</td>"
-      + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.stockMinimo > 0 ? it.stockMinimo.toLocaleString("es-AR") : "-") + "</td>"
+      + "<td style='text-align:right;color:var(--gris-texto)'>" + minTexto + "</td>"
       + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.diasDeStock > 0 ? Math.round(it.diasDeStock * 10) / 10 + "d" : "-") + "</td>"
+      + "<td style='text-align:center;font-size:12px'>" + frecTexto + "</td>"
       + "<td>" + badge + "</td>"
       + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 8px' onclick='abrirModalMinimo(" + idxReal + ")'>Min.</button></td></tr>";
   }).join("");
@@ -346,31 +442,47 @@ function renderizarTabla() {
 }
 
 // --- Modal minimo ---
+let tipoAlertaModalActual = "unidades";
 function abrirModalMinimo(idx) {
   articuloMinimoActual = DATOS_INV[idx];
   if (!articuloMinimoActual) return;
-  document.getElementById("infoArticuloMin").textContent = articuloMinimoActual.descripcion + " - Stock: " + articuloMinimoActual.stockReal + " u.";
-  document.getElementById("inputStockMinimo").value = articuloMinimoActual.stockMinimo || 0;
+  document.getElementById("infoArticuloMin").textContent = articuloMinimoActual.descripcion + " - Stock: " + articuloMinimoActual.stockReal + " u. - " + (articuloMinimoActual.diasDeStock > 0 ? Math.round(articuloMinimoActual.diasDeStock*10)/10 + " dias de cobertura actual" : "");
+  document.getElementById("inputStockMinimoUnidades").value = articuloMinimoActual.stockMinimoUnidades || 0;
+  document.getElementById("inputStockMinimoDias").value = articuloMinimoActual.stockMinimoDias || 0;
+  seleccionarTipoAlerta(articuloMinimoActual.tipoAlerta || "unidades");
   document.getElementById("modalMinimo").classList.add("abierto");
+}
+function seleccionarTipoAlerta(tipo) {
+  tipoAlertaModalActual = tipo;
+  document.getElementById("pillTipoUnidades").className = "pill-tipo" + (tipo === "unidades" ? " activa-entrada" : "");
+  document.getElementById("pillTipoDias").className = "pill-tipo" + (tipo === "dias" ? " activa-entrada" : "");
 }
 function cerrarModalMinimo() {
   document.getElementById("modalMinimo").classList.remove("abierto");
   articuloMinimoActual = null;
 }
-async function guardarStockMinimo() {
+async function guardarConfigMinimo() {
   if (!articuloMinimoActual) return;
-  const val = Number(document.getElementById("inputStockMinimo").value) || 0;
+  const minU = Number(document.getElementById("inputStockMinimoUnidades").value) || 0;
+  const minD = Number(document.getElementById("inputStockMinimoDias").value) || 0;
   try {
-    const url = WEB_APP_URL + "?action=guardarStockMinimo&codArticulo=" + encodeURIComponent(articuloMinimoActual.codigoConcatenado) + "&valor=" + val;
+    const url = WEB_APP_URL + "?action=guardarStockMinimo"
+      + "&codArticulo=" + encodeURIComponent(articuloMinimoActual.codigoConcatenado)
+      + "&tipoAlerta=" + tipoAlertaModalActual
+      + "&minUnidades=" + minU + "&minDias=" + minD;
     const resp = await fetch(url);
     const data = await resp.json();
     if (data.ok) {
       const idx = DATOS_INV.findIndex(x => x.codigoConcatenado === articuloMinimoActual.codigoConcatenado);
-      if (idx >= 0) DATOS_INV[idx].stockMinimo = val;
+      if (idx >= 0) {
+        DATOS_INV[idx].tipoAlerta = tipoAlertaModalActual;
+        DATOS_INV[idx].stockMinimoUnidades = minU;
+        DATOS_INV[idx].stockMinimoDias = minD;
+      }
       cerrarModalMinimo();
       renderizarTabla();
       renderizarAlertas();
-      mostrarBannerInv("exito", "Stock minimo guardado correctamente.");
+      mostrarBannerInv("exito", "Configuracion guardada correctamente.");
     } else {
       mostrarBannerInv("fallo", "Error al guardar: " + (data.error || "desconocido"));
     }
@@ -380,7 +492,7 @@ async function guardarStockMinimo() {
 // --- Alertas ---
 function renderizarAlertas() {
   const sinStock = DATOS_INV.filter(it => it.stockDisponible <= 0);
-  const bajoMin = DATOS_INV.filter(it => it.stockMinimo > 0 && it.stockDisponible > 0 && it.stockDisponible <= it.stockMinimo);
+  const bajoMin = DATOS_INV.filter(it => it.stockMinimoUnidades > 0 && it.stockDisponible > 0 && it.stockDisponible <= it.stockMinimoUnidades);
   const conComp = DATOS_INV.filter(it => it.stockComprometido > 0);
   document.getElementById("resumenAlertas").innerHTML =
     "<div class='stat-box'><div class='num' style='color:var(--rojo)'>" + sinStock.length + "</div><div class='lab'>Sin stock</div></div>" +
@@ -460,12 +572,170 @@ async function registrarMovimiento() {
 
 // --- Tabs ---
 function cambiarTab(tab) {
-  const tabs = ["stock", "movimientos", "alertas"];
+  const tabs = ["stock", "movimientos", "alertas", "recuento"];
   document.querySelectorAll(".tab").forEach((t, i) => t.classList.toggle("activa", tabs[i] === tab));
   tabs.forEach(t => {
     const p = document.getElementById("panel" + t.charAt(0).toUpperCase() + t.slice(1));
     if (p) p.classList.toggle("activo", t === tab);
   });
+  if (tab === "recuento" && recuentoActual.length === 0) poblarSelectArticulosRec();
+}
+
+// --- MODULO RECUENTO ---
+let recuentoActual = []; // [{codigoConcatenado, descripcion, stockTeorico, stockFisico, observacion}]
+let articuloRecSeleccionado = null;
+
+function cambiarModoRecuento(modo) {
+  document.getElementById("modoRecIndividual").className = "pill-tipo" + (modo === "individual" ? " activa-entrada" : "");
+  document.getElementById("modoRecPlanilla").className = "pill-tipo" + (modo === "planilla" ? " activa-entrada" : "");
+  document.getElementById("recuentoIndividual").style.display = modo === "individual" ? "block" : "none";
+  document.getElementById("recuentoPlanilla").style.display = modo === "planilla" ? "block" : "none";
+  if (modo === "planilla") renderizarPlanillaRecuento();
+}
+
+function poblarSelectArticulosRec() {
+  const sel = document.getElementById("selectArticuloRec");
+  if (!sel) return;
+  sel.innerHTML = "";
+  DATOS_INV.forEach((it, idx) => {
+    const opt = document.createElement("option");
+    opt.value = idx;
+    opt.textContent = it.descripcion + " (" + it.codItem + ") - Teorico: " + it.stockReal;
+    sel.appendChild(opt);
+  });
+}
+function filtrarArticulosRec() {
+  const q = (document.getElementById("buscarArticuloRec").value || "").trim().toLowerCase();
+  Array.from(document.getElementById("selectArticuloRec").options).forEach(opt => {
+    opt.style.display = (!q || opt.textContent.toLowerCase().includes(q)) ? "" : "none";
+  });
+}
+function seleccionarArticuloRec() {
+  const sel = document.getElementById("selectArticuloRec");
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt) { articuloRecSeleccionado = null; document.getElementById("recArtInfo").style.display = "none"; return; }
+  articuloRecSeleccionado = DATOS_INV[Number(opt.value)];
+  const div = document.getElementById("recArtInfo");
+  div.style.display = "block";
+  div.innerHTML = "<b>" + articuloRecSeleccionado.descripcion + "</b> - Stock teorico actual: <b>" + articuloRecSeleccionado.stockReal + "</b> u.";
+  document.getElementById("inputFisicoRec").value = "";
+}
+function agregarConteoIndividual() {
+  if (!articuloRecSeleccionado) { mostrarBannerInv("fallo", "Selecciona un articulo."); return; }
+  const fisico = document.getElementById("inputFisicoRec").value;
+  if (fisico === "" || Number(fisico) < 0) { mostrarBannerInv("fallo", "Ingresa el stock fisico contado."); return; }
+  const obs = document.getElementById("obsFisicoRec").value;
+  agregarAlRecuento(articuloRecSeleccionado, Number(fisico), obs);
+  document.getElementById("inputFisicoRec").value = "";
+  document.getElementById("obsFisicoRec").value = "";
+  mostrarBannerInv("exito", "Agregado al recuento: " + articuloRecSeleccionado.descripcion);
+}
+
+function renderizarPlanillaRecuento() {
+  const q = (document.getElementById("buscarPlanillaRec").value || "").trim().toLowerCase();
+  const tbody = document.getElementById("cuerpoPlanillaRec");
+  const filas = DATOS_INV.filter(it => !q || (it.descripcion + " " + it.codItem).toLowerCase().includes(q));
+  tbody.innerHTML = filas.map((it, i) => {
+    const idxReal = DATOS_INV.indexOf(it);
+    const existente = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
+    const valorPrevio = existente ? existente.stockFisico : "";
+    return "<tr><td>" + it.descripcion + "<br><small style='color:#888'>" + it.codItem + "</small></td>"
+      + "<td style='text-align:right'>" + it.stockReal + "</td>"
+      + "<td style='text-align:center'><input type='number' min='0' style='width:90px;text-align:center' value='" + valorPrevio + "' onchange='actualizarPlanillaFila(" + idxReal + ", this.value)'></td></tr>";
+  }).join("");
+}
+function actualizarPlanillaFila(idx, valor) {
+  const it = DATOS_INV[idx];
+  if (!it) return;
+  if (valor === "") {
+    recuentoActual = recuentoActual.filter(r => r.codigoConcatenado !== it.codigoConcatenado);
+  } else {
+    agregarAlRecuento(it, Number(valor), "");
+  }
+}
+
+function agregarAlRecuento(it, fisico, obs) {
+  const idx = recuentoActual.findIndex(r => r.codigoConcatenado === it.codigoConcatenado);
+  const item = {
+    codigoConcatenado: it.codigoConcatenado,
+    descripcion: it.descripcion,
+    stockTeorico: it.stockReal,
+    stockFisico: fisico,
+    observacion: obs || "",
+  };
+  if (idx >= 0) recuentoActual[idx] = item;
+  else recuentoActual.push(item);
+  renderizarListaRecuento();
+}
+
+function renderizarListaRecuento() {
+  const card = document.getElementById("cardListaRecuento");
+  const tbody = document.getElementById("cuerpoListaRecuento");
+  document.getElementById("cantidadEnRecuento").textContent = recuentoActual.length;
+  if (recuentoActual.length === 0) { card.style.display = "none"; return; }
+  card.style.display = "block";
+  tbody.innerHTML = recuentoActual.map((r, i) => {
+    const dif = r.stockFisico - r.stockTeorico;
+    const color = dif === 0 ? "var(--verde)" : dif > 0 ? "var(--azul)" : "var(--rojo)";
+    const signo = dif > 0 ? "+" : "";
+    return "<tr><td>" + r.descripcion + "</td>"
+      + "<td style='text-align:right'>" + r.stockTeorico + "</td>"
+      + "<td style='text-align:right'>" + r.stockFisico + "</td>"
+      + "<td style='text-align:right;font-weight:700;color:" + color + "'>" + signo + dif + "</td>"
+      + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:2px 8px' onclick='quitarDelRecuento(" + i + ")'>Quitar</button></td></tr>";
+  }).join("");
+}
+function quitarDelRecuento(i) {
+  recuentoActual.splice(i, 1);
+  renderizarListaRecuento();
+  renderizarPlanillaRecuento();
+}
+function limpiarRecuento() {
+  if (!confirm("¿Borrar todo el recuento en curso?")) return;
+  recuentoActual = [];
+  renderizarListaRecuento();
+  renderizarPlanillaRecuento();
+}
+
+function exportarRecuentoCSV() {
+  if (recuentoActual.length === 0) { mostrarBannerInv("fallo", "No hay items en el recuento."); return; }
+  let csv = "Codigo;Descripcion;StockTeorico;StockFisico;Diferencia;Observacion\n";
+  recuentoActual.forEach(r => {
+    const dif = r.stockFisico - r.stockTeorico;
+    csv += [r.codigoConcatenado, r.descripcion.replace(/;/g,","), r.stockTeorico, r.stockFisico, dif, (r.observacion||"").replace(/;/g,",")].join(";") + "\n";
+  });
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const fecha = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = "recuento_" + fecha + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarBannerInv("exito", "CSV exportado correctamente.");
+}
+
+async function guardarRecuentoEnSheet() {
+  if (recuentoActual.length === 0) { mostrarBannerInv("fallo", "No hay items en el recuento."); return; }
+  try {
+    const resp = await fetch(WEB_APP_URL + "?action=registrarRecuento", {
+      method: "POST",
+      body: JSON.stringify({ usuario: usuarioActual, items: recuentoActual }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      mostrarBannerInv("exito", data.registrados + " item(s) guardados en Google Sheets (hoja Recuentos).");
+      recuentoActual = [];
+      renderizarListaRecuento();
+      renderizarPlanillaRecuento();
+    } else {
+      mostrarBannerInv("fallo", "Error al guardar: " + (data.error || "desconocido"));
+    }
+  } catch(e) {
+    mostrarBannerInv("fallo", "Error de conexion al guardar el recuento.");
+  }
 }
 
 // --- Banner ---
