@@ -99,6 +99,7 @@
     <button class="tab" onclick="cambiarTab('movimientos')">Movimientos</button>
     <button class="tab" onclick="cambiarTab('alertas')">Alertas</button>
     <button class="tab" onclick="cambiarTab('recuento')">Recuento</button>
+    <button class="tab" onclick="cambiarTab('v2')">V2</button>
   </div>
 
   <div class="panel activo" id="panelStock">
@@ -193,8 +194,24 @@
       <button type="button" class="btn btn-verde" onclick="registrarMovimiento()" style="width:100%">Registrar movimiento</button>
     </div>
     <div class="card">
-      <h2>Historial</h2>
-      <div id="historialMovimientos" style="font-size:13px;color:var(--gris-texto)">Los movimientos quedan registrados en la hoja <b>Movimientos_Stock</b> de Google Sheets.</div>
+      <h2>Historial (últimos 50)</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="ordenarPorHistMov('Timestamp')" style="cursor:pointer">Fecha ⇅</th>
+              <th onclick="ordenarPorHistMov('Descripcion')" style="cursor:pointer">Articulo ⇅</th>
+              <th onclick="ordenarPorHistMov('Tipo')" style="cursor:pointer">Tipo ⇅</th>
+              <th onclick="ordenarPorHistMov('Cantidad')" style="text-align:right;cursor:pointer">Cant. ⇅</th>
+              <th>Motivo</th>
+              <th>Usuario</th>
+            </tr>
+          </thead>
+          <tbody id="cuerpoHistMov">
+            <tr><td colspan="6" style="text-align:center;padding:16px;color:var(--gris-texto)">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -203,11 +220,11 @@
     <div class="card" style="border:2px solid var(--naranja)">
       <h2 style="color:var(--naranja)">⚠ Ventas V2 pendientes de descuento manual</h2>
       <p style="font-size:12px;color:var(--gris-texto);margin-bottom:10px">Estas ventas NO descuentan stock automáticamente en el ERP. Hacé la salida manual ahora, sin esperar el recuento semanal.</p>
-      <div id="listaV2" style="font-size:13px;color:var(--gris-texto)">Cargando...</div>
+      <div id="listaV2" style="font-size:13px;color:var(--gris-texto);overflow-x:auto">Cargando...</div>
     </div>
     <div class="card">
       <h2>Articulos bajo stock minimo</h2>
-      <div id="listaAlertas" style="font-size:13px;color:var(--gris-texto)">Cargando...</div>
+      <div id="listaAlertas" style="font-size:13px;color:var(--gris-texto);overflow-x:auto">Cargando...</div>
     </div>
   </div>
 
@@ -247,7 +264,11 @@
         <div style="overflow-x:auto; max-height:400px; overflow-y:auto; border:1px solid var(--gris-borde); border-radius:6px">
           <table>
             <thead>
-              <tr><th>Articulo</th><th style="text-align:right">Teorico</th><th style="text-align:center">Fisico contado</th></tr>
+              <tr>
+              <th onclick="ordenarPorPlanilla('descripcion')" style="cursor:pointer">Articulo ⇅</th>
+              <th onclick="ordenarPorPlanilla('stockReal')" style="text-align:right;cursor:pointer">Teorico ⇅</th>
+              <th style="text-align:center">Fisico contado</th>
+            </tr>
             </thead>
             <tbody id="cuerpoPlanillaRec"></tbody>
           </table>
@@ -277,8 +298,82 @@
         <button type="button" class="btn btn-verde" onclick="guardarRecuentoEnSheet()" style="flex:1">Guardar recuento en Google Sheets</button>
       </div>
     </div>
+
+    <div class="card">
+      <h2>Historial de recuentos guardados (últimos 200)</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="ordenarPorHistRec('Timestamp')" style="cursor:pointer">Fecha ⇅</th>
+              <th onclick="ordenarPorHistRec('Descripcion')" style="cursor:pointer">Articulo ⇅</th>
+              <th style="text-align:right">Teorico / Fisico</th>
+              <th onclick="ordenarPorHistRec('Diferencia')" style="text-align:right;cursor:pointer">Diferencia ⇅</th>
+              <th>Usuario</th>
+            </tr>
+          </thead>
+          <tbody id="cuerpoHistRec">
+            <tr><td colspan="5" style="text-align:center;padding:16px;color:var(--gris-texto)">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panelV2">
+    <div class="card">
+      <h2>Consulta de ventas V2 por fecha</h2>
+      <p style="font-size:13px;color:var(--gris-texto);margin-bottom:14px">
+        Las ventas facturadas bajo V2 no descuentan stock automáticamente en el ERP. Acá podés ver el total por artículo en un rango de fechas y marcar cada línea como "ajustada" una vez hecho el descuento manual.
+      </p>
+      <div class="filtros">
+        <div style="flex:1;min-width:140px">
+          <label style="font-size:12px;font-weight:600;color:var(--gris-texto);display:block;margin-bottom:4px">Desde</label>
+          <input type="date" id="fechaDesdeV2">
+        </div>
+        <div style="flex:1;min-width:140px">
+          <label style="font-size:12px;font-weight:600;color:var(--gris-texto);display:block;margin-bottom:4px">Hasta</label>
+          <input type="date" id="fechaHastaV2">
+        </div>
+        <button type="button" class="btn btn-azul" onclick="consultarV2()" style="align-self:flex-end">Consultar</button>
+      </div>
+      <div id="resumenV2consulta" style="font-size:13px;color:var(--gris-texto);margin:10px 0"></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="ordenarPorV2('descripcion')" style="cursor:pointer">Articulo ⇅</th>
+              <th onclick="ordenarPorV2('cantidadTotal')" style="text-align:right;cursor:pointer">Cantidad total ⇅</th>
+              <th onclick="ordenarPorV2('cantidadPendiente')" style="text-align:right;cursor:pointer">Pendiente ajuste ⇅</th>
+              <th onclick="ordenarPorV2('lineas')" style="text-align:right;cursor:pointer">Movimientos ⇅</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="cuerpoV2Totales">
+            <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gris-texto)">Elegí un rango de fechas y tocá Consultar.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </main>
+
+<div class="modal-overlay" id="modalDetalleV2">
+  <div class="modal" style="max-width:640px">
+    <h3 id="tituloDetalleV2">Detalle de movimientos V2</h3>
+    <div style="overflow-x:auto; max-height:420px; overflow-y:auto">
+      <table>
+        <thead>
+          <tr><th>Fecha</th><th>Pedido</th><th>Vendedor</th><th>Cliente</th><th style="text-align:right">Cant.</th><th style="text-align:center">Ajustado</th></tr>
+        </thead>
+        <tbody id="cuerpoDetalleV2"></tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button type="button" class="btn btn-gris" style="flex:1" onclick="cerrarModalDetalleV2()">Cerrar</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="modalMinimo">
   <div class="modal">
@@ -461,7 +556,7 @@ function renderizarTabla() {
     const tieneV2 = it.stockComprometidoV2 > 0;
     const filaEstilo = tieneV2 ? " style='background:#fff0e0'" : "";
     const v2Badge = tieneV2
-      ? "<br><span style='background:var(--naranja);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;display:inline-block;margin-top:3px'>⚠ V2: descontar " + it.stockComprometidoV2 + " u. manual</span>"
+      ? "<br><button type='button' onclick='irAAjustarV2(\"" + it.codigoConcatenado + "\")' style='background:var(--naranja);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;display:inline-block;margin-top:3px;border:none;cursor:pointer'>⚠ V2: descontar " + it.stockComprometidoV2 + " u. manual</button>"
       : "";
     // Guardamos el indice real en DATOS_INV para el modal
     const idxReal = DATOS_INV.indexOf(it);
@@ -555,11 +650,12 @@ function renderizarAlertas() {
   if (conV2.length === 0) {
     divV2.innerHTML = "<p style='color:var(--gris-texto)'>No hay ventas V2 pendientes de ajuste manual en este momento.</p>";
   } else {
-    divV2.innerHTML = "<table><thead><tr><th>Articulo</th><th style='text-align:right'>A descontar</th><th>Pedido(s)</th></tr></thead><tbody>"
+    divV2.innerHTML = "<table><thead><tr><th>Articulo</th><th style='text-align:right'>A descontar</th><th>Pedido(s)</th><th></th></tr></thead><tbody>"
       + conV2.map(it => {
           return "<tr style='background:#fff0e0'><td><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + "</small></td>"
             + "<td style='text-align:right;font-weight:700;color:var(--naranja)'>" + it.stockComprometidoV2 + " u.</td>"
-            + "<td style='font-size:12px'>" + (it.pedidosV2 || []).join(", ") + "</td></tr>";
+            + "<td style='font-size:12px'>" + (it.pedidosV2 || []).join(", ") + "</td>"
+            + "<td><button type='button' class='btn btn-azul' style='font-size:11px;padding:4px 10px' onclick='irAAjustarV2(\"" + it.codigoConcatenado + "\")'>Ajustar</button></td></tr>";
         }).join("")
       + "</tbody></table>";
   }
@@ -592,30 +688,39 @@ function renderizarAlertas() {
 
 // --- Movimientos ---
 function poblarSelectArticulosMov() {
-  const sel = document.getElementById("selectArticuloMov");
-  sel.innerHTML = "";
-  DATOS_INV.forEach(it => {
-    const opt = document.createElement("option");
-    opt.value = it.codigoConcatenado;
-    opt.textContent = it.descripcion + " (" + it.codItem + ") - Stock: " + it.stockReal;
-    opt.dataset.idx = DATOS_INV.indexOf(it);
-    sel.appendChild(opt);
-  });
+  filtrarArticulosMov();
 }
 function filtrarArticulosMov() {
+  const sel = document.getElementById("selectArticuloMov");
+  if (!sel) return;
   const q = (document.getElementById("buscarArticuloMov").value || "").trim().toLowerCase();
-  Array.from(document.getElementById("selectArticuloMov").options).forEach(opt => {
-    opt.style.display = (!q || opt.textContent.toLowerCase().includes(q)) ? "" : "none";
+  const filtrados = DATOS_INV
+    .map((it, idx) => ({ it, idx }))
+    .filter(({ it }) => !q || (it.descripcion + " " + it.codItem + " " + it.codigoConcatenado).toLowerCase().includes(q));
+
+  sel.innerHTML = "";
+  if (filtrados.length === 0) {
+    const opt = document.createElement("option");
+    opt.textContent = "Sin resultados";
+    opt.disabled = true;
+    sel.appendChild(opt);
+    return;
+  }
+  filtrados.slice(0, 200).forEach(({ it, idx }) => {
+    const opt = document.createElement("option");
+    opt.value = idx;
+    opt.textContent = it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor + " (" + it.codItem + ") - Stock: " + it.stockReal;
+    sel.appendChild(opt);
   });
 }
 function seleccionarArticuloMov() {
   const sel = document.getElementById("selectArticuloMov");
   const opt = sel.options[sel.selectedIndex];
-  if (!opt || opt.dataset.idx === undefined) { articuloMovSeleccionado = null; document.getElementById("artSeleccionadoDiv").style.display = "none"; return; }
-  articuloMovSeleccionado = DATOS_INV[Number(opt.dataset.idx)];
+  if (!opt || opt.disabled) { articuloMovSeleccionado = null; document.getElementById("artSeleccionadoDiv").style.display = "none"; return; }
+  articuloMovSeleccionado = DATOS_INV[Number(opt.value)];
   const div = document.getElementById("artSeleccionadoDiv");
   div.style.display = "block";
-  div.innerHTML = "<b>" + articuloMovSeleccionado.descripcion + "</b> - Stock real: <b>" + articuloMovSeleccionado.stockReal + "</b> u. - Disponible: <b>" + articuloMovSeleccionado.stockDisponible + "</b> u.";
+  div.innerHTML = "<b>" + articuloMovSeleccionado.descripcion + " " + articuloMovSeleccionado.ancho + "x" + articuloMovSeleccionado.largo + " " + articuloMovSeleccionado.micColor + "</b> - Stock real: <b>" + articuloMovSeleccionado.stockReal + "</b> u. - Disponible: <b>" + articuloMovSeleccionado.stockDisponible + "</b> u.";
 }
 function seleccionarTipo(tipo) {
   tipoMovActual = tipo;
@@ -629,36 +734,87 @@ async function registrarMovimiento() {
   const motivo = document.getElementById("motivoMov").value;
   if (!motivo) { mostrarBannerInv("fallo", "Selecciona el motivo."); return; }
   const observacion = document.getElementById("observacionMov").value;
+  const descCompleta = articuloMovSeleccionado.descripcion + " " + articuloMovSeleccionado.ancho + "x" + articuloMovSeleccionado.largo + " " + articuloMovSeleccionado.micColor;
   try {
     const url = WEB_APP_URL + "?action=registrarMovimiento&usuario=" + encodeURIComponent(usuarioActual)
       + "&codArticulo=" + encodeURIComponent(articuloMovSeleccionado.codigoConcatenado)
-      + "&descripcion=" + encodeURIComponent(articuloMovSeleccionado.descripcion)
+      + "&descripcion=" + encodeURIComponent(descCompleta)
       + "&tipo=" + tipoMovActual + "&cantidad=" + cantidad
       + "&motivo=" + encodeURIComponent(motivo) + "&observacion=" + encodeURIComponent(observacion);
     const resp = await fetch(url);
     const data = await resp.json();
     if (data.ok) {
-      mostrarBannerInv("exito", "Movimiento registrado: " + (tipoMovActual === "entrada" ? "Entrada" : "Salida") + " de " + cantidad + " u. de " + articuloMovSeleccionado.descripcion);
+      mostrarBannerInv("exito", "Movimiento registrado: " + (tipoMovActual === "entrada" ? "Entrada" : "Salida") + " de " + cantidad + " u. de " + descCompleta);
       document.getElementById("cantidadMov").value = "";
       document.getElementById("motivoMov").value = "";
       document.getElementById("observacionMov").value = "";
       articuloMovSeleccionado = null;
       document.getElementById("artSeleccionadoDiv").style.display = "none";
+      cargarHistorialMovimientos();
     } else {
       mostrarBannerInv("fallo", "Error: " + (data.error || "desconocido"));
     }
   } catch(e) { mostrarBannerInv("fallo", "Error de conexion."); }
 }
 
+// --- Historial de movimientos ---
+let historialMovActual = [];
+let ordenHistMov = { col: "Timestamp", asc: false };
+async function cargarHistorialMovimientos() {
+  const tbody = document.getElementById("cuerpoHistMov");
+  tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;padding:16px;color:var(--gris-texto)'>Cargando...</td></tr>";
+  try {
+    const resp = await fetch(WEB_APP_URL + "?action=historialMovimientos");
+    const data = await resp.json();
+    historialMovActual = data.items || [];
+    renderizarHistorialMovimientos();
+  } catch(e) {
+    tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;padding:16px;color:var(--rojo)'>Error al cargar el historial.</td></tr>";
+  }
+}
+function ordenarPorHistMov(col) {
+  if (ordenHistMov.col === col) ordenHistMov.asc = !ordenHistMov.asc;
+  else { ordenHistMov.col = col; ordenHistMov.asc = false; }
+  renderizarHistorialMovimientos();
+}
+function renderizarHistorialMovimientos() {
+  const tbody = document.getElementById("cuerpoHistMov");
+  if (historialMovActual.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;padding:16px;color:var(--gris-texto)'>Sin movimientos registrados todavía.</td></tr>";
+    return;
+  }
+  const col = ordenHistMov.col;
+  const filas = [...historialMovActual].sort((a, b) => {
+    const va = a[col], vb = b[col];
+    if (col === "Timestamp") return ordenHistMov.asc ? new Date(va) - new Date(vb) : new Date(vb) - new Date(va);
+    if (typeof va === "string") return ordenHistMov.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return ordenHistMov.asc ? va - vb : vb - va;
+  });
+  tbody.innerHTML = filas.map(r => {
+    const fecha = new Date(r.Timestamp);
+    const fechaTexto = fecha.toLocaleDateString("es-AR") + " " + fecha.toLocaleTimeString("es-AR", {hour:"2-digit", minute:"2-digit"});
+    const colorTipo = r.Tipo === "entrada" ? "var(--verde)" : "var(--rojo)";
+    const signo = r.Tipo === "entrada" ? "▲" : "▼";
+    return "<tr><td style='font-size:12px'>" + fechaTexto + "</td>"
+      + "<td>" + (r.Descripcion || "") + "</td>"
+      + "<td style='color:" + colorTipo + ";font-weight:700'>" + signo + " " + (r.Tipo || "") + "</td>"
+      + "<td style='text-align:right;font-weight:700'>" + (r.Cantidad || 0) + "</td>"
+      + "<td style='font-size:12px'>" + (r.Motivo || "") + "</td>"
+      + "<td style='font-size:12px'>" + (r.Usuario || "") + "</td></tr>";
+  }).join("");
+}
+
 // --- Tabs ---
 function cambiarTab(tab) {
-  const tabs = ["stock", "movimientos", "alertas", "recuento"];
+  const tabs = ["stock", "movimientos", "alertas", "recuento", "v2"];
   document.querySelectorAll(".tab").forEach((t, i) => t.classList.toggle("activa", tabs[i] === tab));
   tabs.forEach(t => {
     const p = document.getElementById("panel" + t.charAt(0).toUpperCase() + t.slice(1));
     if (p) p.classList.toggle("activo", t === tab);
   });
+  if (tab === "movimientos" && historialMovActual.length === 0) cargarHistorialMovimientos();
   if (tab === "recuento" && recuentoActual.length === 0) poblarSelectArticulosRec();
+  if (tab === "v2" && !document.getElementById("fechaDesdeV2").value) inicializarFechasV2();
 }
 
 // --- MODULO RECUENTO ---
@@ -695,7 +851,7 @@ function filtrarArticulosRec() {
   filtrados.slice(0, 200).forEach(({ it, idx }) => {
     const opt = document.createElement("option");
     opt.value = idx;
-    opt.textContent = it.descripcion + " (" + it.codItem + ") - Teorico: " + it.stockReal;
+    opt.textContent = it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor + " (" + it.codItem + ") - Teorico: " + it.stockReal;
     sel.appendChild(opt);
   });
 }
@@ -706,7 +862,7 @@ function seleccionarArticuloRec() {
   articuloRecSeleccionado = DATOS_INV[Number(opt.value)];
   const div = document.getElementById("recArtInfo");
   div.style.display = "block";
-  div.innerHTML = "<b>" + articuloRecSeleccionado.descripcion + "</b> - Stock teorico actual: <b>" + articuloRecSeleccionado.stockReal + "</b> u.";
+  div.innerHTML = "<b>" + articuloRecSeleccionado.descripcion + " " + articuloRecSeleccionado.ancho + "x" + articuloRecSeleccionado.largo + " " + articuloRecSeleccionado.micColor + "</b> - Stock teorico actual: <b>" + articuloRecSeleccionado.stockReal + "</b> u.";
   document.getElementById("inputFisicoRec").value = "";
 }
 function agregarConteoIndividual() {
@@ -720,15 +876,27 @@ function agregarConteoIndividual() {
   mostrarBannerInv("exito", "Agregado al recuento: " + articuloRecSeleccionado.descripcion);
 }
 
+let ordenPlanilla = { col: "descripcion", asc: true };
+function ordenarPorPlanilla(col) {
+  if (ordenPlanilla.col === col) ordenPlanilla.asc = !ordenPlanilla.asc;
+  else { ordenPlanilla.col = col; ordenPlanilla.asc = false; }
+  renderizarPlanillaRecuento();
+}
 function renderizarPlanillaRecuento() {
   const q = (document.getElementById("buscarPlanillaRec").value || "").trim().toLowerCase();
   const tbody = document.getElementById("cuerpoPlanillaRec");
-  const filas = DATOS_INV.filter(it => !q || (it.descripcion + " " + it.codItem).toLowerCase().includes(q));
+  let filas = DATOS_INV.filter(it => !q || (it.descripcion + " " + it.codItem).toLowerCase().includes(q));
+  const col = ordenPlanilla.col;
+  filas.sort((a, b) => {
+    const va = a[col], vb = b[col];
+    if (typeof va === "string") return ordenPlanilla.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return ordenPlanilla.asc ? va - vb : vb - va;
+  });
   tbody.innerHTML = filas.map((it, i) => {
     const idxReal = DATOS_INV.indexOf(it);
     const existente = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
     const valorPrevio = existente ? existente.stockFisico : "";
-    return "<tr><td>" + it.descripcion + "<br><small style='color:#888'>" + it.codItem + "</small></td>"
+    return "<tr><td>" + it.descripcion + "<br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small></td>"
       + "<td style='text-align:right'>" + it.stockReal + "</td>"
       + "<td style='text-align:center'><input type='number' min='0' style='width:90px;text-align:center' value='" + valorPrevio + "' onchange='actualizarPlanillaFila(" + idxReal + ", this.value)'></td></tr>";
   }).join("");
@@ -738,6 +906,7 @@ function actualizarPlanillaFila(idx, valor) {
   if (!it) return;
   if (valor === "") {
     recuentoActual = recuentoActual.filter(r => r.codigoConcatenado !== it.codigoConcatenado);
+    renderizarListaRecuento();
   } else {
     agregarAlRecuento(it, Number(valor), "");
   }
@@ -745,9 +914,10 @@ function actualizarPlanillaFila(idx, valor) {
 
 function agregarAlRecuento(it, fisico, obs) {
   const idx = recuentoActual.findIndex(r => r.codigoConcatenado === it.codigoConcatenado);
+  const descCompleta = it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor;
   const item = {
     codigoConcatenado: it.codigoConcatenado,
-    descripcion: it.descripcion,
+    descripcion: descCompleta,
     stockTeorico: it.stockReal,
     stockFisico: fisico,
     observacion: obs || "",
@@ -835,12 +1005,196 @@ async function guardarRecuentoEnSheet() {
       recuentoActual = [];
       renderizarListaRecuento();
       renderizarPlanillaRecuento();
+      cargarHistorialRecuento();
     } else {
       mostrarBannerInv("fallo", "Error al guardar: " + (data.error || "desconocido"));
     }
   } catch(e) {
     mostrarBannerInv("fallo", "Error de conexion al guardar el recuento.");
   }
+}
+
+// --- Historial de recuentos guardados ---
+let historialRecActual = [];
+let ordenHistRec = { col: "Timestamp", asc: false };
+async function cargarHistorialRecuento() {
+  const tbody = document.getElementById("cuerpoHistRec");
+  if (!tbody) return;
+  tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;padding:16px;color:var(--gris-texto)'>Cargando...</td></tr>";
+  try {
+    const resp = await fetch(WEB_APP_URL + "?action=historialRecuento");
+    const data = await resp.json();
+    historialRecActual = data.items || [];
+    renderizarHistorialRecuento();
+  } catch(e) {
+    tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;padding:16px;color:var(--rojo)'>Error al cargar el historial.</td></tr>";
+  }
+}
+function ordenarPorHistRec(col) {
+  if (ordenHistRec.col === col) ordenHistRec.asc = !ordenHistRec.asc;
+  else { ordenHistRec.col = col; ordenHistRec.asc = false; }
+  renderizarHistorialRecuento();
+}
+function renderizarHistorialRecuento() {
+  const tbody = document.getElementById("cuerpoHistRec");
+  if (!tbody) return;
+  if (historialRecActual.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;padding:16px;color:var(--gris-texto)'>Sin recuentos guardados todavía.</td></tr>";
+    return;
+  }
+  const col = ordenHistRec.col;
+  const filas = [...historialRecActual].sort((a, b) => {
+    const va = a[col], vb = b[col];
+    if (col === "Timestamp") return ordenHistRec.asc ? new Date(va) - new Date(vb) : new Date(vb) - new Date(va);
+    if (typeof va === "string") return ordenHistRec.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return ordenHistRec.asc ? va - vb : vb - va;
+  });
+  tbody.innerHTML = filas.map(r => {
+    const fecha = new Date(r.Timestamp);
+    const fechaTexto = fecha.toLocaleDateString("es-AR") + " " + fecha.toLocaleTimeString("es-AR", {hour:"2-digit", minute:"2-digit"});
+    const dif = Number(r.Diferencia || 0);
+    const colorDif = dif === 0 ? "var(--verde)" : dif > 0 ? "var(--azul)" : "var(--rojo)";
+    const signo = dif > 0 ? "+" : "";
+    return "<tr><td style='font-size:12px'>" + fechaTexto + "</td>"
+      + "<td>" + (r.Descripcion || "") + "</td>"
+      + "<td style='text-align:right'>" + r.StockTeorico + " / " + r.StockFisico + "</td>"
+      + "<td style='text-align:right;font-weight:700;color:" + colorDif + "'>" + signo + dif + "</td>"
+      + "<td style='font-size:12px'>" + (r.Usuario || "") + "</td></tr>";
+  }).join("");
+}
+
+// --- MODULO V2 ---
+let totalesV2Actual = [];
+let detalleV2Actual = [];
+let ordenV2 = { col: "descripcion", asc: true };
+
+function inicializarFechasV2() {
+  const hoy = new Date();
+  const hace7 = new Date();
+  hace7.setDate(hoy.getDate() - 7);
+  document.getElementById("fechaDesdeV2").value = hace7.toISOString().slice(0, 10);
+  document.getElementById("fechaHastaV2").value = hoy.toISOString().slice(0, 10);
+}
+
+async function consultarV2() {
+  const desde = document.getElementById("fechaDesdeV2").value;
+  const hasta = document.getElementById("fechaHastaV2").value;
+  if (!desde || !hasta) { mostrarBannerInv("fallo", "Elegí ambas fechas."); return; }
+
+  document.getElementById("cuerpoV2Totales").innerHTML = "<tr><td colspan='5' style='text-align:center;padding:20px;color:var(--gris-texto)'>Consultando...</td></tr>";
+  try {
+    const url = WEB_APP_URL + "?action=consultaV2&fechaDesde=" + desde + "&fechaHasta=" + hasta;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    totalesV2Actual = data.totales || [];
+    detalleV2Actual = data.detalle || [];
+    renderizarTotalesV2();
+    const totalGeneral = totalesV2Actual.reduce((a, t) => a + t.cantidadTotal, 0);
+    const pendienteGeneral = totalesV2Actual.reduce((a, t) => a + t.cantidadPendiente, 0);
+    document.getElementById("resumenV2consulta").innerHTML =
+      totalesV2Actual.length + " articulo(s) - " + totalGeneral + " u. totales - "
+      + "<b style='color:var(--naranja)'>" + pendienteGeneral + " u. pendientes de ajuste</b>";
+  } catch(e) {
+    mostrarBannerInv("fallo", "Error de conexion al consultar V2.");
+    document.getElementById("cuerpoV2Totales").innerHTML = "<tr><td colspan='5' style='text-align:center;padding:20px;color:var(--rojo)'>Error al cargar.</td></tr>";
+  }
+}
+
+function ordenarPorV2(col) {
+  if (ordenV2.col === col) ordenV2.asc = !ordenV2.asc;
+  else { ordenV2.col = col; ordenV2.asc = false; }
+  renderizarTotalesV2();
+}
+
+function renderizarTotalesV2() {
+  const tbody = document.getElementById("cuerpoV2Totales");
+  if (totalesV2Actual.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;padding:20px;color:var(--verde)'>Sin ventas V2 en ese rango de fechas.</td></tr>";
+    return;
+  }
+  const col = ordenV2.col;
+  const filas = [...totalesV2Actual].sort((a, b) => {
+    const va = a[col], vb = b[col];
+    if (typeof va === "string") return ordenV2.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return ordenV2.asc ? va - vb : vb - va;
+  });
+  tbody.innerHTML = filas.map(t => {
+    const pendienteColor = t.cantidadPendiente > 0 ? "var(--naranja)" : "var(--verde)";
+    return "<tr" + (t.cantidadPendiente > 0 ? " style='background:#fff0e0'" : "") + ">"
+      + "<td><b>" + t.descripcion + "</b><br><small style='color:#888'>" + t.codItem + " - " + t.ancho + "x" + t.largo + " " + t.micColor + "</small></td>"
+      + "<td style='text-align:right;font-weight:700'>" + t.cantidadTotal + " u.</td>"
+      + "<td style='text-align:right;font-weight:700;color:" + pendienteColor + "'>" + (t.cantidadPendiente > 0 ? t.cantidadPendiente + " u." : "✓ al dia") + "</td>"
+      + "<td style='text-align:right'>" + t.lineas + "</td>"
+      + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 10px' onclick='abrirDetalleV2(\"" + t.codigoConcatenado + "\")'>🔍 Ver</button></td></tr>";
+  }).join("");
+}
+
+function abrirDetalleV2(cc) {
+  const lineas = detalleV2Actual.filter(d => d.codigoConcatenado === cc);
+  if (lineas.length === 0) return;
+  document.getElementById("tituloDetalleV2").textContent = "Detalle: " + lineas[0].descripcion + " " + lineas[0].ancho + "x" + lineas[0].largo + " " + lineas[0].micColor;
+  const tbody = document.getElementById("cuerpoDetalleV2");
+  tbody.innerHTML = lineas.map(l => {
+    const fecha = new Date(l.timestamp);
+    const fechaTexto = fecha.toLocaleDateString("es-AR") + " " + fecha.toLocaleTimeString("es-AR", {hour:"2-digit", minute:"2-digit"});
+    const claveEscapada = l.clave.replace(/'/g, "\\'");
+    return "<tr" + (!l.ajustado ? " style='background:#fff0e0'" : "") + ">"
+      + "<td style='font-size:12px'>" + fechaTexto + "</td>"
+      + "<td style='font-size:12px'>" + l.nroPedido + "</td>"
+      + "<td style='font-size:12px'>" + l.vendedor + "</td>"
+      + "<td style='font-size:12px'>" + l.cliente + "</td>"
+      + "<td style='text-align:right;font-weight:700'>" + l.cantidad + "</td>"
+      + "<td style='text-align:center'><input type='checkbox' " + (l.ajustado ? "checked" : "") + " onchange='toggleAjusteV2(\"" + claveEscapada + "\", this.checked)' style='width:18px;height:18px;cursor:pointer'></td></tr>";
+  }).join("");
+  document.getElementById("modalDetalleV2").classList.add("abierto");
+}
+function cerrarModalDetalleV2() {
+  document.getElementById("modalDetalleV2").classList.remove("abierto");
+}
+async function toggleAjusteV2(clave, ajustado) {
+  try {
+    const url = WEB_APP_URL + "?action=marcarAjusteV2&clave=" + encodeURIComponent(clave)
+      + "&ajustado=" + ajustado + "&usuario=" + encodeURIComponent(usuarioActual);
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.ok) {
+      // Actualizar estado local de la consulta V2 (totales/detalle)
+      const linea = detalleV2Actual.find(d => d.clave === clave);
+      if (linea) linea.ajustado = ajustado;
+      if (linea) {
+        const t = totalesV2Actual.find(x => x.codigoConcatenado === linea.codigoConcatenado);
+        if (t) {
+          const lineasArt = detalleV2Actual.filter(d => d.codigoConcatenado === linea.codigoConcatenado);
+          t.cantidadPendiente = lineasArt.filter(d => !d.ajustado).reduce((a, d) => a + d.cantidad, 0);
+        }
+      }
+      renderizarTotalesV2();
+      // Refrescar tambien Stock/Alertas: el destaque de V2 pendiente usa
+      // datos de responderInventario(), que ahora excluye esta linea si se
+      // marco "ajustado". Sin esto, Stock/Alertas quedarian desactualizados
+      // hasta la proxima recarga manual.
+      await cargarDatosInv();
+      mostrarBannerInv("exito", ajustado ? "Marcado como ajustado." : "Desmarcado.");
+    } else {
+      mostrarBannerInv("fallo", "Error al guardar: " + (data.error || "desconocido"));
+    }
+  } catch(e) {
+    mostrarBannerInv("fallo", "Error de conexion al guardar el ajuste.");
+  }
+}
+
+// Desde Alertas, "Ajustar" salta a la pestaña V2 con un rango amplio de
+// fechas y abre directo el detalle del articulo, para no duplicar la
+// logica de marcar-ajustado en dos lugares distintos.
+async function irAAjustarV2(cc) {
+  cambiarTab("v2");
+  const hoy = new Date();
+  const haceUnAnio = new Date();
+  haceUnAnio.setFullYear(hoy.getFullYear() - 1);
+  document.getElementById("fechaDesdeV2").value = haceUnAnio.toISOString().slice(0, 10);
+  document.getElementById("fechaHastaV2").value = hoy.toISOString().slice(0, 10);
+  await consultarV2();
+  abrirDetalleV2(cc);
 }
 
 // --- Banner ---
