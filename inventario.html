@@ -99,7 +99,7 @@
     <button class="tab" onclick="cambiarTab('movimientos')">Movimientos</button>
     <button class="tab" onclick="cambiarTab('alertas')">Alertas</button>
     <button class="tab" onclick="cambiarTab('recuento')">Recuento</button>
-    <button class="tab" onclick="cambiarTab('v2')">V2</button>
+    <button class="tab" onclick="cambiarTab('compras')">🛒 Compras</button>
   </div>
 
   <div class="panel activo" id="panelStock">
@@ -145,6 +145,51 @@
         </table>
       </div>
       <div id="pieDatos" style="font-size:12px;color:var(--gris-texto);margin-top:10px;text-align:right"></div>
+    </div>
+
+    <!-- Panel de movimiento rápido desde Inventario -->
+    <div id="panelMovRapido" style="display:none" class="card" style="border:2px solid var(--azul)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 style="margin:0;padding:0;border:none">Registrar movimiento</h2>
+        <button type="button" class="btn btn-gris" style="font-size:12px;padding:4px 10px" onclick="cerrarMovRapido()">✕ Cerrar</button>
+      </div>
+      <div id="infoMovRapido" style="background:var(--azul-claro);padding:10px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1;min-width:140px">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Tipo</label>
+          <div class="pills">
+            <button type="button" class="pill-tipo activa-entrada" id="pillEntradaRapido" onclick="seleccionarTipoRapido('entrada')">▲ Entrada</button>
+            <button type="button" class="pill-tipo" id="pillSalidaRapido" onclick="seleccionarTipoRapido('salida')">▼ Salida</button>
+          </div>
+        </div>
+        <div style="flex:1;min-width:120px">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Cantidad</label>
+          <input type="number" id="cantidadMovRapido" min="1" placeholder="0" style="width:100%;padding:8px;border:1px solid var(--gris-borde);border-radius:6px">
+        </div>
+        <div style="flex:2;min-width:180px">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Motivo</label>
+          <select id="motivoMovRapido" style="width:100%;padding:8px;border:1px solid var(--gris-borde);border-radius:6px">
+            <option value="">Seleccioná el motivo...</option>
+            <optgroup label="Entradas">
+              <option value="Compra">Compra</option>
+              <option value="Produccion">Producción</option>
+              <option value="Devolucion cliente">Devolución de cliente</option>
+              <option value="Ajuste positivo">Ajuste positivo</option>
+            </optgroup>
+            <optgroup label="Salidas">
+              <option value="Venta">Venta / despacho</option>
+              <option value="Merma">Merma / daño</option>
+              <option value="Devolucion proveedor">Devolución a proveedor</option>
+              <option value="Ajuste negativo">Ajuste negativo</option>
+            </optgroup>
+          </select>
+        </div>
+        <div style="flex:2;min-width:160px">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Observación (opcional)</label>
+          <input type="text" id="obsMovRapido" placeholder="Detalle adicional..." style="width:100%;padding:8px;border:1px solid var(--gris-borde);border-radius:6px">
+        </div>
+        <button type="button" class="btn btn-verde" onclick="confirmarMovRapido()" style="padding:9px 20px;flex-shrink:0">✅ Registrar</button>
+      </div>
     </div>
   </div>
 
@@ -354,6 +399,47 @@
           </tbody>
         </table>
       </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panelCompras">
+    <div class="resumen-alertas" id="resumenCompras"></div>
+    <div class="card">
+      <h2>🛒 Sugerencia de compra automática</h2>
+      <p style="font-size:13px;color:var(--gris-texto);margin-bottom:14px">
+        Calculado con Punto de Pedido (demanda diaria × tiempo de reposición) + Stock de Seguridad, usando el historial real de ventas y compras. Se actualiza con cada sincronización.
+      </p>
+      <div class="filtros">
+        <input type="text" id="buscarCompras" placeholder="Buscar por código, descripción o proveedor..." oninput="renderizarCompras()">
+        <select id="filtroUrgenciaCompras" onchange="renderizarCompras()">
+          <option value="">Todas las urgencias</option>
+          <option value="Alta">🔴 Alta</option>
+          <option value="Media">🟡 Media</option>
+          <option value="Baja">🟢 Baja</option>
+        </select>
+        <button type="button" class="btn btn-gris" onclick="cargarSugerenciaCompra()">Actualizar</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="ordenarPorCompras('descripcion')" style="cursor:pointer">Articulo ⇅</th>
+              <th onclick="ordenarPorCompras('proveedor')" style="cursor:pointer">Proveedor ⇅</th>
+              <th onclick="ordenarPorCompras('demandaDiaria')" style="text-align:right;cursor:pointer">Demanda/día ⇅</th>
+              <th onclick="ordenarPorCompras('leadTimeDias')" style="text-align:right;cursor:pointer">Lead time ⇅</th>
+              <th onclick="ordenarPorCompras('stockActual')" style="text-align:right;cursor:pointer">Stock actual ⇅</th>
+              <th onclick="ordenarPorCompras('diasCoberturaActual')" style="text-align:right;cursor:pointer">Días cob. ⇅</th>
+              <th onclick="ordenarPorCompras('cantidadSugerida')" style="text-align:right;cursor:pointer">Comprar ⇅</th>
+              <th onclick="ordenarPorCompras('inversionSugerida')" style="text-align:right;cursor:pointer">Inversión ⇅</th>
+              <th onclick="ordenarPorCompras('urgenciaOrden')" style="cursor:pointer">Urgencia ⇅</th>
+            </tr>
+          </thead>
+          <tbody id="cuerpoCompras">
+            <tr><td colspan="9" style="text-align:center;padding:20px;color:var(--gris-texto)">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="pieCompras" style="font-size:12px;color:var(--gris-texto);margin-top:10px;text-align:right"></div>
     </div>
   </div>
 </main>
@@ -569,7 +655,8 @@ function renderizarTabla() {
       + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.diasDeStock > 0 ? Math.round(it.diasDeStock * 10) / 10 + "d" : "-") + "</td>"
       + "<td style='text-align:center;font-size:12px'>" + frecTexto + "</td>"
       + "<td>" + badge + "</td>"
-      + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 8px' onclick='abrirModalMinimo(" + idxReal + ")'>Min.</button></td></tr>";
+      + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 8px' onclick='abrirModalMinimo(" + idxReal + ")'>Min.</button>"
+      + " <button type='button' class='btn btn-azul' style='font-size:11px;padding:4px 6px' title='Registrar movimiento' onclick='abrirMovRapido(" + idxReal + ")'>+Mov</button></td></tr>";
   }).join("");
   document.getElementById("pieDatos").textContent = filas.length + " articulo(s) mostrados.";
 }
@@ -806,7 +893,7 @@ function renderizarHistorialMovimientos() {
 
 // --- Tabs ---
 function cambiarTab(tab) {
-  const tabs = ["stock", "movimientos", "alertas", "recuento", "v2"];
+  const tabs = ["stock", "movimientos", "alertas", "recuento", "compras"];
   document.querySelectorAll(".tab").forEach((t, i) => t.classList.toggle("activa", tabs[i] === tab));
   tabs.forEach(t => {
     const p = document.getElementById("panel" + t.charAt(0).toUpperCase() + t.slice(1));
@@ -814,7 +901,63 @@ function cambiarTab(tab) {
   });
   if (tab === "movimientos" && historialMovActual.length === 0) cargarHistorialMovimientos();
   if (tab === "recuento" && recuentoActual.length === 0) poblarSelectArticulosRec();
-  if (tab === "v2" && !document.getElementById("fechaDesdeV2").value) inicializarFechasV2();
+  if (tab === "compras" && datosComprasActual.length === 0) cargarSugerenciaCompra();
+}
+
+// --- MOVIMIENTO RAPIDO DESDE INVENTARIO ---
+let articuloMovRapidoActual = null;
+let tipoMovRapidoActual = "entrada";
+
+function abrirMovRapido(idx) {
+  articuloMovRapidoActual = DATOS_INV[idx];
+  if (!articuloMovRapidoActual) return;
+  const it = articuloMovRapidoActual;
+  document.getElementById("infoMovRapido").innerHTML =
+    "<b>" + it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor + "</b>"
+    + " &nbsp;|&nbsp; Stock teórico: <b>" + it.stockReal.toLocaleString("es-AR") + "</b> u."
+    + " &nbsp;|&nbsp; Disponible: <b>" + it.stockDisponible.toLocaleString("es-AR") + "</b> u.";
+  document.getElementById("cantidadMovRapido").value = "";
+  document.getElementById("motivoMovRapido").value = "";
+  document.getElementById("obsMovRapido").value = "";
+  seleccionarTipoRapido("entrada");
+  const panel = document.getElementById("panelMovRapido");
+  panel.style.display = "block";
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function cerrarMovRapido() {
+  document.getElementById("panelMovRapido").style.display = "none";
+  articuloMovRapidoActual = null;
+}
+function seleccionarTipoRapido(tipo) {
+  tipoMovRapidoActual = tipo;
+  document.getElementById("pillEntradaRapido").className = "pill-tipo" + (tipo === "entrada" ? " activa-entrada" : "");
+  document.getElementById("pillSalidaRapido").className = "pill-tipo" + (tipo === "salida" ? " activa-salida" : "");
+}
+async function confirmarMovRapido() {
+  if (!articuloMovRapidoActual) return;
+  const cantidad = Number(document.getElementById("cantidadMovRapido").value);
+  if (!(cantidad > 0)) { mostrarBannerInv("fallo", "Ingresá una cantidad mayor a cero."); return; }
+  const motivo = document.getElementById("motivoMovRapido").value;
+  if (!motivo) { mostrarBannerInv("fallo", "Seleccioná el motivo."); return; }
+  const obs = document.getElementById("obsMovRapido").value;
+  const it = articuloMovRapidoActual;
+  const desc = it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor;
+  try {
+    const url = WEB_APP_URL + "?action=registrarMovimiento&usuario=" + encodeURIComponent(usuarioActual)
+      + "&codArticulo=" + encodeURIComponent(it.codigoConcatenado)
+      + "&descripcion=" + encodeURIComponent(desc)
+      + "&tipo=" + tipoMovRapidoActual + "&cantidad=" + cantidad
+      + "&motivo=" + encodeURIComponent(motivo) + "&observacion=" + encodeURIComponent(obs);
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.ok) {
+      mostrarBannerInv("exito", (tipoMovRapidoActual === "entrada" ? "▲ Entrada" : "▼ Salida") + " de " + cantidad + " u. registrada para " + it.descripcion);
+      cerrarMovRapido();
+      cargarHistorialMovimientos();
+    } else {
+      mostrarBannerInv("fallo", "Error: " + (data.error || "desconocido"));
+    }
+  } catch(e) { mostrarBannerInv("fallo", "Error de conexion."); }
 }
 
 // --- MODULO RECUENTO ---
@@ -1195,6 +1338,96 @@ async function irAAjustarV2(cc) {
   document.getElementById("fechaHastaV2").value = hoy.toISOString().slice(0, 10);
   await consultarV2();
   abrirDetalleV2(cc);
+}
+
+// --- MODULO COMPRAS (sugerencia automatica) ---
+let datosComprasActual = [];
+let ordenCompras = { col: "urgenciaOrden", asc: true };
+
+async function cargarSugerenciaCompra() {
+  const tbody = document.getElementById("cuerpoCompras");
+  tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;padding:20px;color:var(--gris-texto)'>Cargando...</td></tr>";
+  try {
+    const resp = await fetch(WEB_APP_URL + "?action=sugerenciaCompra");
+    const data = await resp.json();
+    datosComprasActual = data.items || [];
+    if (datosComprasActual.length === 0 && data.aviso) {
+      tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;padding:20px;color:var(--gris-texto)'>" + data.aviso + "</td></tr>";
+      document.getElementById("resumenCompras").innerHTML = "";
+      return;
+    }
+    renderizarResumenCompras();
+    renderizarCompras();
+  } catch(e) {
+    tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;padding:20px;color:var(--rojo)'>Error al cargar las sugerencias.</td></tr>";
+  }
+}
+
+function renderizarResumenCompras() {
+  const alta = datosComprasActual.filter(i => i.urgencia === "Alta").length;
+  const media = datosComprasActual.filter(i => i.urgencia === "Media").length;
+  const baja = datosComprasActual.filter(i => i.urgencia === "Baja").length;
+  const inversionTotal = datosComprasActual.reduce((a, i) => a + i.inversionSugerida, 0);
+  document.getElementById("resumenCompras").innerHTML =
+    "<div class='stat-box'><div class='num' style='color:var(--rojo)'>" + alta + "</div><div class='lab'>Urgencia alta</div></div>" +
+    "<div class='stat-box'><div class='num' style='color:var(--naranja)'>" + media + "</div><div class='lab'>Urgencia media</div></div>" +
+    "<div class='stat-box'><div class='num' style='color:var(--verde)'>" + baja + "</div><div class='lab'>Urgencia baja</div></div>" +
+    "<div class='stat-box'><div class='num' style='color:var(--azul)'>$" + Math.round(inversionTotal).toLocaleString('es-AR') + "</div><div class='lab'>Inversión total sugerida</div></div>";
+}
+
+function ordenarPorCompras(col) {
+  if (ordenCompras.col === col) ordenCompras.asc = !ordenCompras.asc;
+  else { ordenCompras.col = col; ordenCompras.asc = false; }
+  renderizarCompras();
+}
+
+function valorOrdenCompras(it, col) {
+  if (col === "urgenciaOrden") {
+    return it.urgencia === "Alta" ? 0 : it.urgencia === "Media" ? 1 : 2;
+  }
+  return it[col];
+}
+
+function renderizarCompras() {
+  const q = (document.getElementById("buscarCompras").value || "").trim().toLowerCase();
+  const fu = document.getElementById("filtroUrgenciaCompras").value;
+  let filas = datosComprasActual.filter(it => {
+    if (q && !((it.descripcion + " " + it.codItem + " " + it.codigoConcatenado + " " + it.proveedor).toLowerCase().includes(q))) return false;
+    if (fu && it.urgencia !== fu) return false;
+    return true;
+  });
+
+  const col = ordenCompras.col;
+  filas.sort((a, b) => {
+    const va = valorOrdenCompras(a, col), vb = valorOrdenCompras(b, col);
+    if (typeof va === "string") return ordenCompras.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return ordenCompras.asc ? va - vb : vb - va;
+  });
+
+  const tbody = document.getElementById("cuerpoCompras");
+  if (filas.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;padding:20px;color:var(--verde)'>Sin artículos que requieran compra por ahora.</td></tr>";
+    document.getElementById("pieCompras").textContent = "";
+    return;
+  }
+
+  tbody.innerHTML = filas.map(it => {
+    const badgeUrg = it.urgencia === "Alta" ? "<span class='badge badge-critico'>🔴 Alta</span>"
+      : it.urgencia === "Media" ? "<span class='badge badge-bajo'>🟡 Media</span>"
+      : "<span class='badge badge-ok'>🟢 Baja</span>";
+    const filaEstilo = it.urgencia === "Alta" ? " style='background:#fdeaea'" : "";
+    return "<tr" + filaEstilo + "><td><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small></td>"
+      + "<td style='font-size:12px'>" + (it.proveedor || "<span style='color:#bbb'>Sin datos</span>") + "</td>"
+      + "<td style='text-align:right'>" + it.demandaDiaria.toLocaleString("es-AR") + "</td>"
+      + "<td style='text-align:right'>" + it.leadTimeDias.toLocaleString("es-AR") + "d</td>"
+      + "<td style='text-align:right;font-weight:700'>" + it.stockActual.toLocaleString("es-AR") + "</td>"
+      + "<td style='text-align:right'>" + it.diasCoberturaActual.toLocaleString("es-AR") + "d</td>"
+      + "<td style='text-align:right;font-weight:700;color:var(--azul)'>" + it.cantidadSugerida.toLocaleString("es-AR") + "</td>"
+      + "<td style='text-align:right'>$" + Math.round(it.inversionSugerida).toLocaleString("es-AR") + "</td>"
+      + "<td>" + badgeUrg + "</td></tr>";
+  }).join("");
+
+  document.getElementById("pieCompras").textContent = filas.length + " artículo(s) sugeridos para compra.";
 }
 
 // --- Banner ---
