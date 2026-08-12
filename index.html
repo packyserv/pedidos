@@ -1415,6 +1415,14 @@ async function cargarRangoPrecios() {
     if (nota) nota.textContent = n > 0
       ? `✅ Rangos cargados para ${n} artículos (últimos 30 días).`
       : '⚠️ Sin datos de rangos de precio aún — corrés el sync para generarlos.';
+
+    // Si hay items con precio $0 en el carrito, repreciarlos automáticamente
+    // con la lista actualmente seleccionada ahora que los rangos ya cargaron.
+    const listaActual = document.querySelector('input[name="listaPrecios"]:checked')?.value || 'maximo';
+    const hayItemsEnCero = carrito.some(it => !(it.precioUnitarioARS > 0));
+    if (hayItemsEnCero && listaActual !== 'especial') {
+      cambiarListaPrecios(listaActual);
+    }
   } catch(e) {
     if (nota) nota.textContent = '⚠️ No se pudieron cargar los rangos de precio. Intentá recargar la página.';
     console.warn('No se pudo cargar el rango de precios:', e);
@@ -1452,7 +1460,7 @@ function cambiarListaPrecios(lista) {
     carrito.forEach(it => {
       const cc = it.codigoConcatenado || (it.codItem + it.ancho + it.largo + it.micColor);
       let precioArs = 0;
-      if (lista === 'especial') return; // especial: no tocar, el operador ingresa manualmente
+      if (lista === 'especial') return;
       if (lista === 'anterior' && DATOS.preciosAnteriores && DATOS.preciosAnteriores[codCli + '|' + cc]) {
         precioArs = DATOS.preciosAnteriores[codCli + '|' + cc];
       } else if (DATOS.rangoPrecios && DATOS.rangoPrecios[cc]) {
@@ -1460,6 +1468,11 @@ function cambiarListaPrecios(lista) {
         if (lista === 'minimo')     precioArs = r.min;
         else if (lista === 'medio') precioArs = r.medio;
         else                        precioArs = r.max;
+      } else {
+        // Fallback robusto: precio anterior de cualquier cliente para este artículo
+        const fallbacks = Object.entries(DATOS.preciosAnteriores || {})
+          .filter(([k]) => k.endsWith('|' + cc)).map(([, v]) => v).filter(v => v > 0);
+        if (fallbacks.length > 0) precioArs = Math.max(...fallbacks);
       }
       if (precioArs > 0) {
         it.precioUnitarioARS = precioArs;
@@ -2613,10 +2626,22 @@ function seleccionarArticulo(a, stockInfo) {
     if (listaSeleccionada === 'minimo')      { precioArs = r.min;   origenPrecio = 'Mínimo 30 días'; }
     else if (listaSeleccionada === 'medio')  { precioArs = r.medio; origenPrecio = 'Medio 30 días'; }
     else                                     { precioArs = r.max;   origenPrecio = 'Máximo 30 días'; }
-  } else if (a.PrecioSugerido) {
-    // Fallback: precio sugerido del catálogo si no hay rango disponible
-    precioArs = Number(a.PrecioSugerido);
-    origenPrecio = 'Precio de catálogo (sin datos últimos 30 días)';
+  } else {
+    // Fallback 1: precio anterior de cualquier cliente para este artículo
+    const precioAnteriorCualquiera = Object.entries(DATOS.preciosAnteriores || {})
+      .filter(([k]) => k.endsWith('|' + cc))
+      .map(([, v]) => v)
+      .filter(v => v > 0);
+    if (precioAnteriorCualquiera.length > 0) {
+      precioArs = Math.max(...precioAnteriorCualquiera);
+      origenPrecio = 'Precio histórico (sin ventas recientes en 30 días)';
+    } else if (a.PrecioSugerido && Number(a.PrecioSugerido) > 0) {
+      // Fallback 2: precio del catálogo
+      precioArs = Number(a.PrecioSugerido);
+      origenPrecio = 'Precio de catálogo (ingresalo manualmente si no es correcto)';
+    } else {
+      origenPrecio = '⚠️ Sin precio disponible — ingresalo manualmente';
+    }
   }
 
   let precioSugeridoTexto = precioArs > 0 ? formatoMoneda(precioArs) + ' (ARS)' : origenPrecio;
