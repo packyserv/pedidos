@@ -1621,8 +1621,8 @@ document.getElementById('btnLupaCliente').addEventListener('click', () => {
       const importe = Number(it.Importe || 0);
       const importeUsd = Number(it.ImporteUSD || 0);
       const cantidad = Number(it.Cantidad || 1);
-      const precioUnitArs = cantidad > 0 ? importe / cantidad : 0;
-      const precioUnitUsd = cantidad > 0 ? importeUsd / cantidad : 0;
+      const precioUnitArs = Number(it.PrecioUnitario || 0) || (cantidad > 0 ? importe / cantidad : 0);
+      const precioUnitUsd = Number(it.PrecioUnitarioUSD || 0) || (cantidad > 0 && importeUsd > 0 ? importeUsd / cantidad : 0);
       totalArs += importe;
       totalUsd += importeUsd;
       filas += `<tr>
@@ -3007,6 +3007,7 @@ function editarItemDelCarrito(i) {
   recalcularM2();
   recalcularPrecioNeto();
   document.getElementById('campoArticulo').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  mostrarBanner('cargando', '✏️ Ítem cargado para edición — modificá lo que necesites y tocá "Guardar cambios del ítem".');
 }
 
 
@@ -3074,7 +3075,15 @@ function renderizarCarrito() {
           onchange="editarCantidadEnCarrito(${i}, this.value)"
           onclick="this.select()">
       </td>
-      <td>${formatoEnMoneda(precioNetoMostrar, moneda)}${descTexto}</td>
+      <td>
+        <input type="number" min="0.01" step="0.01"
+          value="${precioNetoMostrar.toFixed(2)}"
+          style="width:90px; text-align:right; padding:4px 6px; font-size:13px; border:1px solid #ddd; border-radius:4px"
+          title="Precio neto en ${moneda} — editá directo acá"
+          onchange="editarPrecioEnCarrito(${i}, this.value)"
+          onclick="this.select()">
+        ${descTexto}
+      </td>
       <td>${formatoEnMoneda(importe, moneda)}</td>
       <td style="white-space:nowrap">
         <button type="button" class="quitar" style="font-size:15px" title="Fecha de entrega de este ítem" onclick="abrirModalFechaItem(${i})">📅</button>
@@ -3087,7 +3096,7 @@ function renderizarCarrito() {
   });
 
   cont.innerHTML = `<table>
-    <thead><tr><th>Artículo</th><th>Cant.</th><th>P. Neto</th><th>Importe</th><th></th></tr></thead>
+    <thead><tr><th>Artículo</th><th>Cant.</th><th>P. Neto (${moneda})</th><th>Importe (${moneda})</th><th></th></tr></thead>
     <tbody>${filas}</tbody>
   </table>`;
 
@@ -3172,6 +3181,25 @@ function editarCantidadEnCarrito(i, nuevaCantidad) {
     }
   }
   renderizarCarrito();
+}
+
+// Editar el precio neto directo en la tabla del carrito.
+// El valor que ingresa el usuario está en la moneda actual del pedido
+// (ARS o USD); lo convertimos a ARS interno para mantener coherencia.
+function editarPrecioEnCarrito(i, nuevoPrecioEnMoneda) {
+  const precio = parseFloat(nuevoPrecioEnMoneda);
+  if (isNaN(precio) || precio <= 0) { renderizarCarrito(); return; }
+  const moneda = document.getElementById('moneda')?.value || 'ARS';
+  const tipoCambio = tipoCambioActual || 1;
+  // Precio neto en moneda actual; convertir a ARS base
+  const precioNetoARS = moneda === 'USD' ? precio * tipoCambio : precio;
+  // El descuento ya está aplicado en el neto; guardamos el precio neto directamente
+  // como precio unitario (sin descuento adicional, ya viene descontado)
+  carrito[i].precioUnitarioARS = precioNetoARS;
+  carrito[i].precioUnitario = precioNetoARS;
+  carrito[i].descuentoItemPct = 0; // el precio ingresado ya es el neto final
+  renderizarCarrito();
+  mostrarBanner('exito', 'Precio actualizado directamente.');
 }
 
 function duplicarItemDelCarrito(i) {
