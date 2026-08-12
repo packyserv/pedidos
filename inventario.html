@@ -103,6 +103,7 @@
   </div>
 
   <div class="panel activo" id="panelStock">
+    <div class="resumen-alertas" id="dashboardStock"></div>
     <div class="card">
       <div class="filtros">
         <input type="text" id="buscarStock" placeholder="Buscar por codigo o descripcion..." oninput="renderizarTabla()">
@@ -495,6 +496,29 @@ const CLAVE_DEFAULT_INV = "1234";
 const CLAVE_MAESTRA_INV = "3232";
 const CLAVE_RESET_INV = "0000";
 
+// Tasa mensual de referencia para calcular el costo financiero del stock
+// inmovilizado (costo de oportunidad de la plata parada). Editable: hoy ~1,7%
+// mensual segun cauciones/tasa BCRA. Cambiar aca si cambia la tasa.
+const TASA_MENSUAL = 0.017;
+
+// Helper de fetch con timeout: si el backend no responde en 30s, corta y
+// tira error en vez de dejar la UI colgada en "Cargando..." para siempre.
+// (En redes moviles/Chrome Android a veces una peticion se cuelga sin fallar.)
+async function fetchInv(url, opciones) {
+  const controlador = new AbortController();
+  const timeout = setTimeout(() => controlador.abort(), 30000);
+  try {
+    const resp = await fetch(url, Object.assign({ signal: controlador.signal }, opciones || {}));
+    clearTimeout(timeout);
+    if (!resp.ok) throw new Error("Respuesta no valida del servidor (" + resp.status + ")");
+    return resp;
+  } catch (err) {
+    clearTimeout(timeout);
+    if (err.name === "AbortError") throw new Error("El servidor tardó demasiado en responder. Reintentá en unos segundos.");
+    throw err;
+  }
+}
+
 let DATOS_INV = [];
 let articuloMovSeleccionado = null;
 let tipoMovActual = "entrada";
@@ -560,9 +584,10 @@ function autenticarInv(usuario) {
 async function cargarDatosInv() {
   mostrarBannerInv("cargando", "Cargando datos de stock...");
   try {
-    const resp = await fetch(URL_INV);
+    const resp = await fetchInv(URL_INV);
     const data = await resp.json();
     DATOS_INV = data.items || [];
+    renderizarDashboard();
     renderizarTabla();
     renderizarAlertas();
     poblarSelectArticulosMov();
@@ -573,6 +598,38 @@ async function cargarDatosInv() {
   }
 }
 async function recargarDatos() { DATOS_INV = []; cargarDatosInv(); }
+
+// --- Dashboard resumen (arriba del panel de Stock) ---
+function renderizarDashboard() {
+  const cont = document.getElementById("dashboardStock");
+  if (!cont) return;
+  const total = DATOS_INV.length;
+  let criticos = 0, bajos = 0, conV2 = 0, valorInmovilizado = 0;
+  DATOS_INV.forEach(it => {
+    const est = estadoArticulo(it);
+    if (est === "critico") criticos++;
+    else if (est === "bajo") bajos++;
+    if (it.stockComprometidoV2 > 0) conV2++;
+    // Valor inmovilizado: stock teorico x costo unitario (si el backend lo trae)
+    if (it.costoUnitario && it.stockReal > 0) valorInmovilizado += it.stockReal * it.costoUnitario;
+  });
+
+  let html =
+    "<div class='stat-box'><div class='num'>" + total.toLocaleString("es-AR") + "</div><div class='lab'>Artículos</div></div>" +
+    "<div class='stat-box'><div class='num' style='color:var(--rojo)'>" + criticos + "</div><div class='lab'>Sin stock / crítico</div></div>" +
+    "<div class='stat-box'><div class='num' style='color:var(--naranja)'>" + bajos + "</div><div class='lab'>Stock bajo</div></div>";
+  if (conV2 > 0) {
+    html += "<div class='stat-box'><div class='num' style='color:var(--naranja)'>" + conV2 + "</div><div class='lab'>V2 pendiente ajuste</div></div>";
+  }
+  if (valorInmovilizado > 0) {
+    html += "<div class='stat-box'><div class='num' style='color:var(--azul)'>$" + Math.round(valorInmovilizado).toLocaleString("es-AR") + "</div><div class='lab'>Valor inmovilizado</div></div>";
+    // Costo financiero mensual: cuanto cuesta tener esa plata parada, segun la
+    // tasa mensual de referencia (editable). Es el costo de oportunidad real.
+    const costoFinanciero = valorInmovilizado * TASA_MENSUAL;
+    html += "<div class='stat-box'><div class='num' style='color:var(--rojo)'>$" + Math.round(costoFinanciero).toLocaleString("es-AR") + "</div><div class='lab'>Costo financiero / mes (" + (TASA_MENSUAL*100).toFixed(1) + "%)</div></div>";
+  }
+  cont.innerHTML = html;
+}
 
 // --- Tabla stock ---
 function estadoArticulo(it) {
@@ -690,7 +747,7 @@ async function guardarConfigMinimo() {
       + "&codArticulo=" + encodeURIComponent(articuloMinimoActual.codigoConcatenado)
       + "&tipoAlerta=" + tipoAlertaModalActual
       + "&minUnidades=" + minU + "&minDias=" + minD;
-    const resp = await fetch(url);
+    const resp = await fetchInv(url);
     const data = await resp.json();
     if (data.ok) {
       const idx = DATOS_INV.findIndex(x => x.codigoConcatenado === articuloMinimoActual.codigoConcatenado);
@@ -828,7 +885,7 @@ async function registrarMovimiento() {
       + "&descripcion=" + encodeURIComponent(descCompleta)
       + "&tipo=" + tipoMovActual + "&cantidad=" + cantidad
       + "&motivo=" + encodeURIComponent(motivo) + "&observacion=" + encodeURIComponent(observacion);
-    const resp = await fetch(url);
+    const resp = await fetchInv(url);
     const data = await resp.json();
     if (data.ok) {
       mostrarBannerInv("exito", "Movimiento registrado: " + (tipoMovActual === "entrada" ? "Entrada" : "Salida") + " de " + cantidad + " u. de " + descCompleta);
@@ -851,7 +908,7 @@ async function cargarHistorialMovimientos() {
   const tbody = document.getElementById("cuerpoHistMov");
   tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;padding:16px;color:var(--gris-texto)'>Cargando...</td></tr>";
   try {
-    const resp = await fetch(WEB_APP_URL + "?action=historialMovimientos");
+    const resp = await fetchInv(WEB_APP_URL + "?action=historialMovimientos");
     const data = await resp.json();
     historialMovActual = data.items || [];
     renderizarHistorialMovimientos();
@@ -948,7 +1005,7 @@ async function confirmarMovRapido() {
       + "&descripcion=" + encodeURIComponent(desc)
       + "&tipo=" + tipoMovRapidoActual + "&cantidad=" + cantidad
       + "&motivo=" + encodeURIComponent(motivo) + "&observacion=" + encodeURIComponent(obs);
-    const resp = await fetch(url);
+    const resp = await fetchInv(url);
     const data = await resp.json();
     if (data.ok) {
       mostrarBannerInv("exito", (tipoMovRapidoActual === "entrada" ? "▲ Entrada" : "▼ Salida") + " de " + cantidad + " u. registrada para " + it.descripcion);
@@ -1138,7 +1195,7 @@ function exportarRecuentoCSV() {
 async function guardarRecuentoEnSheet() {
   if (recuentoActual.length === 0) { mostrarBannerInv("fallo", "No hay items en el recuento."); return; }
   try {
-    const resp = await fetch(WEB_APP_URL + "?action=registrarRecuento", {
+    const resp = await fetchInv(WEB_APP_URL + "?action=registrarRecuento", {
       method: "POST",
       body: JSON.stringify({ usuario: usuarioActual, items: recuentoActual }),
     });
@@ -1165,7 +1222,7 @@ async function cargarHistorialRecuento() {
   if (!tbody) return;
   tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;padding:16px;color:var(--gris-texto)'>Cargando...</td></tr>";
   try {
-    const resp = await fetch(WEB_APP_URL + "?action=historialRecuento");
+    const resp = await fetchInv(WEB_APP_URL + "?action=historialRecuento");
     const data = await resp.json();
     historialRecActual = data.items || [];
     renderizarHistorialRecuento();
@@ -1227,7 +1284,7 @@ async function consultarV2() {
   document.getElementById("cuerpoV2Totales").innerHTML = "<tr><td colspan='5' style='text-align:center;padding:20px;color:var(--gris-texto)'>Consultando...</td></tr>";
   try {
     const url = WEB_APP_URL + "?action=consultaV2&fechaDesde=" + desde + "&fechaHasta=" + hasta;
-    const resp = await fetch(url);
+    const resp = await fetchInv(url);
     const data = await resp.json();
     totalesV2Actual = data.totales || [];
     detalleV2Actual = data.detalle || [];
@@ -1298,7 +1355,7 @@ async function toggleAjusteV2(clave, ajustado) {
   try {
     const url = WEB_APP_URL + "?action=marcarAjusteV2&clave=" + encodeURIComponent(clave)
       + "&ajustado=" + ajustado + "&usuario=" + encodeURIComponent(usuarioActual);
-    const resp = await fetch(url);
+    const resp = await fetchInv(url);
     const data = await resp.json();
     if (data.ok) {
       // Actualizar estado local de la consulta V2 (totales/detalle)
@@ -1348,7 +1405,7 @@ async function cargarSugerenciaCompra() {
   const tbody = document.getElementById("cuerpoCompras");
   tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;padding:20px;color:var(--gris-texto)'>Cargando...</td></tr>";
   try {
-    const resp = await fetch(WEB_APP_URL + "?action=sugerenciaCompra");
+    const resp = await fetchInv(WEB_APP_URL + "?action=sugerenciaCompra");
     const data = await resp.json();
     datosComprasActual = data.items || [];
     if (datosComprasActual.length === 0 && data.aviso) {
