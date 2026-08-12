@@ -1401,22 +1401,29 @@ function reintentarCargaManual() {
 }
 
 // Carga el rango de precios (min/medio/max/anterior) desde el backend.
-// Se llama en segundo plano, sin bloquear la carga principal.
+// Se llama en segundo plano. Muestra un indicador en el selector de lista.
 async function cargarRangoPrecios() {
+  const nota = document.getElementById('notaListaPrecios');
+  if (nota) nota.textContent = '⏳ Cargando rangos de precios del último mes...';
   try {
     const resp = await fetch(WEB_APP_URL + '?action=rangoPrecios');
-    if (!resp.ok) return;
+    if (!resp.ok) throw new Error('Error del servidor');
     const data = await resp.json();
     DATOS.rangoPrecios = data.rangos || {};
     DATOS.preciosAnteriores = data.anteriores || {};
+    const n = Object.keys(DATOS.rangoPrecios).length;
+    if (nota) nota.textContent = n > 0
+      ? `✅ Rangos cargados para ${n} artículos (últimos 30 días).`
+      : '⚠️ Sin datos de rangos de precio aún — corrés el sync para generarlos.';
   } catch(e) {
-    // Si falla, los precios simplemente no aparecen por rango (usa catálogo)
+    if (nota) nota.textContent = '⚠️ No se pudieron cargar los rangos de precio. Intentá recargar la página.';
     console.warn('No se pudo cargar el rango de precios:', e);
   }
 }
 
 // Cuando cambia la lista global de precios, vuelve a llenar el precio
-// unitario del artículo que ya está seleccionado en el formulario.
+// unitario del artículo que ya está seleccionado en el formulario,
+// Y reprecia también todos los items ya cargados en el carrito.
 function cambiarListaPrecios(lista) {
   const nota = document.getElementById('notaListaPrecios');
   if (nota) {
@@ -1429,7 +1436,43 @@ function cambiarListaPrecios(lista) {
     };
     nota.textContent = textos[lista] || '';
   }
-  // Si ya hay un artículo seleccionado, recalcular su precio con la nueva lista
+
+  // Si los rangos no cargaron aún, avisamos y esperamos
+  if (lista !== 'especial' && lista !== 'anterior' && Object.keys(DATOS.rangoPrecios || {}).length === 0) {
+    mostrarBanner('cargando', '⏳ Cargando rangos de precios... Intentá de nuevo en un momento.');
+    return;
+  }
+
+  const codCli = clienteSeleccionado ? String(clienteSeleccionado.CodCliente) : '';
+  const moneda = document.getElementById('monedaCarga').value || 'ARS';
+  const tipoCambio = Number(document.getElementById('tipoCambio').value || 0);
+
+  // Repreciar todos los items del carrito con la nueva lista
+  if (carrito.length > 0) {
+    carrito.forEach(it => {
+      const cc = it.codigoConcatenado || (it.codItem + it.ancho + it.largo + it.micColor);
+      let precioArs = 0;
+      if (lista === 'especial') return; // especial: no tocar, el operador ingresa manualmente
+      if (lista === 'anterior' && DATOS.preciosAnteriores && DATOS.preciosAnteriores[codCli + '|' + cc]) {
+        precioArs = DATOS.preciosAnteriores[codCli + '|' + cc];
+      } else if (DATOS.rangoPrecios && DATOS.rangoPrecios[cc]) {
+        const r = DATOS.rangoPrecios[cc];
+        if (lista === 'minimo')     precioArs = r.min;
+        else if (lista === 'medio') precioArs = r.medio;
+        else                        precioArs = r.max;
+      }
+      if (precioArs > 0) {
+        it.precioUnitarioARS = precioArs;
+        it.precioNetoARS = precioArs * (1 - (it.descuentoItemPct || 0) / 100);
+        it.precioUnitario = moneda === 'USD' && tipoCambio > 0 ? precioArs / tipoCambio : precioArs;
+        it.precioNeto = it.precioUnitario * (1 - (it.descuentoItemPct || 0) / 100);
+      }
+    });
+    renderizarCarrito();
+    if (lista !== 'especial') mostrarBanner('exito', 'Precios actualizados en todos los artículos del carrito.');
+  }
+
+  // Si hay un artículo seleccionado en el formulario, actualizarlo también
   if (articuloSeleccionado) {
     seleccionarArticulo(articuloSeleccionado, INDICE_STOCK[articuloSeleccionado.CodigoConcatenado]);
   }
@@ -2976,6 +3019,7 @@ function agregarItemAlCarrito() {
 
   const datosItem = {
     codItem: articuloSeleccionado.CodItem.trim(),
+    codigoConcatenado: String(articuloSeleccionado.CodigoConcatenado || '').trim(),
     descripcion: articuloSeleccionado.Descripcion,
     ancho: articuloSeleccionado.Ancho,
     largo: articuloSeleccionado.Largo,
