@@ -669,10 +669,34 @@
       </div>
       <div class="subnota">Aplica a todo el pedido. Si no tocás nada, el 100% factura por Bejerman. Si activás uno solo, ese factura el 100%. Si activás los dos, cargás a mano cuánto va a cada uno (deben sumar 100%).</div>
     </div>
+    <div class="campo">
+      <label>Lista de precios para este pedido</label>
+      <div class="pills-modalidad" id="pillsListaPrecios">
+        <label class="pill">
+          <input type="radio" name="listaPrecios" value="maximo" checked onchange="cambiarListaPrecios(this.value)">
+          <span title="Precio más alto facturado en los últimos 30 días para cada ítem">Precio Máximo</span>
+        </label>
+        <label class="pill">
+          <input type="radio" name="listaPrecios" value="medio" onchange="cambiarListaPrecios(this.value)">
+          <span title="Promedio entre el precio mínimo y máximo de los últimos 30 días">Precio Medio</span>
+        </label>
+        <label class="pill">
+          <input type="radio" name="listaPrecios" value="minimo" onchange="cambiarListaPrecios(this.value)">
+          <span title="Precio más bajo facturado en los últimos 30 días para cada ítem">Precio Mínimo</span>
+        </label>
+        <label class="pill">
+          <input type="radio" name="listaPrecios" value="anterior" onchange="cambiarListaPrecios(this.value)">
+          <span title="Último precio facturado a este cliente específico para cada ítem">Precio Anterior</span>
+        </label>
+        <label class="pill">
+          <input type="radio" name="listaPrecios" value="especial" onchange="cambiarListaPrecios(this.value)">
+          <span title="Precio ingresado manualmente ítem por ítem">Especial (Manual)</span>
+        </label>
+      </div>
+      <div class="subnota" id="notaListaPrecios">Los precios Mínimo, Medio y Máximo se calculan en base a las ventas facturadas de los últimos 30 días. "Precio Anterior" replica el último precio facturado a este cliente para cada artículo.</div>
+    </div>
   </div>
     </div>
-
-  <!-- ============ ENTREGA DE LA MERCADERIA ============ -->
   <div class="card">
     <h2 onclick="toggleCard('bodyAgregar')">Agregar artículos<button type="button" class="btn-colapsar" id="btnbodyAgregar" tabindex="-1">+</button></h2>
     <div class="card-body colapsado" id="bodyAgregar">
@@ -941,7 +965,7 @@ const URL_COTIZACION = WEB_APP_URL + "?action=cotizacion";
 /* =========================================================================
    ESTADO GLOBAL
    ========================================================================= */
-let DATOS = { vendedores: [], clientes: [], articulos: [], stock: [], condVta: [] };
+let DATOS = { vendedores: [], clientes: [], articulos: [], stock: [], condVta: [], rangoPrecios: {}, preciosAnteriores: {} };
 let clienteSeleccionado = null;
 let articuloSeleccionado = null;
 let carrito = [];
@@ -1276,7 +1300,12 @@ async function cargarDatos(intento) {
 
     if (!resp.ok) throw new Error('Respuesta no valida del servidor');
     DATOS = await resp.json();
+    DATOS.rangoPrecios = {};
+    DATOS.preciosAnteriores = {};
     construirIndices();
+
+    // Cargar rangos de precios en segundo plano (no bloquea la carga principal)
+    cargarRangoPrecios();
 
     estado.innerHTML = '<span class="punto"></span> Datos actualizados';
     ocultarBanner();
@@ -1369,6 +1398,41 @@ function reintentarCargaManual() {
   // Limpia los selects para no duplicar opciones al recargar los datos.
   document.getElementById('condicionVenta').innerHTML = '<option value="">Seleccioná...</option>';
   cargarDatos(1);
+}
+
+// Carga el rango de precios (min/medio/max/anterior) desde el backend.
+// Se llama en segundo plano, sin bloquear la carga principal.
+async function cargarRangoPrecios() {
+  try {
+    const resp = await fetch(WEB_APP_URL + '?action=rangoPrecios');
+    if (!resp.ok) return;
+    const data = await resp.json();
+    DATOS.rangoPrecios = data.rangos || {};
+    DATOS.preciosAnteriores = data.anteriores || {};
+  } catch(e) {
+    // Si falla, los precios simplemente no aparecen por rango (usa catálogo)
+    console.warn('No se pudo cargar el rango de precios:', e);
+  }
+}
+
+// Cuando cambia la lista global de precios, vuelve a llenar el precio
+// unitario del artículo que ya está seleccionado en el formulario.
+function cambiarListaPrecios(lista) {
+  const nota = document.getElementById('notaListaPrecios');
+  if (nota) {
+    const textos = {
+      minimo: 'Precio mínimo facturado en los últimos 30 días para cada artículo.',
+      medio: 'Promedio entre el precio mínimo y máximo de los últimos 30 días.',
+      maximo: 'Precio máximo facturado en los últimos 30 días para cada artículo.',
+      anterior: 'Último precio facturado a este cliente específico para cada artículo.',
+      especial: 'Precio manual — ingresá el precio para cada artículo de forma individual.',
+    };
+    nota.textContent = textos[lista] || '';
+  }
+  // Si ya hay un artículo seleccionado, recalcular su precio con la nueva lista
+  if (articuloSeleccionado) {
+    seleccionarArticulo(articuloSeleccionado, INDICE_STOCK[articuloSeleccionado.CodigoConcatenado]);
+  }
 }
 
 async function cargarCotizacion() {
@@ -2486,22 +2550,41 @@ function seleccionarArticulo(a, stockInfo) {
   const moneda = document.getElementById('monedaCarga').value || 'ARS';
   const tipoCambio = Number(document.getElementById('tipoCambio').value || 0);
 
-  // PrecioSugerido viene siempre en ARS (es el ultimo precio de venta
-  // historico). Si el pedido se esta cargando en USD, se muestra convertido.
-  let precioSugeridoTexto = 'No disponible';
+  // Calcular el precio según la lista global seleccionada
+  const listaSeleccionada = document.querySelector('input[name="listaPrecios"]:checked')?.value || 'maximo';
+  const cc = String(a.CodigoConcatenado || '').trim();
+  const codCli = clienteSeleccionado ? String(clienteSeleccionado.CodCliente) : '';
+
+  let precioArs = 0;
+  let origenPrecio = '';
+
+  if (listaSeleccionada === 'especial') {
+    // Precio especial: el campo queda vacío para ingreso manual
+    precioArs = 0;
+    origenPrecio = 'Especial (ingresá el precio manualmente)';
+  } else if (listaSeleccionada === 'anterior' && DATOS.preciosAnteriores && DATOS.preciosAnteriores[codCli + '|' + cc]) {
+    precioArs = DATOS.preciosAnteriores[codCli + '|' + cc];
+    origenPrecio = 'Último precio facturado a este cliente';
+  } else if (DATOS.rangoPrecios && DATOS.rangoPrecios[cc]) {
+    const r = DATOS.rangoPrecios[cc];
+    if (listaSeleccionada === 'minimo')      { precioArs = r.min;   origenPrecio = 'Mínimo 30 días'; }
+    else if (listaSeleccionada === 'medio')  { precioArs = r.medio; origenPrecio = 'Medio 30 días'; }
+    else                                     { precioArs = r.max;   origenPrecio = 'Máximo 30 días'; }
+  } else if (a.PrecioSugerido) {
+    // Fallback: precio sugerido del catálogo si no hay rango disponible
+    precioArs = Number(a.PrecioSugerido);
+    origenPrecio = 'Precio de catálogo (sin datos últimos 30 días)';
+  }
+
+  let precioSugeridoTexto = precioArs > 0 ? formatoMoneda(precioArs) + ' (ARS)' : origenPrecio;
   let precioParaCargar = null;
-  if (a.PrecioSugerido) {
-    const precioArs = Number(a.PrecioSugerido);
-    precioSugeridoTexto = formatoMoneda(precioArs) + ' (ARS)';
+  if (precioArs > 0) {
     if (moneda === 'USD') {
       if (tipoCambio > 0) {
         const precioUsd = precioArs / tipoCambio;
         precioSugeridoTexto += ` · ≈ ${formatoUSD(precioUsd)}`;
         precioParaCargar = precioUsd;
       }
-      // si no hay tipo de cambio cargado todavia, no se puede convertir --
-      // se deja el campo vacio para que el vendedor no cargue por error un
-      // valor en ARS pensando que esta en USD.
     } else {
       precioParaCargar = precioArs;
     }
@@ -2512,17 +2595,18 @@ function seleccionarArticulo(a, stockInfo) {
     <div class="dato"><b>Código</b>${a.CodItem.trim()}</div>
     <div class="dato"><b>Medidas</b>${a.Ancho}/${a.Largo}/${a.MicColor}</div>
     <div class="dato"><b>Stock disponible</b><span class="${stockDisp <= 0 ? 'alerta' : 'ok'}">${stockDisp} unidades</span></div>
-    <div class="dato"><b>Precio sugerido</b>${precioSugeridoTexto}</div>
+    <div class="dato"><b>Precio (${origenPrecio || listaSeleccionada})</b>${precioSugeridoTexto}</div>
   `;
   box.classList.add('visible');
 
-  document.getElementById('precioUnitario').value = precioParaCargar !== null ? precioParaCargar.toFixed(2) : '';
+  if (listaSeleccionada !== 'especial') {
+    document.getElementById('precioUnitario').value = precioParaCargar !== null ? precioParaCargar.toFixed(2) : '';
+  } else {
+    document.getElementById('precioUnitario').value = '';
+  }
   document.getElementById('cantidad').focus();
   recalcularM2();
   recalcularPrecioNeto();
-
-  // Chips de cantidad rapida: cantidades tipicas de este cliente para este articulo
-  // (tomadas de UltimaVenta si existe, sino cantidades redondas genericas)
   actualizarChipsCantistad(a);
 }
 
