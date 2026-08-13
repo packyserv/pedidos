@@ -73,7 +73,7 @@
   .fila-lotes{display:none;background:#f7fafd;}
   .fila-lotes.abierta{display:table-row;}
   /* --- Dashboard adaptativo --- */
-  .stat-box .num{font-size:clamp(13px,2vw,26px);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .stat-box .num{font-size:clamp(14px,2.5vw,28px);font-weight:700;word-break:break-word;line-height:1.1;}
   /* --- Icono de ayuda contextual ("i") --- */
   .info-btn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.08);color:var(--gris-texto);font-size:12px;font-weight:700;font-style:italic;font-family:Georgia,serif;cursor:pointer;border:none;flex-shrink:0;user-select:none;}
   .info-btn:hover{background:var(--azul);color:#fff;}
@@ -205,6 +205,7 @@
               <th onclick="ordenarPor('tipo')">Tipo ⇅</th>
               <th onclick="ordenarPor('clasificacionABCXYZ')" title="ABC: por facturación (A=más importante). XYZ: por variabilidad de demanda (X=estable, Z=errática)">Clase ⇅</th>
               <th onclick="ordenarPor('stockReal')" style="text-align:right">Stock teórico ⇅</th>
+              <th style="text-align:right;background:#1e3a52" title="Ingresá el stock físico contado y confirmá con ✓ para registrar el recuento">Stock físico ✓</th>
               <th onclick="ordenarPor('stockComprometido')" style="text-align:right">Comprometido ⇅</th>
               <th onclick="ordenarPor('stockDisponible')" style="text-align:right">Disponible ⇅</th>
               <th onclick="ordenarPor('minimoEfectivo')" style="text-align:right">Minimo ⇅</th>
@@ -215,7 +216,7 @@
             </tr>
           </thead>
           <tbody id="cuerpoTabla">
-            <tr><td colspan="11" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
+            <tr><td colspan="12" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
           </tbody>
         </table>
       </div>
@@ -645,6 +646,16 @@ function formatoMonedaInv(valor) {
   if (moneda === 'USD') return 'U$S\u00a0' + Number(valor).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
   return '$\u00a0' + Math.round(valor).toLocaleString('es-AR');
 }
+// Formato compacto para stat-box (evita desborde): M para millones, K para miles
+function formatoCompacto(valor, moneda) {
+  if (valor === null || valor === undefined) return '-';
+  const prefijo = moneda === 'USD' ? 'U$S ' : '$ ';
+  const abs = Math.abs(valor);
+  if (abs >= 1e9) return prefijo + (valor / 1e9).toLocaleString('es-AR', {maximumFractionDigits:2}) + 'B';
+  if (abs >= 1e6) return prefijo + (valor / 1e6).toLocaleString('es-AR', {maximumFractionDigits:2}) + 'M';
+  if (abs >= 1e3) return prefijo + (valor / 1e3).toLocaleString('es-AR', {maximumFractionDigits:1}) + 'K';
+  return prefijo + Math.round(valor).toLocaleString('es-AR');
+}
 function formatoMonedaInvNum(valor) {
   // Version sin HTML para contextos donde no se puede usar HTML
   if (valor === null || valor === undefined) return '-';
@@ -880,6 +891,60 @@ function poblarFiltroProveedores() {
 // ================================================================
 // LOTES INLINE (expandible con + / -)
 // ================================================================
+// Confirma el stock físico ingresado directo en la tabla de Stock.
+// Registra el recuento (teórico vs físico) con un clic al ✓.
+async function confirmarStockFisico(idx) {
+  const it = DATOS_INV[idx];
+  if (!it) return;
+  const input = document.getElementById("sf_" + idx);
+  if (!input) return;
+  const val = input.value.trim();
+  if (val === "") {
+    input.focus();
+    return;
+  }
+  const fisico = parseFloat(val);
+  if (isNaN(fisico) || fisico < 0) {
+    mostrarBannerInv("fallo", "Ingresá un valor válido mayor o igual a cero.");
+    input.focus();
+    return;
+  }
+  const desc = it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor;
+  const teorico = it.stockReal || 0;
+  const diferencia = fisico - teorico;
+  const diferTexto = diferencia === 0 ? "Sin diferencia" : (diferencia > 0 ? "+" + diferencia : diferencia) + " u.";
+  try {
+    const payload = {
+      usuario: usuarioActual,
+      items: [{
+        codigoConcatenado: it.codigoConcatenado,
+        descripcion: desc,
+        stockTeorico: teorico,
+        stockFisico: fisico,
+        observacion: "Carga directa desde panel de Stock",
+      }]
+    };
+    const resp = await fetchInv(WEB_APP_URL + "?action=registrarRecuento", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      // Feedback visual en el input: lo pinta según si hay diferencia o no
+      input.value = "";
+      input.style.background = diferencia === 0 ? "#d4edda" : "#fff3cd";
+      input.placeholder = fisico.toLocaleString("es-AR");
+      setTimeout(() => { input.style.background = ""; input.placeholder = "—"; }, 3000);
+      mostrarBannerInv("exito", "✅ Recuento registrado — " + desc + " · Teórico: " + teorico + " · Físico: " + fisico + " · " + diferTexto);
+    } else {
+      mostrarBannerInv("fallo", "Error al registrar: " + (data.error || "desconocido"));
+    }
+  } catch(e) {
+    mostrarBannerInv("fallo", "Error de conexión al registrar el recuento.");
+  }
+}
+
 async function toggleLotesInline(filId, idxReal, btn) {
   const fila = document.getElementById(filId);
   if (!fila) return;
@@ -1025,8 +1090,8 @@ function renderizarDashboard() {
     html += "<div class='stat-box'><div class='num' style='color:var(--naranja)'>" + conV2 + "</div><div class='lab'>V2 pendiente ajuste</div></div>";
   }
   if (valorInmovilizadoARS > 0) {
-    html += "<div class='stat-box'><div class='num' style='color:var(--azul)'>" + formatoMonedaInv(valorInmovilizado) + "</div><div class='lab'>Valor inmovilizado" + etiqMoneda + "</div></div>";
-    html += "<div class='stat-box'><div class='num' style='color:var(--rojo)'>" + formatoMonedaInv(costoFinanciero) + "</div><div class='lab'>Costo financiero / mes (" + (TASA_MENSUAL*100).toFixed(1) + "%)</div></div>";
+    html += "<div class='stat-box'><div class='num' style='color:var(--azul)'>" + formatoCompacto(valorInmovilizado, moneda) + "</div><div class='lab'>Valor inmovilizado" + etiqMoneda + "</div></div>";
+    html += "<div class='stat-box'><div class='num' style='color:var(--rojo)'>" + formatoCompacto(costoFinanciero, moneda) + "</div><div class='lab'>Costo financiero / mes (" + (TASA_MENSUAL*100).toFixed(1) + "%)</div></div>";
   }
   cont.innerHTML = html;
 }
@@ -1123,7 +1188,7 @@ function renderizarTabla() {
   }
 
   const tbody = document.getElementById("cuerpoTabla");
-  if (!filas.length) { tbody.innerHTML = "<tr><td colspan='11' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
+  if (!filas.length) { tbody.innerHTML = "<tr><td colspan='12' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
   tbody.innerHTML = filas.map((it, idx) => {
     const est = estadoArticulo(it);
     const badge = est === "ok" ? "<span class='badge badge-ok'>OK</span>" : est === "bajo" ? "<span class='badge badge-bajo'>Bajo</span>" : "<span class='badge badge-critico'>Critico</span>";
@@ -1152,6 +1217,14 @@ function renderizarTabla() {
       + "<td>" + tipoTag + "</td>"
       + "<td>" + claseBadge + "</td>"
       + "<td style='text-align:right;font-weight:700'>" + Number(it.stockReal || 0).toLocaleString("es-AR") + "</td>"
+      + "<td style='text-align:right;padding:4px 6px;background:#f0f7ff'>"
+      + "<div style='display:flex;gap:3px;align-items:center;justify-content:flex-end'>"
+      + "<input type='number' min='0' step='0.1' placeholder='—' id='sf_" + idxReal + "' "
+      + "style='width:70px;padding:3px 5px;text-align:right;font-size:12px;border:1px solid var(--gris-borde);border-radius:4px' "
+      + "onkeydown='if(event.key===\"Enter\"){confirmarStockFisico(' + idxReal + ');}'>"
+      + "<button type='button' title='Confirmar recuento' onclick='confirmarStockFisico(" + idxReal + ")' "
+      + "style='background:var(--verde);color:#fff;border:none;border-radius:4px;padding:3px 7px;font-size:13px;cursor:pointer;flex-shrink:0'>✓</button>"
+      + "</div></td>"
       + "<td style='text-align:right'>" + comp + "</td>"
       + "<td style='text-align:right;font-weight:700;color:" + colorDisp + "'>" + Number(it.stockDisponible || 0).toLocaleString("es-AR") + "</td>"
       + "<td style='text-align:right;color:var(--gris-texto)'>" + minTexto + "</td>"
@@ -1161,7 +1234,7 @@ function renderizarTabla() {
       + "<td style='white-space:nowrap'><button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 8px' onclick='abrirModalMinimo(" + idxReal + ")'>Min.</button>"
       + " <button type='button' class='btn btn-azul' style='font-size:11px;padding:4px 6px' title='Registrar movimiento' onclick='abrirMovRapido(" + idxReal + ")'>+Mov</button>"
       + " <button type='button' class='fila-lote-toggle' title='Ver / ocultar lotes' onclick='toggleLotesInline(\"" + filId + "\"," + idxReal + ",this)'>+</button></td></tr>"
-      + "<tr class='fila-lotes' id='" + filId + "'><td colspan='11' style='padding:0'><div style='padding:8px 16px'><span style='color:var(--gris-texto);font-size:12px'>Cargando lotes...</span></div></td></tr>";
+      + "<tr class='fila-lotes' id='" + filId + "'><td colspan='12' style='padding:0'><div style='padding:8px 16px'><span style='color:var(--gris-texto);font-size:12px'>Cargando lotes...</span></div></td></tr>";
   }).join("");
   document.getElementById("pieDatos").textContent = filas.length + " articulo(s) mostrados.";
 }
