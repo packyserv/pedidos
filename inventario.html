@@ -50,6 +50,29 @@
   #bannerInv.fallo{display:block;background:#f8d7da;color:#721c24;}
   #bannerInv.cargando{display:block;background:#d1ecf1;color:#0c5460;}
   .comprometido{color:var(--naranja);font-size:12px;font-weight:600;}
+  /* --- Filtros custom con búsqueda, flechas y multiselección --- */
+  .filtro-custom{position:relative;min-width:140px;flex:1;}
+  .filtro-custom-input{width:100%;padding:9px 30px 9px 12px;border:1px solid var(--gris-borde);border-radius:6px;font-size:14px;background:var(--superficie);cursor:pointer;user-select:none;}
+  .filtro-custom-input::after{content:"▾";position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--gris-texto);}
+  .filtro-custom-lista{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--gris-borde);border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.12);z-index:120;display:none;max-height:260px;overflow-y:auto;}
+  .filtro-custom-lista.abierta{display:block;}
+  .filtro-custom-buscar{width:calc(100% - 16px);margin:8px;padding:7px 10px;border:1px solid var(--gris-borde);border-radius:5px;font-size:13px;}
+  .filtro-custom-opcion{padding:8px 12px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;}
+  .filtro-custom-opcion:hover,.filtro-custom-opcion.focus{background:var(--azul-claro);}
+  .filtro-custom-opcion.seleccionada{font-weight:700;color:var(--azul);}
+  .filtro-custom-opcion input[type=checkbox]{accent-color:var(--azul);width:15px;height:15px;flex-shrink:0;}
+  /* --- Checkboxes de tipo --- */
+  .tipo-checks{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .tipo-check-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:2px solid var(--gris-borde);cursor:pointer;font-size:13px;font-weight:600;background:none;user-select:none;}
+  .tipo-check-btn.activo{border-color:var(--azul);background:var(--azul-claro);color:var(--azul);}
+  .tipo-check-btn input{accent-color:var(--azul);}
+  /* --- Filas expandibles de lotes --- */
+  .fila-lote-toggle{cursor:pointer;font-size:14px;font-weight:700;color:var(--azul);background:none;border:none;padding:2px 6px;border-radius:4px;}
+  .fila-lote-toggle:hover{background:var(--azul-claro);}
+  .fila-lotes{display:none;background:#f7fafd;}
+  .fila-lotes.abierta{display:table-row;}
+  /* --- Dashboard adaptativo --- */
+  .stat-box .num{font-size:clamp(14px,2.2vw,28px);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   /* --- Icono de ayuda contextual ("i") --- */
   .info-btn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.08);color:var(--gris-texto);font-size:12px;font-weight:700;font-style:italic;font-family:Georgia,serif;cursor:pointer;border:none;flex-shrink:0;user-select:none;}
   .info-btn:hover{background:var(--azul);color:#fff;}
@@ -133,29 +156,57 @@
         <button class="info-btn" onclick="mostrarInfo(event, 'Stock TEÓRICO: lo que dice el sistema (ERP). COMPROMETIDO: ya vendido en pedidos, pendiente de facturar. DISPONIBLE: teórico menos comprometido — lo que realmente podés vender.\n\nLa columna CLASE muestra la importancia del artículo: A = concentra la mayor parte de la facturación (más control), C = bajo impacto. La segunda letra (X/Y/Z) indica qué tan estable es su demanda.')">i</button>
       </div>
       <div class="filtros">
-        <input type="text" id="buscarStock" placeholder="Buscar por codigo o descripcion..." oninput="renderizarTabla()">
-        <select id="filtroEstado" onchange="renderizarTabla()">
-          <option value="">Todos</option>
-          <option value="ok">Stock OK</option>
-          <option value="bajo">Stock bajo</option>
-          <option value="critico">Sin stock / critico</option>
-          <option value="comprometido">Con comprometido</option>
-          <option value="v2">⚠ V2 pendiente de ajuste manual</option>
-        </select>
+        <input type="text" id="buscarStock" placeholder="Buscar por código, descripción o proveedor..." oninput="renderizarTabla()" style="flex:2;min-width:200px">
+        <div class="filtro-custom" id="fcEstado">
+          <div class="filtro-custom-input" tabindex="0" onclick="toggleFiltroCustom('fcEstado')" onkeydown="teclasFC(event,'fcEstado')">
+            <span id="fcEstadoLabel">Todos los status</span> ▾
+          </div>
+          <div class="filtro-custom-lista" id="fcEstadoLista">
+            <input class="filtro-custom-buscar" type="text" placeholder="Buscar..." oninput="filtrarOpciones('fcEstado',this.value)" onkeydown="teclasFC(event,'fcEstado')">
+            <div class="filtro-custom-opcion" data-val="" onclick="seleccionarFC('fcEstado','','Todos los status',event)"><input type="checkbox" checked> Todos los status</div>
+            <div class="filtro-custom-opcion" data-val="ok" onclick="seleccionarFC('fcEstado','ok','Stock OK',event)"><input type="checkbox"> Stock OK</div>
+            <div class="filtro-custom-opcion" data-val="bajo" onclick="seleccionarFC('fcEstado','bajo','Stock bajo',event)"><input type="checkbox"> Stock bajo</div>
+            <div class="filtro-custom-opcion" data-val="critico" onclick="seleccionarFC('fcEstado','critico','Sin stock / crítico',event)"><input type="checkbox"> Sin stock / crítico</div>
+            <div class="filtro-custom-opcion" data-val="comprometido" onclick="seleccionarFC('fcEstado','comprometido','Comprometido',event)"><input type="checkbox"> Comprometido</div>
+            <div class="filtro-custom-opcion" data-val="v2" onclick="seleccionarFC('fcEstado','v2','⚠ V2 pendiente',event)"><input type="checkbox"> ⚠ V2 pendiente</div>
+          </div>
+        </div>
+        <div class="filtro-custom" id="fcABC">
+          <div class="filtro-custom-input" tabindex="0" onclick="toggleFiltroCustom('fcABC')" onkeydown="teclasFC(event,'fcABC')">
+            <span id="fcABCLabel">Todas las clases ABC</span> ▾
+          </div>
+          <div class="filtro-custom-lista" id="fcABCLista">
+            <input class="filtro-custom-buscar" type="text" placeholder="Buscar..." oninput="filtrarOpciones('fcABC',this.value)" onkeydown="teclasFC(event,'fcABC')">
+            <div class="filtro-custom-opcion" data-val="" onclick="seleccionarFC('fcABC','','Todas las clases ABC',event)"><input type="checkbox" checked> Todas las clases ABC</div>
+            <div class="filtro-custom-opcion" data-val="A" onclick="seleccionarFC('fcABC','A','🔴 Clase A',event)"><input type="checkbox"> 🔴 Clase A (alta facturación)</div>
+            <div class="filtro-custom-opcion" data-val="B" onclick="seleccionarFC('fcABC','B','🟠 Clase B',event)"><input type="checkbox"> 🟠 Clase B</div>
+            <div class="filtro-custom-opcion" data-val="C" onclick="seleccionarFC('fcABC','C','⚪ Clase C',event)"><input type="checkbox"> ⚪ Clase C (baja rotación)</div>
+          </div>
+        </div>
         <button type="button" class="btn btn-gris" onclick="recargarDatos()">Actualizar</button>
       </div>
-      <div class="filtros" style="margin-top:-4px">
-        <select id="filtroTipo" onchange="renderizarTabla()">
-          <option value="">Todos los tipos</option>
-          <option value="Producto Terminado">📦 Productos Terminados</option>
-          <option value="Insumo">🧱 Insumos</option>
-        </select>
-        <select id="filtroABC" onchange="renderizarTabla()" title="Clasificación por importancia en la facturación (últimos 12 meses)">
-          <option value="">Todas las clases ABC</option>
-          <option value="A">🔴 Clase A (80% de la facturación)</option>
-          <option value="B">🟠 Clase B</option>
-          <option value="C">⚪ Clase C</option>
-        </select>
+      <div class="filtros" style="margin-top:-4px;align-items:center">
+        <span style="font-size:12px;font-weight:600;color:var(--gris-texto);white-space:nowrap">Tipo:</span>
+        <div class="tipo-checks" id="tipoChecks">
+          <label class="tipo-check-btn activo" id="checkTodosLbl">
+            <input type="checkbox" id="checkTodos" checked onchange="toggleTipo('todos')"> Todos
+          </label>
+          <label class="tipo-check-btn" id="checkProductoLbl">
+            <input type="checkbox" id="checkProducto" onchange="toggleTipo('producto')"> 📦 Producto Terminado
+          </label>
+          <label class="tipo-check-btn" id="checkInsumoLbl">
+            <input type="checkbox" id="checkInsumo" onchange="toggleTipo('insumo')"> 🧱 Insumo
+          </label>
+        </div>
+        <div class="filtro-custom" id="fcProv" style="flex:1;min-width:140px">
+          <div class="filtro-custom-input" tabindex="0" onclick="toggleFiltroCustom('fcProv')" onkeydown="teclasFC(event,'fcProv')">
+            <span id="fcProvLabel">Todos los proveedores</span> ▾
+          </div>
+          <div class="filtro-custom-lista" id="fcProvLista">
+            <input class="filtro-custom-buscar" type="text" placeholder="Buscar proveedor..." oninput="filtrarOpciones('fcProv',this.value)" onkeydown="teclasFC(event,'fcProv')">
+            <div class="filtro-custom-opcion" data-val="" onclick="seleccionarFC('fcProv','','Todos los proveedores',event)"><input type="checkbox" checked> Todos los proveedores</div>
+          </div>
+        </div>
       </div>
       <div style="overflow-x:auto">
         <table>
@@ -691,9 +742,197 @@ async function fetchInv(url, opciones) {
 let DATOS_INV = [];
 let articuloMovSeleccionado = null;
 let tipoMovActual = "entrada";
-let ordenActual = { col: "descripcion", asc: true };
+let ordenActual = { col: "", asc: true }; // "" = orden por impacto por defecto
+let FILTROS_ACTIVOS = { estado: [], abc: [], proveedor: [], tipo: "todos" };
 let usuarioActual = "";
 let articuloMinimoActual = null;
+
+// ================================================================
+// SISTEMA DE FILTROS CUSTOM (búsqueda + flechas + multiselección)
+// ================================================================
+function toggleFiltroCustom(id) {
+  const lista = document.getElementById(id + "Lista");
+  const todas = document.querySelectorAll(".filtro-custom-lista");
+  todas.forEach(l => { if (l !== lista) l.classList.remove("abierta"); });
+  lista.classList.toggle("abierta");
+  if (lista.classList.contains("abierta")) {
+    const buscar = lista.querySelector(".filtro-custom-buscar");
+    if (buscar) setTimeout(() => buscar.focus(), 50);
+  }
+}
+function filtrarOpciones(id, q) {
+  const lista = document.getElementById(id + "Lista");
+  const q2 = q.toLowerCase();
+  lista.querySelectorAll(".filtro-custom-opcion").forEach(op => {
+    op.style.display = (!q2 || op.textContent.toLowerCase().includes(q2)) ? "" : "none";
+  });
+}
+function seleccionarFC(id, valor, label, event) {
+  const ctrlKey = event && (event.ctrlKey || event.metaKey);
+  // Determinar a qué filtro pertenece
+  const filtroKey = id === "fcEstado" ? "estado" : id === "fcABC" ? "abc" : "proveedor";
+  const opts = document.querySelectorAll("#" + id + "Lista .filtro-custom-opcion");
+
+  if (!ctrlKey || valor === "") {
+    // Sin ctrl: selección única, deselecciona todo y marca este
+    FILTROS_ACTIVOS[filtroKey] = valor ? [valor] : [];
+    opts.forEach(op => {
+      const v = op.dataset.val;
+      const cb = op.querySelector("input");
+      const sel = (valor === "" && v === "") || (valor !== "" && v === valor);
+      op.classList.toggle("seleccionada", sel);
+      if (cb) cb.checked = (v === "" && valor === "") || (v === valor);
+    });
+    // "Todos" siempre se marca sola cuando no hay selección
+    if (valor === "") {
+      const todosOp = document.querySelector("#" + id + "Lista .filtro-custom-opcion[data-val='']");
+      if (todosOp) { todosOp.classList.add("seleccionada"); const cb = todosOp.querySelector("input"); if(cb) cb.checked = true; }
+    }
+  } else {
+    // Con ctrl: multiselección
+    const activos = FILTROS_ACTIVOS[filtroKey];
+    const idx = activos.indexOf(valor);
+    if (idx >= 0) activos.splice(idx, 1); else activos.push(valor);
+    FILTROS_ACTIVOS[filtroKey] = activos;
+    opts.forEach(op => {
+      const v = op.dataset.val;
+      const cb = op.querySelector("input");
+      const sel = v !== "" && activos.includes(v);
+      op.classList.toggle("seleccionada", sel);
+      if (cb) cb.checked = (v === "" && activos.length === 0) || sel;
+    });
+    // Si nada seleccionado, marcar "Todos"
+    if (activos.length === 0) {
+      const todosOp = document.querySelector("#" + id + "Lista .filtro-custom-opcion[data-val='']");
+      if (todosOp) { todosOp.classList.add("seleccionada"); const cb = todosOp.querySelector("input"); if(cb) cb.checked = true; }
+    }
+  }
+  // Actualizar label del botón
+  const labelEl = document.getElementById(id + "Label");
+  const activos2 = FILTROS_ACTIVOS[filtroKey];
+  if (labelEl) {
+    if (activos2.length === 0) {
+      labelEl.textContent = id === "fcEstado" ? "Todos los status" : id === "fcABC" ? "Todas las clases ABC" : "Todos los proveedores";
+    } else {
+      const nombres = Array.from(document.querySelectorAll("#" + id + "Lista .filtro-custom-opcion.seleccionada")).map(o => o.textContent.trim()).join(", ");
+      labelEl.textContent = nombres.length > 28 ? nombres.slice(0,25) + "..." : nombres;
+    }
+  }
+  renderizarTabla();
+}
+function teclasFC(event, id) {
+  const lista = document.getElementById(id + "Lista");
+  const abierta = lista.classList.contains("abierta");
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    if (!abierta) { toggleFiltroCustom(id); return; }
+    const ops = Array.from(lista.querySelectorAll(".filtro-custom-opcion:not([style*='none'])"));
+    const idx = ops.findIndex(o => o.classList.contains("focus"));
+    ops.forEach(o => o.classList.remove("focus"));
+    const next = ops[Math.min((idx < 0 ? -1 : idx) + 1, ops.length - 1)];
+    if (next) { next.classList.add("focus"); next.scrollIntoView({ block: "nearest" }); }
+  } else if (event.key === "ArrowUp") {
+    event.preventDefault();
+    const ops = Array.from(lista.querySelectorAll(".filtro-custom-opcion:not([style*='none'])"));
+    const idx = ops.findIndex(o => o.classList.contains("focus"));
+    ops.forEach(o => o.classList.remove("focus"));
+    const prev = ops[Math.max((idx < 0 ? 1 : idx) - 1, 0)];
+    if (prev) { prev.classList.add("focus"); prev.scrollIntoView({ block: "nearest" }); }
+  } else if (event.key === "Enter") {
+    event.preventDefault();
+    const focused = lista.querySelector(".filtro-custom-opcion.focus");
+    if (focused) focused.click();
+    else if (!abierta) toggleFiltroCustom(id);
+  } else if (event.key === "Escape") {
+    lista.classList.remove("abierta");
+  }
+}
+// Cerrar al hacer click afuera
+document.addEventListener("click", e => {
+  if (!e.target.closest(".filtro-custom")) {
+    document.querySelectorAll(".filtro-custom-lista").forEach(l => l.classList.remove("abierta"));
+  }
+});
+
+// Checkboxes de tipo
+function toggleTipo(tipo) {
+  FILTROS_ACTIVOS.tipo = tipo;
+  ["todos","producto","insumo"].forEach(t => {
+    const lbl = document.getElementById("check" + t.charAt(0).toUpperCase() + t.slice(1) + "Lbl");
+    const cb = document.getElementById("check" + t.charAt(0).toUpperCase() + t.slice(1));
+    if (lbl) lbl.classList.toggle("activo", t === tipo);
+    if (cb) cb.checked = (t === tipo);
+  });
+  renderizarTabla();
+}
+
+// Poblar opciones de Proveedor cuando cargan los datos
+function poblarFiltroProveedores() {
+  const lista = document.getElementById("fcProvLista");
+  if (!lista) return;
+  const provs = [...new Set(DATOS_INV.map(it => it.proveedor || "").filter(Boolean))].sort();
+  // Mantener solo la opción "Todos"
+  const todos = lista.querySelector(".filtro-custom-opcion[data-val='']");
+  lista.innerHTML = "";
+  const buscar = document.createElement("input");
+  buscar.className = "filtro-custom-buscar";
+  buscar.type = "text";
+  buscar.placeholder = "Buscar proveedor...";
+  buscar.oninput = function() { filtrarOpciones("fcProv", this.value); };
+  buscar.onkeydown = function(e) { teclasFC(e, "fcProv"); };
+  lista.appendChild(buscar);
+  lista.insertAdjacentHTML("beforeend", "<div class='filtro-custom-opcion seleccionada' data-val='' onclick='seleccionarFC(\"fcProv\",\"\",\"Todos los proveedores\",event)'><input type='checkbox' checked> Todos los proveedores</div>");
+  provs.forEach(p => {
+    lista.insertAdjacentHTML("beforeend", "<div class='filtro-custom-opcion' data-val='" + p.replace(/'/g,"&#39;") + "' onclick='seleccionarFC(\"fcProv\",\"" + p.replace(/"/g,"&quot;") + "\",\"" + p.replace(/"/g,"&quot;") + "\",event)'><input type='checkbox'> " + p + "</div>");
+  });
+}
+
+// ================================================================
+// LOTES INLINE (expandible con + / -)
+// ================================================================
+async function toggleLotesInline(filId, idxReal, btn) {
+  const fila = document.getElementById(filId);
+  if (!fila) return;
+  const abierta = fila.classList.contains("abierta");
+  if (abierta) {
+    fila.classList.remove("abierta");
+    btn.textContent = "+";
+    return;
+  }
+  // Abrir y cargar si no hay datos aún
+  fila.classList.add("abierta");
+  btn.textContent = "−";
+  const it = DATOS_INV[idxReal];
+  if (!it) return;
+  const celda = fila.querySelector("td > div");
+  if (!celda) return;
+  if (celda.dataset.cargado === "1") return; // ya cargado
+  celda.dataset.cargado = "1";
+  try {
+    const resp = await fetchInv(WEB_APP_URL + "?action=partidasArticulo&codigoConcatenado=" + encodeURIComponent(it.codigoConcatenado));
+    const data = await resp.json();
+    const items = data.items || [];
+    if (items.length === 0) {
+      celda.innerHTML = "<span style='color:var(--gris-texto);font-size:12px'>Sin partidas registradas para este artículo.</span>";
+      return;
+    }
+    celda.innerHTML = "<table style='width:100%;font-size:12px;border-collapse:collapse'>"
+      + "<thead><tr style='background:var(--azul-claro)'><th style='padding:4px 8px;text-align:left'>Partida</th><th style='padding:4px 8px;text-align:right'>Comprado</th><th style='padding:4px 8px;text-align:right'>Remanente</th><th style='padding:4px 8px'>Primera compra</th><th style='padding:4px 8px;text-align:right'>Antigüedad</th></tr></thead><tbody>"
+      + items.map((p, i) => {
+          const esFirst = p.unidadesRemanentes > 0 && items.slice(0, i).every(x => x.unidadesRemanentes === 0);
+          const bg = esFirst ? "background:#e8f4ea;font-weight:700" : (i%2===0 ? "" : "background:#f7f9fb");
+          return "<tr style='" + bg + "'><td style='padding:4px 8px'>" + p.partida + (esFirst ? " <span style='background:var(--verde);color:#fff;font-size:10px;padding:1px 5px;border-radius:6px'>SALE PRIMERO</span>" : "") + "</td>"
+            + "<td style='padding:4px 8px;text-align:right'>" + p.unidadesCompradas.toLocaleString("es-AR") + "</td>"
+            + "<td style='padding:4px 8px;text-align:right;color:" + (p.unidadesRemanentes > 0 ? "var(--verde)" : "var(--gris-texto)") + ";font-weight:700'>" + p.unidadesRemanentes.toLocaleString("es-AR") + "</td>"
+            + "<td style='padding:4px 8px'>" + (p.fechaPrimeraCompra || "-") + "</td>"
+            + "<td style='padding:4px 8px;text-align:right;color:var(--gris-texto)'>" + (p.diasAntiguedad > 0 ? p.diasAntiguedad + "d" : "-") + "</td></tr>";
+        }).join("")
+      + "</tbody></table>";
+  } catch(e) {
+    celda.innerHTML = "<span style='color:var(--rojo);font-size:12px'>Error al cargar los lotes.</span>";
+  }
+}
+
 
 // --- Login ---
 document.getElementById("loginUsuario").addEventListener("change", function() {
@@ -757,6 +996,7 @@ async function cargarDatosInv() {
     const data = await resp.json();
     DATOS_INV = data.items || [];
     renderizarDashboard();
+    poblarFiltroProveedores();
     renderizarTabla();
     renderizarAlertas();
     poblarSelectArticulosMov();
@@ -834,27 +1074,59 @@ function valorOrden(it, col) {
 }
 function renderizarTabla() {
   const q = (document.getElementById("buscarStock").value || "").trim().toLowerCase();
-  const fe = document.getElementById("filtroEstado").value;
-  const ft = document.getElementById("filtroTipo").value;
-  const fabc = document.getElementById("filtroABC").value;
+  // Nuevos filtros custom (multiselección)
+  const filtrosEstado = FILTROS_ACTIVOS.estado;
+  const filtrosABC = FILTROS_ACTIVOS.abc;
+  const filtrosProv = FILTROS_ACTIVOS.proveedor;
+  const tipoSeleccionado = FILTROS_ACTIVOS.tipo; // "todos","producto","insumo"
+
   let filas = DATOS_INV.filter(it => {
-    if (q && !((it.descripcion + " " + it.codItem + " " + it.codigoConcatenado).toLowerCase().includes(q))) return false;
-    if (ft && it.tipo !== ft) return false;
-    if (fabc && it.clasificacionABC !== fabc) return false;
-    const est = estadoArticulo(it);
-    if (fe === "ok" && est !== "ok") return false;
-    if (fe === "bajo" && est !== "bajo") return false;
-    if (fe === "critico" && est !== "critico") return false;
-    if (fe === "comprometido" && it.stockComprometido === 0) return false;
-    if (fe === "v2" && it.stockComprometidoV2 === 0) return false;
+    if (q && !((it.descripcion + " " + it.codItem + " " + it.codigoConcatenado + " " + (it.proveedor||"")).toLowerCase().includes(q))) return false;
+    if (tipoSeleccionado === "producto" && it.tipo !== "Producto Terminado") return false;
+    if (tipoSeleccionado === "insumo" && it.tipo !== "Insumo") return false;
+    if (filtrosABC.length > 0 && !filtrosABC.includes(it.clasificacionABC)) return false;
+    if (filtrosProv.length > 0 && !filtrosProv.includes(it.proveedor || "")) return false;
+    if (filtrosEstado.length > 0) {
+      const est = estadoArticulo(it);
+      const pasa = filtrosEstado.some(fe => {
+        if (fe === "ok") return est === "ok";
+        if (fe === "bajo") return est === "bajo";
+        if (fe === "critico") return est === "critico";
+        if (fe === "comprometido") return it.stockComprometido > 0;
+        if (fe === "v2") return it.stockComprometidoV2 > 0;
+        return true;
+      });
+      if (!pasa) return false;
+    }
     return true;
   });
+
+  // Ordenamiento: si no hay columna seleccionada, usar orden por impacto:
+  // crítico A > crítico B > crítico C > bajo A > bajo B > bajo C > ok C > ok B > ok A
   const col = ordenActual.col;
-  filas.sort((a, b) => {
-    const va = valorOrden(a, col), vb = valorOrden(b, col);
-    if (typeof va === "string") return ordenActual.asc ? va.localeCompare(vb) : vb.localeCompare(va);
-    return ordenActual.asc ? va - vb : vb - va;
-  });
+  if (col === "impacto" || col === "") {
+    const pesoCritico = { A: 0, B: 1, C: 2 };
+    const pesoBajo = { A: 3, B: 4, C: 5 };
+    const pesoOk = { A: 9, B: 8, C: 7 };
+    filas.sort((a, b) => {
+      const est_a = estadoArticulo(a), est_b = estadoArticulo(b);
+      const abc_a = a.clasificacionABC || "C", abc_b = b.clasificacionABC || "C";
+      const p = (it, est) => {
+        const abc = it.clasificacionABC || "C";
+        if (est === "critico") return pesoCritico[abc] ?? 2;
+        if (est === "bajo") return pesoBajo[abc] ?? 5;
+        return pesoOk[abc] ?? 7;
+      };
+      return p(a, est_a) - p(b, est_b);
+    });
+  } else {
+    filas.sort((a, b) => {
+      const va = valorOrden(a, col), vb = valorOrden(b, col);
+      if (typeof va === "string") return ordenActual.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+      return ordenActual.asc ? va - vb : vb - va;
+    });
+  }
+
   const tbody = document.getElementById("cuerpoTabla");
   if (!filas.length) { tbody.innerHTML = "<tr><td colspan='11' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
   tbody.innerHTML = filas.map((it, idx) => {
@@ -880,6 +1152,7 @@ function renderizarTabla() {
     const claseBadge = it.clasificacionABCXYZ
       ? "<span style='background:" + colorABC + ";color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px' title='ABC: importancia por facturación (A=más alto). XYZ: variabilidad de demanda (X=estable, Z=errática)'>" + it.clasificacionABCXYZ + "</span>"
       : "<span style='color:#ccc;font-size:11px'>-</span>";
+    const filId = "lotes-" + idxReal;
     return "<tr" + filaEstilo + "><td><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small>" + v2Badge + "</td>"
       + "<td>" + tipoTag + "</td>"
       + "<td>" + claseBadge + "</td>"
@@ -890,9 +1163,10 @@ function renderizarTabla() {
       + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.diasDeStock > 0 ? Math.round(it.diasDeStock * 10) / 10 + "d" : "-") + "</td>"
       + "<td style='text-align:center;font-size:12px'>" + frecTexto + "</td>"
       + "<td>" + badge + "</td>"
-      + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 8px' onclick='abrirModalMinimo(" + idxReal + ")'>Min.</button>"
+      + "<td style='white-space:nowrap'><button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 8px' onclick='abrirModalMinimo(" + idxReal + ")'>Min.</button>"
       + " <button type='button' class='btn btn-azul' style='font-size:11px;padding:4px 6px' title='Registrar movimiento' onclick='abrirMovRapido(" + idxReal + ")'>+Mov</button>"
-      + " <button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 6px' title='Ver lotes/partidas (FIFO)' onclick='abrirModalPartidas(" + idxReal + ")'>📦 Lotes</button></td></tr>";
+      + " <button type='button' class='fila-lote-toggle' title='Ver / ocultar lotes' onclick='toggleLotesInline(\"" + filId + "\"," + idxReal + ",this)'>+</button></td></tr>"
+      + "<tr class='fila-lotes' id='" + filId + "'><td colspan='11' style='padding:0'><div style='padding:8px 16px'><span style='color:var(--gris-texto);font-size:12px'>Cargando lotes...</span></div></td></tr>";
   }).join("");
   document.getElementById("pieDatos").textContent = filas.length + " articulo(s) mostrados.";
 }
