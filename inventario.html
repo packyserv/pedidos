@@ -50,29 +50,30 @@
   #bannerInv.fallo{display:block;background:#f8d7da;color:#721c24;}
   #bannerInv.cargando{display:block;background:#d1ecf1;color:#0c5460;}
   .comprometido{color:var(--naranja);font-size:12px;font-weight:600;}
-  /* --- Filtros custom con búsqueda, flechas y multiselección --- */
-  .filtro-custom{position:relative;min-width:140px;flex:1;}
-  .filtro-custom-input{width:100%;padding:9px 30px 9px 12px;border:1px solid var(--gris-borde);border-radius:6px;font-size:14px;background:var(--superficie);cursor:pointer;user-select:none;}
-  .filtro-custom-input::after{content:"▾";position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--gris-texto);}
-  .filtro-custom-lista{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--gris-borde);border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.12);z-index:120;display:none;max-height:260px;overflow-y:auto;}
+  /* --- Filtros custom con búsqueda, flechas y multiselección SIN checkboxes --- */
+  .filtro-custom{position:relative;min-width:120px;flex:1;}
+  .filtro-custom-trigger{width:100%;padding:6px 24px 6px 10px;border:1px solid var(--gris-borde);border-radius:6px;font-size:13px;background:var(--superficie);cursor:pointer;user-select:none;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;display:block;}
+  .filtro-custom-trigger::after{content:"▾";position:absolute;right:7px;top:50%;transform:translateY(-50%);color:var(--gris-texto);font-size:11px;pointer-events:none;}
+  .filtro-custom-trigger.tiene-filtro{border-color:var(--azul);background:var(--azul-claro);color:var(--azul);font-weight:600;}
+  .filtro-custom-lista{position:absolute;top:calc(100% + 3px);left:0;min-width:180px;background:#fff;border:1px solid var(--gris-borde);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:130;display:none;max-height:280px;overflow-y:auto;}
   .filtro-custom-lista.abierta{display:block;}
-  .filtro-custom-buscar{width:calc(100% - 16px);margin:8px;padding:7px 10px;border:1px solid var(--gris-borde);border-radius:5px;font-size:13px;}
-  .filtro-custom-opcion{padding:8px 12px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;}
+  .filtro-custom-buscar{display:block;width:calc(100% - 16px);margin:8px 8px 4px;padding:6px 10px;border:1px solid var(--gris-borde);border-radius:5px;font-size:13px;}
+  .filtro-custom-opcion{padding:8px 14px;font-size:13px;cursor:pointer;white-space:nowrap;border-radius:4px;}
   .filtro-custom-opcion:hover,.filtro-custom-opcion.focus{background:var(--azul-claro);}
-  .filtro-custom-opcion.seleccionada{font-weight:700;color:var(--azul);}
-  .filtro-custom-opcion input[type=checkbox]{accent-color:var(--azul);width:15px;height:15px;flex-shrink:0;}
-  /* --- Checkboxes de tipo --- */
-  .tipo-checks{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-  .tipo-check-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:2px solid var(--gris-borde);cursor:pointer;font-size:13px;font-weight:600;background:none;user-select:none;}
-  .tipo-check-btn.activo{border-color:var(--azul);background:var(--azul-claro);color:var(--azul);}
-  .tipo-check-btn input{accent-color:var(--azul);}
+  .filtro-custom-opcion.seleccionada{background:var(--azul);color:#fff;font-weight:700;}
+  .filtro-custom-opcion.seleccionada:hover,.filtro-custom-opcion.seleccionada.focus{background:#1560a0;}
+  /* --- Tipo: pills compactos --- */
+  .tipo-checks{display:flex;gap:5px;align-items:center;flex-wrap:nowrap;}
+  .tipo-check-btn{padding:5px 11px;border-radius:20px;border:1.5px solid var(--gris-borde);cursor:pointer;font-size:12px;font-weight:600;background:none;user-select:none;white-space:nowrap;}
+  .tipo-check-btn.activo{border-color:var(--azul);background:var(--azul);color:#fff;}
+  .tipo-check-btn input{display:none;}
   /* --- Filas expandibles de lotes --- */
-  .fila-lote-toggle{cursor:pointer;font-size:14px;font-weight:700;color:var(--azul);background:none;border:none;padding:2px 6px;border-radius:4px;}
+  .fila-lote-toggle{cursor:pointer;font-size:15px;font-weight:700;color:var(--azul);background:none;border:none;padding:1px 5px;border-radius:4px;line-height:1;}
   .fila-lote-toggle:hover{background:var(--azul-claro);}
   .fila-lotes{display:none;background:#f7fafd;}
   .fila-lotes.abierta{display:table-row;}
   /* --- Dashboard adaptativo --- */
-  .stat-box .num{font-size:clamp(14px,2.2vw,28px);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .stat-box .num{font-size:clamp(13px,2vw,26px);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   /* --- Icono de ayuda contextual ("i") --- */
   .info-btn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.08);color:var(--gris-texto);font-size:12px;font-weight:700;font-style:italic;font-family:Georgia,serif;cursor:pointer;border:none;flex-shrink:0;user-select:none;}
   .info-btn:hover{background:var(--azul);color:#fff;}
@@ -155,57 +156,45 @@
         <h2 style="margin:0;padding:0;border:none">Stock actual</h2>
         <button class="info-btn" onclick="mostrarInfo(event, 'Stock TEÓRICO: lo que dice el sistema (ERP). COMPROMETIDO: ya vendido en pedidos, pendiente de facturar. DISPONIBLE: teórico menos comprometido — lo que realmente podés vender.\n\nLa columna CLASE muestra la importancia del artículo: A = concentra la mayor parte de la facturación (más control), C = bajo impacto. La segunda letra (X/Y/Z) indica qué tan estable es su demanda.')">i</button>
       </div>
-      <div class="filtros">
-        <input type="text" id="buscarStock" placeholder="Buscar por código, descripción o proveedor..." oninput="renderizarTabla()" style="flex:2;min-width:200px">
+      <div class="filtros" style="margin-bottom:6px">
+        <input type="text" id="buscarStock" placeholder="Buscar por código, descripción o proveedor..." oninput="renderizarTabla()" style="flex:2;min-width:180px;padding:6px 10px;font-size:13px">
         <div class="filtro-custom" id="fcEstado">
-          <div class="filtro-custom-input" tabindex="0" onclick="toggleFiltroCustom('fcEstado')" onkeydown="teclasFC(event,'fcEstado')">
-            <span id="fcEstadoLabel">Todos los status</span> ▾
-          </div>
+          <button class="filtro-custom-trigger" type="button" id="fcEstadoTrig" onclick="toggleFiltroCustom('fcEstado')" onkeydown="teclasFC(event,'fcEstado')">Todos los status</button>
           <div class="filtro-custom-lista" id="fcEstadoLista">
             <input class="filtro-custom-buscar" type="text" placeholder="Buscar..." oninput="filtrarOpciones('fcEstado',this.value)" onkeydown="teclasFC(event,'fcEstado')">
-            <div class="filtro-custom-opcion" data-val="" onclick="seleccionarFC('fcEstado','','Todos los status',event)"><input type="checkbox" checked> Todos los status</div>
-            <div class="filtro-custom-opcion" data-val="ok" onclick="seleccionarFC('fcEstado','ok','Stock OK',event)"><input type="checkbox"> Stock OK</div>
-            <div class="filtro-custom-opcion" data-val="bajo" onclick="seleccionarFC('fcEstado','bajo','Stock bajo',event)"><input type="checkbox"> Stock bajo</div>
-            <div class="filtro-custom-opcion" data-val="critico" onclick="seleccionarFC('fcEstado','critico','Sin stock / crítico',event)"><input type="checkbox"> Sin stock / crítico</div>
-            <div class="filtro-custom-opcion" data-val="comprometido" onclick="seleccionarFC('fcEstado','comprometido','Comprometido',event)"><input type="checkbox"> Comprometido</div>
-            <div class="filtro-custom-opcion" data-val="v2" onclick="seleccionarFC('fcEstado','v2','⚠ V2 pendiente',event)"><input type="checkbox"> ⚠ V2 pendiente</div>
+            <div class="filtro-custom-opcion seleccionada" data-val="" onclick="seleccionarFC('fcEstado','','Todos los status',event)">Todos los status</div>
+            <div class="filtro-custom-opcion" data-val="ok" onclick="seleccionarFC('fcEstado','ok','Stock OK',event)">Stock OK</div>
+            <div class="filtro-custom-opcion" data-val="bajo" onclick="seleccionarFC('fcEstado','bajo','Stock bajo',event)">Stock bajo</div>
+            <div class="filtro-custom-opcion" data-val="critico" onclick="seleccionarFC('fcEstado','critico','Sin stock / crítico',event)">Sin stock / crítico</div>
+            <div class="filtro-custom-opcion" data-val="comprometido" onclick="seleccionarFC('fcEstado','comprometido','Comprometido',event)">Comprometido</div>
+            <div class="filtro-custom-opcion" data-val="v2" onclick="seleccionarFC('fcEstado','v2','⚠ V2 pendiente',event)">⚠ V2 pendiente</div>
           </div>
         </div>
         <div class="filtro-custom" id="fcABC">
-          <div class="filtro-custom-input" tabindex="0" onclick="toggleFiltroCustom('fcABC')" onkeydown="teclasFC(event,'fcABC')">
-            <span id="fcABCLabel">Todas las clases ABC</span> ▾
-          </div>
+          <button class="filtro-custom-trigger" type="button" id="fcABCTrig" onclick="toggleFiltroCustom('fcABC')" onkeydown="teclasFC(event,'fcABC')">Clase ABC</button>
           <div class="filtro-custom-lista" id="fcABCLista">
             <input class="filtro-custom-buscar" type="text" placeholder="Buscar..." oninput="filtrarOpciones('fcABC',this.value)" onkeydown="teclasFC(event,'fcABC')">
-            <div class="filtro-custom-opcion" data-val="" onclick="seleccionarFC('fcABC','','Todas las clases ABC',event)"><input type="checkbox" checked> Todas las clases ABC</div>
-            <div class="filtro-custom-opcion" data-val="A" onclick="seleccionarFC('fcABC','A','🔴 Clase A',event)"><input type="checkbox"> 🔴 Clase A (alta facturación)</div>
-            <div class="filtro-custom-opcion" data-val="B" onclick="seleccionarFC('fcABC','B','🟠 Clase B',event)"><input type="checkbox"> 🟠 Clase B</div>
-            <div class="filtro-custom-opcion" data-val="C" onclick="seleccionarFC('fcABC','C','⚪ Clase C',event)"><input type="checkbox"> ⚪ Clase C (baja rotación)</div>
+            <div class="filtro-custom-opcion seleccionada" data-val="" onclick="seleccionarFC('fcABC','','Clase ABC',event)">Todas las clases</div>
+            <div class="filtro-custom-opcion" data-val="A" onclick="seleccionarFC('fcABC','A','🔴 Clase A',event)">🔴 Clase A (alta facturación)</div>
+            <div class="filtro-custom-opcion" data-val="B" onclick="seleccionarFC('fcABC','B','🟠 Clase B',event)">🟠 Clase B</div>
+            <div class="filtro-custom-opcion" data-val="C" onclick="seleccionarFC('fcABC','C','⚪ Clase C',event)">⚪ Clase C (baja rotación)</div>
           </div>
         </div>
-        <button type="button" class="btn btn-gris" onclick="recargarDatos()">Actualizar</button>
-      </div>
-      <div class="filtros" style="margin-top:-4px;align-items:center">
-        <span style="font-size:12px;font-weight:600;color:var(--gris-texto);white-space:nowrap">Tipo:</span>
-        <div class="tipo-checks" id="tipoChecks">
-          <label class="tipo-check-btn activo" id="checkTodosLbl">
-            <input type="checkbox" id="checkTodos" checked onchange="toggleTipo('todos')"> Todos
-          </label>
-          <label class="tipo-check-btn" id="checkProductoLbl">
-            <input type="checkbox" id="checkProducto" onchange="toggleTipo('producto')"> 📦 Producto Terminado
-          </label>
-          <label class="tipo-check-btn" id="checkInsumoLbl">
-            <input type="checkbox" id="checkInsumo" onchange="toggleTipo('insumo')"> 🧱 Insumo
-          </label>
-        </div>
-        <div class="filtro-custom" id="fcProv" style="flex:1;min-width:140px">
-          <div class="filtro-custom-input" tabindex="0" onclick="toggleFiltroCustom('fcProv')" onkeydown="teclasFC(event,'fcProv')">
-            <span id="fcProvLabel">Todos los proveedores</span> ▾
-          </div>
+        <div class="filtro-custom" id="fcProv">
+          <button class="filtro-custom-trigger" type="button" id="fcProvTrig" onclick="toggleFiltroCustom('fcProv')" onkeydown="teclasFC(event,'fcProv')">Proveedor</button>
           <div class="filtro-custom-lista" id="fcProvLista">
             <input class="filtro-custom-buscar" type="text" placeholder="Buscar proveedor..." oninput="filtrarOpciones('fcProv',this.value)" onkeydown="teclasFC(event,'fcProv')">
-            <div class="filtro-custom-opcion" data-val="" onclick="seleccionarFC('fcProv','','Todos los proveedores',event)"><input type="checkbox" checked> Todos los proveedores</div>
+            <div class="filtro-custom-opcion seleccionada" data-val="" onclick="seleccionarFC('fcProv','','Proveedor',event)">Todos los proveedores</div>
           </div>
+        </div>
+        <button type="button" class="btn btn-gris" style="padding:6px 12px;font-size:13px;white-space:nowrap" onclick="recargarDatos()">↺ Actualizar</button>
+      </div>
+      <div class="filtros" style="margin-bottom:10px;align-items:center">
+        <span style="font-size:12px;font-weight:600;color:var(--gris-texto);white-space:nowrap">Tipo:</span>
+        <div class="tipo-checks">
+          <button type="button" class="tipo-check-btn activo" id="checkTodosLbl" onclick="toggleTipo('todos')"><input id="checkTodos"> Todos</button>
+          <button type="button" class="tipo-check-btn" id="checkProductoLbl" onclick="toggleTipo('producto')"><input id="checkProducto"> 📦 Prod. Terminado</button>
+          <button type="button" class="tipo-check-btn" id="checkInsumoLbl" onclick="toggleTipo('insumo')"><input id="checkInsumo"> 🧱 Insumo</button>
         </div>
       </div>
       <div style="overflow-x:auto">
@@ -769,53 +758,51 @@ function filtrarOpciones(id, q) {
 }
 function seleccionarFC(id, valor, label, event) {
   const ctrlKey = event && (event.ctrlKey || event.metaKey);
-  // Determinar a qué filtro pertenece
   const filtroKey = id === "fcEstado" ? "estado" : id === "fcABC" ? "abc" : "proveedor";
   const opts = document.querySelectorAll("#" + id + "Lista .filtro-custom-opcion");
 
   if (!ctrlKey || valor === "") {
-    // Sin ctrl: selección única, deselecciona todo y marca este
+    // Sin ctrl: selección única
     FILTROS_ACTIVOS[filtroKey] = valor ? [valor] : [];
     opts.forEach(op => {
       const v = op.dataset.val;
-      const cb = op.querySelector("input");
       const sel = (valor === "" && v === "") || (valor !== "" && v === valor);
       op.classList.toggle("seleccionada", sel);
-      if (cb) cb.checked = (v === "" && valor === "") || (v === valor);
     });
-    // "Todos" siempre se marca sola cuando no hay selección
-    if (valor === "") {
-      const todosOp = document.querySelector("#" + id + "Lista .filtro-custom-opcion[data-val='']");
-      if (todosOp) { todosOp.classList.add("seleccionada"); const cb = todosOp.querySelector("input"); if(cb) cb.checked = true; }
-    }
   } else {
-    // Con ctrl: multiselección
+    // Con ctrl: multiselección — se pinta/despinta el elemento clickeado
     const activos = FILTROS_ACTIVOS[filtroKey];
     const idx = activos.indexOf(valor);
     if (idx >= 0) activos.splice(idx, 1); else activos.push(valor);
     FILTROS_ACTIVOS[filtroKey] = activos;
     opts.forEach(op => {
       const v = op.dataset.val;
-      const cb = op.querySelector("input");
-      const sel = v !== "" && activos.includes(v);
-      op.classList.toggle("seleccionada", sel);
-      if (cb) cb.checked = (v === "" && activos.length === 0) || sel;
+      if (v === "") {
+        op.classList.toggle("seleccionada", activos.length === 0);
+      } else {
+        op.classList.toggle("seleccionada", activos.includes(v));
+      }
     });
-    // Si nada seleccionado, marcar "Todos"
     if (activos.length === 0) {
       const todosOp = document.querySelector("#" + id + "Lista .filtro-custom-opcion[data-val='']");
-      if (todosOp) { todosOp.classList.add("seleccionada"); const cb = todosOp.querySelector("input"); if(cb) cb.checked = true; }
+      if (todosOp) todosOp.classList.add("seleccionada");
     }
   }
-  // Actualizar label del botón
-  const labelEl = document.getElementById(id + "Label");
+
+  // Actualizar label del trigger
+  const trig = document.getElementById(id + "Trig");
   const activos2 = FILTROS_ACTIVOS[filtroKey];
-  if (labelEl) {
+  const defaultLabel = id === "fcEstado" ? "Todos los status" : id === "fcABC" ? "Clase ABC" : "Proveedor";
+  if (trig) {
     if (activos2.length === 0) {
-      labelEl.textContent = id === "fcEstado" ? "Todos los status" : id === "fcABC" ? "Todas las clases ABC" : "Todos los proveedores";
+      trig.textContent = defaultLabel;
+      trig.classList.remove("tiene-filtro");
     } else {
-      const nombres = Array.from(document.querySelectorAll("#" + id + "Lista .filtro-custom-opcion.seleccionada")).map(o => o.textContent.trim()).join(", ");
-      labelEl.textContent = nombres.length > 28 ? nombres.slice(0,25) + "..." : nombres;
+      const nombres = Array.from(document.querySelectorAll("#" + id + "Lista .filtro-custom-opcion.seleccionada"))
+        .filter(o => o.dataset.val !== "")
+        .map(o => o.textContent.trim()).join(", ");
+      trig.textContent = nombres.length > 22 ? nombres.slice(0,20) + "…" : nombres;
+      trig.classList.add("tiene-filtro");
     }
   }
   renderizarTabla();
@@ -871,19 +858,22 @@ function poblarFiltroProveedores() {
   const lista = document.getElementById("fcProvLista");
   if (!lista) return;
   const provs = [...new Set(DATOS_INV.map(it => it.proveedor || "").filter(Boolean))].sort();
-  // Mantener solo la opción "Todos"
-  const todos = lista.querySelector(".filtro-custom-opcion[data-val='']");
-  lista.innerHTML = "";
   const buscar = document.createElement("input");
   buscar.className = "filtro-custom-buscar";
   buscar.type = "text";
   buscar.placeholder = "Buscar proveedor...";
   buscar.oninput = function() { filtrarOpciones("fcProv", this.value); };
   buscar.onkeydown = function(e) { teclasFC(e, "fcProv"); };
+  lista.innerHTML = "";
   lista.appendChild(buscar);
-  lista.insertAdjacentHTML("beforeend", "<div class='filtro-custom-opcion seleccionada' data-val='' onclick='seleccionarFC(\"fcProv\",\"\",\"Todos los proveedores\",event)'><input type='checkbox' checked> Todos los proveedores</div>");
+  lista.insertAdjacentHTML("beforeend",
+    "<div class='filtro-custom-opcion seleccionada' data-val='' onclick='seleccionarFC(\"fcProv\",\"\",\"Proveedor\",event)'>Todos los proveedores</div>"
+  );
   provs.forEach(p => {
-    lista.insertAdjacentHTML("beforeend", "<div class='filtro-custom-opcion' data-val='" + p.replace(/'/g,"&#39;") + "' onclick='seleccionarFC(\"fcProv\",\"" + p.replace(/"/g,"&quot;") + "\",\"" + p.replace(/"/g,"&quot;") + "\",event)'><input type='checkbox'> " + p + "</div>");
+    const pEsc = p.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    lista.insertAdjacentHTML("beforeend",
+      "<div class='filtro-custom-opcion' data-val='" + pEsc + "' onclick='seleccionarFC(\"fcProv\",\"" + pEsc + "\",\"" + pEsc + "\",event)'>" + p + "</div>"
+    );
   });
 }
 
@@ -1074,6 +1064,10 @@ function valorOrden(it, col) {
 }
 function renderizarTabla() {
   const q = (document.getElementById("buscarStock").value || "").trim().toLowerCase();
+  // Búsqueda flexible: cada palabra del query debe aparecer en alguna parte
+  // del artículo (descripción, código, proveedor), en cualquier orden.
+  // "cinta 90" → muestra todo lo que tenga "cinta" Y "90" en cualquier campo.
+  const tokens = q.split(/\s+/).filter(Boolean);
   // Nuevos filtros custom (multiselección)
   const filtrosEstado = FILTROS_ACTIVOS.estado;
   const filtrosABC = FILTROS_ACTIVOS.abc;
@@ -1081,7 +1075,8 @@ function renderizarTabla() {
   const tipoSeleccionado = FILTROS_ACTIVOS.tipo; // "todos","producto","insumo"
 
   let filas = DATOS_INV.filter(it => {
-    if (q && !((it.descripcion + " " + it.codItem + " " + it.codigoConcatenado + " " + (it.proveedor||"")).toLowerCase().includes(q))) return false;
+    const texto = (it.descripcion + " " + it.codItem + " " + it.codigoConcatenado + " " + (it.proveedor||"")).toLowerCase();
+    if (tokens.length > 0 && !tokens.every(t => texto.includes(t))) return false;
     if (tipoSeleccionado === "producto" && it.tipo !== "Producto Terminado") return false;
     if (tipoSeleccionado === "insumo" && it.tipo !== "Insumo") return false;
     if (filtrosABC.length > 0 && !filtrosABC.includes(it.clasificacionABC)) return false;
