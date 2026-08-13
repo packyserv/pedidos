@@ -335,6 +335,12 @@
     #areaImpresion .subnota-impresion{font-size:11px; color:#666; margin-bottom:10px;}
     @page{size:A4; margin:12mm;}
   }
+  /* --- Icono de ayuda contextual ("i") --- */
+  .info-btn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.08);color:var(--gris-texto);font-size:12px;font-weight:700;font-style:italic;font-family:Georgia,serif;cursor:pointer;border:none;flex-shrink:0;user-select:none;}
+  .info-btn:hover{background:var(--azul);color:#fff;}
+  .con-info{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .info-popover{position:fixed;z-index:200;max-width:300px;background:#1a2f4a;color:#fff;font-size:12.5px;font-weight:400;line-height:1.5;padding:12px 14px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.3);display:none;white-space:pre-line;}
+  .info-popover.abierto{display:block;}
 </style>
 </head>
 <body>
@@ -383,6 +389,7 @@
 
 <main id="mainContenido" style="display:none">
   <div id="bannerGlobal" class="banner"></div>
+  <div class="info-popover" id="infoPopover"></div>
   <div class="card">
     <h2>Datos del pedido <span class="check-seccion" id="chkDatos" style="display:none; color:#2e7d4f; font-size:14px">✓</span></h2>
     <div class="card-body" id="bodyDatos">
@@ -479,7 +486,7 @@
   <div id="modalRecompra" style="display:none; position:fixed; inset:0; background:rgba(18,41,63,.55); z-index:50; align-items:center; justify-content:center; padding:4px;">
     <div style="background:var(--superficie); border-radius:var(--radio); width:100%; max-width:1200px; max-height:95vh; overflow-y:auto; padding:20px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <h2 style="margin:0; border:none; padding:0;">📊 Clientes para recontactar</h2>
+        <h2 style="margin:0; border:none; padding:0; display:flex; align-items:center; gap:8px">📊 Clientes para recontactar<button type="button" class="info-btn" onclick="mostrarInfo(event, 'Clientes que venían comprando con regularidad y hace tiempo no compran, ordenados por cuánto se perdió de facturar.\n\nTocá \"🔮 Ver compra sugerida\" para ver qué artículos y cantidades sugiere el sistema en base a su historial, o \"Cargar pedido\" para arrancar un pedido nuevo con ese cliente ya seleccionado.')">i</button></h2>
         <button type="button" class="quitar" style="font-size:22px" onclick="cerrarModalRecompra()">✕</button>
       </div>
       <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:flex-end">
@@ -518,7 +525,7 @@
   <div id="modalUltimaCompra" style="display:none; position:fixed; inset:0; background:rgba(18,41,63,.55); z-index:50; align-items:center; justify-content:center; padding:16px;">
     <div style="background:#fff; border-radius:var(--radio); max-width:780px; width:100%; max-height:80vh; overflow-y:auto; padding:20px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <h2 style="margin:0; border:none; padding:0;">Última compra del cliente</h2>
+        <h2 style="margin:0; border:none; padding:0; display:flex; align-items:center; gap:8px">Última compra del cliente<button type="button" class="info-btn" onclick="mostrarInfo(event, 'Muestra el último pedido facturado a este cliente: qué artículos, cantidades y a qué precio (en pesos y en dólares). Sirve como referencia rápida antes de cargar un pedido nuevo, para no tener que preguntarle al cliente qué compró la vez pasada.')">i</button></h2>
         <button type="button" class="quitar" style="font-size:22px" onclick="cerrarModalUltimaCompra()">✕</button>
       </div>
       <div id="contenidoUltimaCompra"></div>
@@ -584,7 +591,7 @@
 
   <!-- ============ CONDICIONES ============ -->
   <div class="card">
-    <h2 onclick="toggleCard('bodyCondiciones')">Condiciones de venta<span class="check-seccion" id="chkCondiciones" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="btn-colapsar" id="btnbodyCondiciones" tabindex="-1">+</button></h2>
+    <h2 onclick="toggleCard('bodyCondiciones')">Condiciones de venta<span class="check-seccion" id="chkCondiciones" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="info-btn" style="margin-left:8px" onclick="mostrarInfo(event, 'Definí acá las reglas generales del pedido antes de cargar artículos:\n\nMONEDA: en qué moneda se carga todo (pesos o dólares). El tipo de cambio se autocompleta con la cotización del BCRA.\n\nFACTURACIÓN Bejerman/V2: por defecto todo el pedido factura 100% por Bejerman (descuenta stock automático). Si activás V2, ese % no descuenta stock solo — depósito lo hace manual.\n\nLISTA DE PRECIOS: elegí con qué precio arrancar cada artículo (máximo/medio/mínimo de los últimos 30 días, el último precio a este cliente, o cargar manual).')">i</button><button type="button" class="btn-colapsar" id="btnbodyCondiciones" tabindex="-1">+</button></h2>
     <div class="card-body colapsado" id="bodyCondiciones">
 
     <div class="fila">
@@ -698,7 +705,7 @@
   </div>
     </div>
   <div class="card">
-    <h2 onclick="toggleCard('bodyAgregar')">Agregar artículos<button type="button" class="btn-colapsar" id="btnbodyAgregar" tabindex="-1">+</button></h2>
+    <h2 onclick="toggleCard('bodyAgregar')">Agregar artículos<button type="button" class="info-btn" style="margin-left:8px" onclick="mostrarInfo(event, 'Buscá el artículo por código o descripción, elegí cuánto y a qué precio. El precio se autocompleta según la Lista de precios elegida en Condiciones de venta, pero podés editarlo antes de agregarlo o directo en la tabla de abajo.\n\nEl sistema muestra el stock disponible del artículo para que sepas si alcanza antes de cargarlo.')">i</button><button type="button" class="btn-colapsar" id="btnbodyAgregar" tabindex="-1">+</button></h2>
     <div class="card-body colapsado" id="bodyAgregar">
 
     <div class="grid-filtros">
@@ -769,7 +776,7 @@
 
   <!-- ============ CARRITO ============ -->
   <div class="card">
-    <h2 onclick="toggleCard('bodyCarrito')">🛒 Artículos cargados<span class="check-seccion" id="chkArticulos" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="btn-colapsar" id="btnbodyCarrito" tabindex="-1">+</button></h2>
+    <h2 onclick="toggleCard('bodyCarrito')">🛒 Artículos cargados<span class="check-seccion" id="chkArticulos" style="display:none; color:#2e7d4f; font-size:14px">✓</span><button type="button" class="info-btn" style="margin-left:8px" onclick="mostrarInfo(event, 'Los artículos que ya agregaste al pedido. Podés editar la cantidad o el precio directo tocando esos campos en la tabla, sin tener que reabrir el artículo.\n\nEl lápiz ✏️ abre el artículo completo para editar (medidas, descuento, observación). El 📅 permite poner una fecha de entrega distinta solo para ese ítem, y el 🧾 una facturación Bejerman/V2 distinta a la general del pedido.')">i</button><button type="button" class="btn-colapsar" id="btnbodyCarrito" tabindex="-1">+</button></h2>
     <div class="card-body colapsado" id="bodyCarrito">
     <div id="carritoContenedor">
       <div class="vacio-carrito">Todavía no agregaste artículos</div>
@@ -962,6 +969,45 @@ const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwjDU1jXdqW7WQxaR8S
 const URL_DATOS = WEB_APP_URL + "?action=datos";
 const URL_COTIZACION = WEB_APP_URL + "?action=cotizacion";
 
+// Helper de fetch con timeout: si el backend no responde en 20s, corta y
+// tira error en vez de dejar la UI colgada esperando para siempre.
+// (En redes moviles/Chrome Android a veces una peticion se cuelga sin fallar.)
+async function fetchVentas(url, opciones) {
+  const controlador = new AbortController();
+  const timeout = setTimeout(() => controlador.abort(), 20000);
+  try {
+    const resp = await fetch(url, Object.assign({ signal: controlador.signal }, opciones || {}));
+    clearTimeout(timeout);
+    return resp;
+  } catch (err) {
+    clearTimeout(timeout);
+    if (err.name === "AbortError") throw new Error("El servidor tardó demasiado en responder.");
+    throw err;
+  }
+}
+
+// --- Ayuda contextual ("i") ---
+// Muestra un globo explicativo cerca del icono tocado. Funciona igual con
+// click (desktop) o tap (mobile) -- no usa hover porque en celular no existe.
+function mostrarInfo(event, texto) {
+  event.stopPropagation();
+  const pop = document.getElementById("infoPopover");
+  const btn = event.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  pop.textContent = texto;
+  pop.classList.add("abierto");
+  let left = rect.right - 300;
+  if (left < 8) left = 8;
+  pop.style.left = left + "px";
+  pop.style.top = (rect.bottom + 8) + "px";
+}
+function cerrarInfo() {
+  document.getElementById("infoPopover").classList.remove("abierto");
+}
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".info-btn") && !e.target.closest("#infoPopover")) cerrarInfo();
+});
+
 /* =========================================================================
    ESTADO GLOBAL
    ========================================================================= */
@@ -973,12 +1019,18 @@ let carrito = [];
 // Indices precalculados (se arman una sola vez cuando llegan los datos, en
 // vez de recorrer los arrays completos cada vez que se busca o filtra).
 let INDICE_STOCK = {};            // CodigoConcatenado -> fila de stock
+let INDICE_ARTICULOS = {};        // CodigoConcatenado -> fila de articulo (evita recorrer ~1000 articulos en cada busqueda)
+let INDICE_CLIENTES = {};         // CodCliente -> fila de cliente
 let CODIGOS_BASE = [];            // lista ordenada de CodItem base unicos
 let itemEnEdicion = null;         // indice del carrito que se esta reeditando (o null)
 
 function construirIndices() {
   INDICE_STOCK = {};
   (DATOS.stock || []).forEach(s => { INDICE_STOCK[s.CodigoConcatenado] = s; });
+  INDICE_ARTICULOS = {};
+  (DATOS.articulos || []).forEach(a => { INDICE_ARTICULOS[a.CodigoConcatenado] = a; });
+  INDICE_CLIENTES = {};
+  (DATOS.clientes || []).forEach(c => { INDICE_CLIENTES[String(c.CodCliente)] = c; });
   CODIGOS_BASE = [...new Set((DATOS.articulos || []).map(a => a.CodItem.trim()))].sort();
 }
 
@@ -1052,7 +1104,7 @@ function restaurarBorrador() {
   }
   // Cliente (se busca el objeto completo en los datos ya cargados)
   if (b.codCliente) {
-    const cli = DATOS.clientes.find(c => String(c.CodCliente) === String(b.codCliente));
+    const cli = INDICE_CLIENTES[String(b.codCliente)];
     if (cli) seleccionarCliente(cli);
   }
   // Observaciones
@@ -1406,7 +1458,7 @@ async function cargarRangoPrecios() {
   const nota = document.getElementById('notaListaPrecios');
   if (nota) nota.textContent = '⏳ Cargando rangos de precios del último mes...';
   try {
-    const resp = await fetch(WEB_APP_URL + '?action=rangoPrecios');
+    const resp = await fetchVentas(WEB_APP_URL + '?action=rangoPrecios');
     if (!resp.ok) throw new Error('Error del servidor');
     const data = await resp.json();
     DATOS.rangoPrecios = data.rangos || {};
@@ -1494,7 +1546,7 @@ function cambiarListaPrecios(lista) {
 async function cargarCotizacion() {
   const notaCot = document.getElementById('notaCotizacion');
   try {
-    const resp = await fetch(URL_COTIZACION, { method: 'GET' });
+    const resp = await fetchVentas(URL_COTIZACION, { method: 'GET' });
     const data = await resp.json();
     DATOS.cotizacionUSD = data.cotizacionUSD;
 
@@ -1775,14 +1827,14 @@ function cerrarModalUltimaCompra() {
 // Abre el modal de predicción de compra directamente desde "Clientes para recontactar"
 async function verPrediccionRecompra(codCliente) {
   cerrarModalRecompra();
-  const cli = DATOS.clientes.find(c => String(c.CodCliente) === String(codCliente));
+  const cli = INDICE_CLIENTES[String(codCliente)];
   if (!cli) return;
   // Simula la selección del cliente para que funcione el modal de predicción
   const cont = document.getElementById('contenidoPrediccion');
   cont.innerHTML = '<p style="color:var(--gris-texto)">Calculando predicción para ' + (cli.RazonSocial || codCliente) + '...</p>';
   document.getElementById('modalPrediccion').style.display = 'flex';
   try {
-    const resp = await fetch(URL_PREDICCION + encodeURIComponent(codCliente));
+    const resp = await fetchVentas(URL_PREDICCION + encodeURIComponent(codCliente));
     const data = await resp.json();
     window._datosPrediccionActual = data;
     ordenPrediccion = { col: 'recurrencia', asc: false };
@@ -1837,7 +1889,7 @@ function renderizarPrediccion(data) {
 
     // El precio sugerido vive en DATOS.articulos (campo PrecioSugerido,
     // viene de la solapa "Venta media" del Excel).
-    const articuloBase = DATOS.articulos.find(a => a.CodigoConcatenado === it.CodigoConcatenado);
+    const articuloBase = INDICE_ARTICULOS[it.CodigoConcatenado];
     const precioUlt = articuloBase ? Number(articuloBase.PrecioSugerido || 0) : 0;
     const importeEstimado = cantidadRedondeada * precioUlt;
 
@@ -1870,7 +1922,7 @@ function renderizarPrediccion(data) {
   }
 
   const filas = sorted.map(it => {
-    const disponible = !!DATOS.articulos.find(a => a.CodigoConcatenado === it.CodigoConcatenado);
+    const disponible = !!INDICE_ARTICULOS[it.CodigoConcatenado];
     const btnCargar = disponible
       ? `<button type="button" class="btn btn-secundario" style="font-size:12px; padding:5px 10px; white-space:nowrap" onclick="cargarItemPredicho('${it.CodigoConcatenado}', ${it.cantidadRedondeada})">+ Cargar</button>`
       : `<small style="color:var(--gris-texto)">No disp.</small>`;
@@ -1962,7 +2014,7 @@ function cambiarOrdenPrediccion(col) {
 }
 
 function cargarItemPredicho(codigoConcatenado, cantidadSugerida) {
-  const articulo = DATOS.articulos.find(a => a.CodigoConcatenado === codigoConcatenado);
+  const articulo = INDICE_ARTICULOS[codigoConcatenado];
   if (!articulo) { mostrarBanner('fallo', 'Ese artículo ya no está disponible en el catálogo vigente.'); return; }
 
   seleccionarArticulo(articulo, INDICE_STOCK[articulo.CodigoConcatenado]);
@@ -1982,7 +2034,7 @@ function cargarTodoPredicho() {
   let omitidos = 0;
 
   items.forEach(it => {
-    const articulo = DATOS.articulos.find(a => a.CodigoConcatenado === it.CodigoConcatenado);
+    const articulo = INDICE_ARTICULOS[it.CodigoConcatenado];
     if (!articulo) { omitidos++; return; }
 
     const cantidadRedondeada = Math.round(Number(it.CantidadPromedio));
@@ -2082,12 +2134,12 @@ function actualizarListaVendedoresRecompra() {
     DATOS_RECOMPRA
       .filter(f => {
         if (!qCli) return true;
-        const cli = DATOS.clientes.find(c => String(c.CodCliente) === String(f.CodCliente));
+        const cli = INDICE_CLIENTES[String(f.CodCliente)];
         const nombre = cli ? cli.RazonSocial : '';
         return `${nombre} ${f.CodCliente}`.toLowerCase().includes(qCli);
       })
       .map(f => {
-        const cli = DATOS.clientes.find(c => String(c.CodCliente) === String(f.CodCliente));
+        const cli = INDICE_CLIENTES[String(f.CodCliente)];
         return cli ? nombreVendedorDeCodigo(cli.CodVendedor) : '';
       })
       .filter(Boolean)
@@ -2151,7 +2203,7 @@ document.getElementById('btnRecompra').addEventListener('click', async () => {
         if (!esOportunidadRecompra(f)) return false;
         // Si no es DIRECCIÓN ni MARKETING, filtrar solo los clientes del vendedor logueado
         if (!VENDEDORES_SIN_FILTRO.includes(_codVendedorLogueado)) {
-          const cli = DATOS.clientes.find(c => String(c.CodCliente) === String(f.CodCliente));
+          const cli = INDICE_CLIENTES[String(f.CodCliente)];
           if (!cli || String(cli.CodVendedor) !== String(_codVendedorLogueado)) return false;
         }
         return true;
@@ -2227,7 +2279,7 @@ function renderizarRecompra() {
 
   // Enriquecer con datos de DATOS.clientes
   let filasDatos = DATOS_RECOMPRA.map(f => {
-    const cli = DATOS.clientes.find(c => String(c.CodCliente) === String(f.CodCliente));
+    const cli = INDICE_CLIENTES[String(f.CodCliente)];
     const nombre = cli ? cli.RazonSocial : `(cliente ${f.CodCliente})`;
     const vendedor = cli ? nombreVendedorDeCodigo(cli.CodVendedor) : '—';
     const prom = Math.round(Number(f.DiasPromedioEntreCompras));
@@ -2326,7 +2378,7 @@ function renderizarRecompra() {
 }
 
 async function iniciarPedidoDesdeRecompra(codCliente) {
-  const cli = DATOS.clientes.find(c => String(c.CodCliente) === String(codCliente));
+  const cli = INDICE_CLIENTES[String(codCliente)];
   if (!cli) return;
 
   cerrarModalRecompra();
@@ -2334,7 +2386,7 @@ async function iniciarPedidoDesdeRecompra(codCliente) {
   mostrarBanner('cargando', `⏳ Cargando condiciones del último pedido de "${cli.RazonSocial}"...`);
 
   try {
-    const resp = await fetch(WEB_APP_URL + '?action=ultimoPedido&codCliente=' + encodeURIComponent(codCliente));
+    const resp = await fetchVentas(WEB_APP_URL + '?action=ultimoPedido&codCliente=' + encodeURIComponent(codCliente));
     const data = await resp.json();
 
     if (data.items && data.items.length > 0) {
@@ -2806,7 +2858,7 @@ function mostrarResultadosFiltro() {
 });
 
 document.getElementById('resultadosFiltro').addEventListener('change', function () {
-  const a = DATOS.articulos.find(x => x.CodigoConcatenado === this.value);
+  const a = INDICE_ARTICULOS[this.value];
   if (!a) return;
   const st = mapaStock()[a.CodigoConcatenado];
   seleccionarArticulo(a, st);
@@ -3058,11 +3110,14 @@ function agregarItemAlCarrito() {
     precioNeto: precioNetoARS,
     m2Total,
     observacionItem: document.getElementById('observacionItem').value.trim(),
+    lotesAsignadosTexto: '', // se completa en segundo plano (FIFO)
   };
 
+  let idxParaFifo;
   if (itemEnEdicion !== null) {
     // Reedicion: se conservan los overrides (fecha/facturacion) que ya tuviera.
     const previo = carrito[itemEnEdicion];
+    idxParaFifo = itemEnEdicion;
     carrito[itemEnEdicion] = {
       ...datosItem,
       fechaEntregaOverride: previo.fechaEntregaOverride || null,
@@ -3086,11 +3141,14 @@ function agregarItemAlCarrito() {
       );
       if (confirmar) {
         carrito[yaExiste].cantidad += cantidad;
+        idxParaFifo = yaExiste;
       } else {
         carrito.push({ ...datosItem, fechaEntregaOverride: null, facturacionOverride: null });
+        idxParaFifo = carrito.length - 1;
       }
     } else {
       carrito.push({ ...datosItem, fechaEntregaOverride: null, facturacionOverride: null });
+      idxParaFifo = carrito.length - 1;
     }
   }
 
@@ -3107,12 +3165,45 @@ function agregarItemAlCarrito() {
 
   renderizarCarrito();
 
+  // Asignación FIFO de lotes en segundo plano (no bloquea la carga del
+  // ítem). Cuando llega la respuesta, se completa la línea con el detalle
+  // de qué lote(s) surten esta venta -- útil para trazabilidad y despacho.
+  asignarLoteFifoAlItem(idxParaFifo, datosItem.codigoConcatenado, carrito[idxParaFifo].cantidad);
+
   // Aviso informativo (no bloqueante): la decision de vender igual queda a
   // criterio del vendedor, tal como se definio para el resto del formulario.
   if (cantidad > stockDisp) {
     mostrarBanner('fallo', `⚠ Artículo agregado, pero la cantidad (${cantidad}) supera el stock disponible (${stockDisp}). Podés confirmar igual si corresponde.`);
   } else {
     ocultarBanner();
+  }
+}
+
+// Consulta al backend qué lote(s) FIFO cubren esta línea del pedido y
+// completa el campo lotesAsignadosTexto del ítem correspondiente en el
+// carrito. Se llama en segundo plano al agregar/editar un ítem.
+async function asignarLoteFifoAlItem(idx, codigoConcatenado, cantidad) {
+  if (!codigoConcatenado || !(cantidad > 0)) return;
+  const controlador = new AbortController();
+  const timeout = setTimeout(() => controlador.abort(), 15000);
+  try {
+    const resp = await fetch(WEB_APP_URL + '?action=asignacionFifo'
+      + '&codigoConcatenado=' + encodeURIComponent(codigoConcatenado)
+      + '&cantidad=' + cantidad, { signal: controlador.signal });
+    clearTimeout(timeout);
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const item = carrito[idx];
+    if (!item) return; // el item pudo haber sido borrado mientras esperábamos
+    const partes = (data.asignacion || []).map(a => Math.round(a.cantidad) + 'u ' + a.partida);
+    if (data.sinLoteAsignado > 0) {
+      partes.push(Math.round(data.sinLoteAsignado) + 'u sin lote identificado');
+    }
+    item.lotesAsignadosTexto = partes.join(' + ');
+    renderizarCarrito();
+  } catch(e) {
+    clearTimeout(timeout);
+    console.warn('No se pudo calcular la asignación FIFO de lotes:', e);
   }
 }
 
@@ -3173,8 +3264,11 @@ function formatoEnMoneda(n, moneda) {
 }
 
 function precioEnMoneda(precioARS, moneda, tipoCambio) {
-  if (moneda === 'USD' && tipoCambio > 0) return precioARS / tipoCambio;
-  return precioARS;
+  if (moneda !== 'USD') return precioARS;
+  // En USD: solo convertir si hay TC válido. Si TC=0 (cargando), devolver null
+  // para que el render muestre "---" en vez de un número incorrecto.
+  if (tipoCambio > 0) return precioARS / tipoCambio;
+  return null;
 }
 
 function renderizarCarrito() {
@@ -3195,6 +3289,8 @@ function renderizarCarrito() {
   const tipoCambioActual = Number(document.getElementById('tipoCambio').value || 0);
 
   let subtotal = 0;
+  let subtotalARS = 0;
+  const sinTC = moneda === 'USD' && tipoCambioActual <= 0;
   let filas = '';
   carrito.forEach((it, i) => {
     // Siempre calcular desde ARS con conversión dinámica según moneda actual
@@ -3202,8 +3298,10 @@ function renderizarCarrito() {
     const precioNetoARS = precioUnitARS * (1 - (it.descuentoItemPct || 0) / 100);
     const precioUnitMostrar = precioEnMoneda(precioUnitARS, moneda, tipoCambioActual);
     const precioNetoMostrar = precioEnMoneda(precioNetoARS, moneda, tipoCambioActual);
-    const importe = it.cantidad * precioNetoMostrar;
-    subtotal += importe;
+    const importeARS = it.cantidad * precioNetoARS;
+    const importe = precioNetoMostrar !== null ? it.cantidad * precioNetoMostrar : null;
+    subtotalARS += importeARS;
+    if (importe !== null) subtotal += importe;
     const descTexto = it.descuentoItemPct > 0 ? ` <small style="color:var(--verde)">(-${formatoPorcentaje(it.descuentoItemPct)})</small>` : '';
     const fechaTexto = it.fechaEntregaOverride
       ? `<br><small style="color:var(--naranja-oscuro)">📅 Entrega: ${it.fechaEntregaOverride}</small>`
@@ -3218,9 +3316,16 @@ function renderizarCarrito() {
     const m2Texto = (it.m2Total !== '' && it.m2Total !== undefined && it.m2Total !== null)
       ? ` · M2 (Um2): ${Number(it.m2Total).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       : '';
-    const detalleTexto = `<br><small style="color:#888">${it.codItem}${medidas ? ' · ' + medidas : ''} · P.Unit: ${formatoEnMoneda(precioUnitMostrar, moneda)}${m2Texto}</small>`;
+    const pUnitTexto = precioUnitMostrar !== null ? formatoEnMoneda(precioUnitMostrar, moneda) : '⚠️ sin TC';
+    const detalleTexto = `<br><small style="color:#888">${it.codItem}${medidas ? ' · ' + medidas : ''} · P.Unit: ${pUnitTexto}${m2Texto}</small>`;
+    const loteTexto = it.lotesAsignadosTexto
+      ? `<br><small style="color:var(--azul)">📦 Lote FIFO: ${it.lotesAsignadosTexto}</small>`
+      : '';
+    const inputPrecioValue = precioNetoMostrar !== null ? precioNetoMostrar.toFixed(2) : '';
+    const inputPrecioPlaceholder = sinTC ? 'Cargando TC...' : '0.00';
+    const importeTexto = importe !== null ? formatoEnMoneda(importe, moneda) : `<span style="color:var(--naranja);font-size:12px">⚠️ Ingresá el TC</span>`;
     filas += `<tr>
-      <td><b>${it.descripcion}</b>${detalleTexto}${fechaTexto}${facturacionTexto}${observacionTexto}</td>
+      <td><b>${it.descripcion}</b>${detalleTexto}${loteTexto}${fechaTexto}${facturacionTexto}${observacionTexto}</td>
       <td>
         <input type="number" min="1" value="${it.cantidad}"
           style="width:60px; text-align:center; padding:4px 6px; font-size:13px"
@@ -3230,14 +3335,15 @@ function renderizarCarrito() {
       </td>
       <td>
         <input type="number" min="0.01" step="0.01"
-          value="${precioNetoMostrar.toFixed(2)}"
-          style="width:90px; text-align:right; padding:4px 6px; font-size:13px; border:1px solid #ddd; border-radius:4px"
+          value="${inputPrecioValue}"
+          placeholder="${inputPrecioPlaceholder}"
+          style="width:90px; text-align:right; padding:4px 6px; font-size:13px; border:1px solid ${sinTC ? 'var(--naranja)' : '#ddd'}; border-radius:4px"
           title="Precio neto en ${moneda} — editá directo acá"
           onchange="editarPrecioEnCarrito(${i}, this.value)"
           onclick="this.select()">
         ${descTexto}
       </td>
-      <td>${formatoEnMoneda(importe, moneda)}</td>
+      <td>${importeTexto}</td>
       <td style="white-space:nowrap">
         <button type="button" class="quitar" style="font-size:15px" title="Fecha de entrega de este ítem" onclick="abrirModalFechaItem(${i})">📅</button>
         <button type="button" class="quitar" style="font-size:15px" title="Editar este ítem" onclick="editarItemDelCarrito(${i})">✏️</button>
@@ -3251,11 +3357,13 @@ function renderizarCarrito() {
   cont.innerHTML = `<table>
     <thead><tr><th>Artículo</th><th>Cant.</th><th>P. Neto (${moneda})</th><th>Importe (${moneda})</th><th></th></tr></thead>
     <tbody>${filas}</tbody>
-  </table>`;
+  </table>${sinTC ? '<div style="background:#fff3cd;border:1px solid #f0ad4e;border-radius:6px;padding:10px 14px;margin-top:10px;font-size:13px">⚠️ <b>Tipo de cambio no disponible aún.</b> Esperá que cargue la cotización del día (o ingresala manualmente) para ver los precios e importe en USD correctamente.</div>' : ''}`;
 
   const descuentoGlobalPct = valorPorcentaje('descuentoGlobal');
-  const descuentoGlobalMonto = subtotal * (descuentoGlobalPct / 100);
-  const total = subtotal - descuentoGlobalMonto;
+  // Para los totales: si estamos en USD sin TC, usamos los valores ARS como base
+  const subtotalParaTotales = sinTC ? subtotalARS : subtotal;
+  const descuentoGlobalMonto = subtotalParaTotales * (descuentoGlobalPct / 100);
+  const total = subtotalParaTotales - descuentoGlobalMonto;
 
   totalBox.style.display = 'flex';
   document.getElementById('subtotalPedidoValor').textContent = formatoEnMoneda(subtotal, moneda);
@@ -3333,6 +3441,9 @@ function editarCantidadEnCarrito(i, nuevaCantidad) {
       if (anchoM > 0 && largoM > 0) carrito[i].m2Total = +(anchoM * largoM * cant).toFixed(4);
     }
   }
+  // La cantidad cambió: recalcular la asignación FIFO de lotes para esta línea
+  carrito[i].lotesAsignadosTexto = '';
+  asignarLoteFifoAlItem(i, carrito[i].codigoConcatenado, cant);
   renderizarCarrito();
 }
 
@@ -3575,7 +3686,7 @@ function mostrarResumenConfirmacion() {
   const itemsSinStock = carrito.filter(it => {
     const st = INDICE_STOCK[it.ancho && it.largo && it.micColor
       ? Object.keys(INDICE_STOCK).find(k => {
-          const a = DATOS.articulos.find(a => a.CodigoConcatenado === k);
+          const a = INDICE_ARTICULOS[k];
           return a && a.CodItem.trim() === it.codItem && a.Ancho === it.ancho && a.Largo === it.largo && a.MicColor === it.micColor;
         })
       : null] || INDICE_STOCK[DATOS.articulos.find(a => a.CodItem.trim()===it.codItem && a.Ancho===it.ancho && a.Largo===it.largo && a.MicColor===it.micColor)?.CodigoConcatenado];
@@ -3834,7 +3945,7 @@ let debounceLocalidad = null;
 async function cargarProvincias() {
   const sel = document.getElementById('provinciaEntrega');
   try {
-    const resp = await fetch('https://apis.datos.gob.ar/georef/api/provincias?campos=id,nombre&orden=nombre&max=30');
+    const resp = await fetchVentas('https://apis.datos.gob.ar/georef/api/provincias?campos=id,nombre&orden=nombre&max=30');
     const data = await resp.json();
     sel.innerHTML = '<option value="">Seleccioná...</option>';
     (data.provincias || []).forEach(p => {
@@ -4200,7 +4311,7 @@ async function cargarVendedoresLogin() {
   ];
 
   try {
-    const resp = await fetch(URL_VENDEDORES_LOGIN);
+    const resp = await fetchVentas(URL_VENDEDORES_LOGIN);
     const data = await resp.json();
     vendedoresLogin = [...(data.vendedores || []), ...ESPECIALES];
 

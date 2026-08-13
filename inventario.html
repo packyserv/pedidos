@@ -50,6 +50,13 @@
   #bannerInv.fallo{display:block;background:#f8d7da;color:#721c24;}
   #bannerInv.cargando{display:block;background:#d1ecf1;color:#0c5460;}
   .comprometido{color:var(--naranja);font-size:12px;font-weight:600;}
+  /* --- Icono de ayuda contextual ("i") --- */
+  .info-btn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.08);color:var(--gris-texto);font-size:12px;font-weight:700;font-style:italic;font-family:Georgia,serif;cursor:pointer;border:none;flex-shrink:0;user-select:none;}
+  .info-btn:hover{background:var(--azul);color:#fff;}
+  .con-info{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .info-popover{position:fixed;z-index:200;max-width:300px;background:#1a2f4a;color:#fff;font-size:12.5px;font-weight:400;line-height:1.5;padding:12px 14px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.3);display:none;white-space:pre-line;}
+  .info-popover.abierto{display:block;}
+  .info-popover::after{content:"";position:absolute;top:-6px;right:16px;border-width:0 6px 6px 6px;border-style:solid;border-color:transparent transparent #1a2f4a transparent;}
   @media(max-width:600px){.filtros{flex-direction:column;}.resumen-alertas{flex-direction:column;}th,td{padding:6px 8px;font-size:12px;}}
 </style>
 </head>
@@ -86,25 +93,45 @@
     <img src="data:image/png;base64,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" alt="Logo" style="height:28px;border-radius:4px">
     <span style="font-size:17px;font-weight:600">Inventario - Packaging y Servicios</span>
   </div>
-  <div style="display:flex;align-items:center;gap:10px">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
     <span id="usuarioLogueado" style="font-size:13px;opacity:.8"></span>
+    <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);padding:5px 10px;border-radius:8px">
+      <label style="font-size:12px;font-weight:600;color:#fff;white-space:nowrap">Moneda:</label>
+      <select id="monedaInv" onchange="cambiarMonedaInv()" style="font-size:12px;padding:3px 6px;border-radius:5px;border:none;cursor:pointer">
+        <option value="ARS">$ ARS</option>
+        <option value="USD">U$S USD</option>
+      </select>
+      <span id="tcInvWrap" style="display:none;align-items:center;gap:4px">
+        <label style="font-size:12px;color:#fff">TC:</label>
+        <input type="number" id="tcInv" min="1" step="1" placeholder="TC..."
+          onchange="renderizarMonetariosInv()"
+          style="width:70px;font-size:12px;padding:3px 5px;border-radius:5px;border:none">
+      </span>
+      <span id="notaTcInv" style="font-size:10px;color:rgba(255,255,255,.7)"></span>
+    </div>
     <button type="button" class="btn btn-gris" style="font-size:12px;padding:6px 12px" onclick="location.reload()">Salir</button>
   </div>
 </header>
 
 <main id="appMain" style="display:none">
   <div id="bannerInv"></div>
-  <div class="tab-bar">
+  <div class="info-popover" id="infoPopover"></div>
+  <div class="tab-bar" style="align-items:center">
     <button class="tab activa" onclick="cambiarTab('stock')">Inventario</button>
     <button class="tab" onclick="cambiarTab('movimientos')">Movimientos</button>
     <button class="tab" onclick="cambiarTab('alertas')">Alertas</button>
     <button class="tab" onclick="cambiarTab('recuento')">Recuento</button>
     <button class="tab" onclick="cambiarTab('compras')">🛒 Compras</button>
+    <button class="info-btn" style="margin-left:auto" onclick="mostrarInfo(event, 'INVENTARIO: stock actual de cada artículo, con clasificación por importancia (ABC-XYZ).\n\nMOVIMIENTOS: registrar entradas/salidas manuales de mercadería (compras, mermas, ajustes).\n\nALERTAS: qué contar hoy, ventas V2 pendientes de descontar del stock, y artículos bajo el mínimo.\n\nRECUENTO: contar el stock físico y compararlo contra lo que dice el sistema.\n\nCOMPRAS: sugerencia automática de qué y cuánto comprar, según ritmo de venta y stock actual.')">i</button>
   </div>
 
   <div class="panel activo" id="panelStock">
     <div class="resumen-alertas" id="dashboardStock"></div>
     <div class="card">
+      <div class="con-info" style="margin-bottom:10px">
+        <h2 style="margin:0;padding:0;border:none">Stock actual</h2>
+        <button class="info-btn" onclick="mostrarInfo(event, 'Stock TEÓRICO: lo que dice el sistema (ERP). COMPROMETIDO: ya vendido en pedidos, pendiente de facturar. DISPONIBLE: teórico menos comprometido — lo que realmente podés vender.\n\nLa columna CLASE muestra la importancia del artículo: A = concentra la mayor parte de la facturación (más control), C = bajo impacto. La segunda letra (X/Y/Z) indica qué tan estable es su demanda.')">i</button>
+      </div>
       <div class="filtros">
         <input type="text" id="buscarStock" placeholder="Buscar por codigo o descripcion..." oninput="renderizarTabla()">
         <select id="filtroEstado" onchange="renderizarTabla()">
@@ -123,6 +150,12 @@
           <option value="Producto Terminado">📦 Productos Terminados</option>
           <option value="Insumo">🧱 Insumos</option>
         </select>
+        <select id="filtroABC" onchange="renderizarTabla()" title="Clasificación por importancia en la facturación (últimos 12 meses)">
+          <option value="">Todas las clases ABC</option>
+          <option value="A">🔴 Clase A (80% de la facturación)</option>
+          <option value="B">🟠 Clase B</option>
+          <option value="C">⚪ Clase C</option>
+        </select>
       </div>
       <div style="overflow-x:auto">
         <table>
@@ -130,6 +163,7 @@
             <tr>
               <th onclick="ordenarPor('descripcion')">Articulo ⇅</th>
               <th onclick="ordenarPor('tipo')">Tipo ⇅</th>
+              <th onclick="ordenarPor('clasificacionABCXYZ')" title="ABC: por facturación (A=más importante). XYZ: por variabilidad de demanda (X=estable, Z=errática)">Clase ⇅</th>
               <th onclick="ordenarPor('stockReal')" style="text-align:right">Stock teórico ⇅</th>
               <th onclick="ordenarPor('stockComprometido')" style="text-align:right">Comprometido ⇅</th>
               <th onclick="ordenarPor('stockDisponible')" style="text-align:right">Disponible ⇅</th>
@@ -141,7 +175,7 @@
             </tr>
           </thead>
           <tbody id="cuerpoTabla">
-            <tr><td colspan="10" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
+            <tr><td colspan="11" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
           </tbody>
         </table>
       </div>
@@ -196,7 +230,10 @@
 
   <div class="panel" id="panelMovimientos">
     <div class="card">
-      <h2>Registrar movimiento</h2>
+      <div class="con-info">
+        <h2 style="margin:0;padding:0;border:none">Registrar movimiento</h2>
+        <button class="info-btn" onclick="mostrarInfo(event, 'Anotá acá entradas o salidas de mercadería que no vengan de una venta del sistema: por ejemplo una compra que ya llegó, una merma, o una corrección puntual.\n\nOJO: esto NO modifica el stock del ERP automáticamente. Es un registro/sugerencia para que después alguien lo cargue en Bejerman. El stock teórico se actualiza recién cuando se sincroniza desde el ERP.')">i</button>
+      </div>
       <p style="font-size:13px;color:var(--gris-texto);margin-bottom:14px">Los movimientos registrados son sugerencias de ajuste para el ERP. No modifican el stock teórico del sistema hasta ingresarlos en el ERP.</p>
       <div class="campo">
         <label>Tipo</label>
@@ -263,20 +300,40 @@
 
   <div class="panel" id="panelAlertas">
     <div class="resumen-alertas" id="resumenAlertas"></div>
+    <div class="card" style="border:2px solid var(--azul)">
+      <div class="con-info">
+        <h2 style="color:var(--azul);margin:0;padding:0;border:none">🔄 Recuento cíclico — qué contar hoy</h2>
+        <button class="info-btn" onclick="mostrarInfo(event, 'En vez de hacer un inventario general una vez al año (que acumula error todo el año), esta lista sugiere qué contar cada día según la importancia del artículo:\n\nClase A (los que más facturan): cada 7 días.\nClase B: cada 15 días.\nClase C: cada 30 días.\n\nTocá \"Contar ahora\" para ir directo a la pestaña Recuento con ese artículo ya seleccionado.')">i</button>
+      </div>
+      <p style="font-size:12px;color:var(--gris-texto);margin-bottom:10px">
+        Sugerido según clasificación ABC (importancia por facturación): Clase A cada 7 días, B cada 15 días, C cada 30 días.
+        En vez de un inventario general una vez al año, contar por rotación reduce el error acumulado donde más importa.
+      </p>
+      <div id="listaCicloConteo" style="font-size:13px;color:var(--gris-texto);overflow-x:auto">Cargando...</div>
+    </div>
     <div class="card" style="border:2px solid var(--naranja)">
-      <h2 style="color:var(--naranja)">⚠ Ventas V2 pendientes de descuento manual</h2>
+      <div class="con-info">
+        <h2 style="color:var(--naranja);margin:0;padding:0;border:none">⚠ Ventas V2 pendientes de descuento manual</h2>
+        <button class="info-btn" onclick="mostrarInfo(event, 'Cuando una venta se factura por \"V2\", el sistema registra la venta pero NO descuenta el stock automáticamente en el ERP (a diferencia de una venta por Bejerman, que sí lo hace sola).\n\nEsta lista muestra esas ventas para que depósito haga la salida manual del stock cuanto antes, sin esperar al recuento semanal. Una vez ajustado en el ERP, se sincroniza solo y desaparece de acá.')">i</button>
+      </div>
       <p style="font-size:12px;color:var(--gris-texto);margin-bottom:10px">Estas ventas NO descuentan stock automáticamente en el ERP. Hacé la salida manual ahora, sin esperar el recuento semanal.</p>
       <div id="listaV2" style="font-size:13px;color:var(--gris-texto);overflow-x:auto">Cargando...</div>
     </div>
     <div class="card">
-      <h2>Articulos bajo stock minimo</h2>
+      <div class="con-info">
+        <h2 style="margin:0;padding:0;border:none">Articulos bajo stock minimo</h2>
+        <button class="info-btn" onclick="mostrarInfo(event, 'Artículos cuyo stock disponible cayó por debajo del mínimo configurado (en unidades o en días de cobertura, según cómo se haya definido cada uno).\n\nConfigurá el mínimo de cada artículo desde el botón \"Min.\" en la pestaña Inventario.')">i</button>
+      </div>
       <div id="listaAlertas" style="font-size:13px;color:var(--gris-texto);overflow-x:auto">Cargando...</div>
     </div>
   </div>
 
   <div class="panel" id="panelRecuento">
     <div class="card">
-      <h2>Recuento fisico de stock</h2>
+      <div class="con-info">
+        <h2 style="margin:0;padding:0;border:none">Recuento fisico de stock</h2>
+        <button class="info-btn" onclick="mostrarInfo(event, 'Contá lo que hay físicamente en el depósito y compáralo contra lo que dice el sistema (\"stock teórico\"). Si hay diferencia, se guarda automáticamente como \"pendiente de ajustar\" para que después alguien lo cargue en Bejerman.\n\nDos modos: artículo por artículo (buscás uno y contás), o planilla completa (contás todo el catálogo de una vez).')">i</button>
+      </div>
       <p style="font-size:13px;color:var(--gris-texto);margin-bottom:14px">
         Contá el stock físico y compará contra el teórico del sistema. Al finalizar podés exportar las diferencias a CSV para cargarlas en Bejerman.
       </p>
@@ -355,11 +412,12 @@
               <th onclick="ordenarPorHistRec('Descripcion')" style="cursor:pointer">Articulo ⇅</th>
               <th style="text-align:right">Teorico / Fisico</th>
               <th onclick="ordenarPorHistRec('Diferencia')" style="text-align:right;cursor:pointer">Diferencia ⇅</th>
+              <th>Estado</th>
               <th>Usuario</th>
             </tr>
           </thead>
           <tbody id="cuerpoHistRec">
-            <tr><td colspan="5" style="text-align:center;padding:16px;color:var(--gris-texto)">Cargando...</td></tr>
+            <tr><td colspan="6" style="text-align:center;padding:16px;color:var(--gris-texto)">Cargando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -406,7 +464,10 @@
   <div class="panel" id="panelCompras">
     <div class="resumen-alertas" id="resumenCompras"></div>
     <div class="card">
-      <h2>🛒 Sugerencia de compra automática</h2>
+      <div class="con-info">
+        <h2 style="margin:0;padding:0;border:none">🛒 Sugerencia de compra automática</h2>
+        <button class="info-btn" onclick="mostrarInfo(event, 'El sistema calcula, para cada artículo, cuánto conviene comprar y cuándo, usando: demanda diaria (ritmo de venta), tiempo de reposición (cuánto tarda en llegar), y un stock de seguridad para no quedarse sin nada por una demora del proveedor.\n\nUrgencia ALTA: por debajo del colchón de seguridad, riesgo de quiebre inminente.\nMEDIA: por debajo del punto ideal de reposición.\nBAJA: cerca del límite, sin apuro.')">i</button>
+      </div>
       <p style="font-size:13px;color:var(--gris-texto);margin-bottom:14px">
         Calculado con Punto de Pedido (demanda diaria × tiempo de reposición) + Stock de Seguridad, usando el historial real de ventas y compras. Se actualiza con cada sincronización.
       </p>
@@ -489,6 +550,34 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modalPartidas">
+  <div class="modal" style="max-width:640px">
+    <h3>📦 Lotes / Partidas — orden FIFO</h3>
+    <div id="infoArticuloPartidas" style="font-size:13px;color:var(--gris-texto);margin-bottom:14px"></div>
+    <div style="font-size:12px;color:var(--gris-texto);margin-bottom:12px">
+      Ordenados del más antiguo (arriba, sale primero) al más nuevo (abajo, sale último) — criterio FIFO.
+    </div>
+    <div style="overflow-x:auto;max-height:400px;overflow-y:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Partida</th>
+            <th style="text-align:right">Unidades</th>
+            <th>Primera compra</th>
+            <th style="text-align:right">Antigüedad</th>
+          </tr>
+        </thead>
+        <tbody id="cuerpoPartidas">
+          <tr><td colspan="4" style="text-align:center;padding:16px;color:var(--gris-texto)">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button type="button" class="btn btn-gris" style="flex:1" onclick="cerrarModalPartidas()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwjDU1jXdqW7WQxaR8SBHfKPRBdXKkqKDtvGkP7Y4_tUfYroF6UHOL67GFhAtpOs6cCug/exec";
 const URL_INV = WEB_APP_URL + "?action=inventario";
@@ -500,6 +589,86 @@ const CLAVE_RESET_INV = "0000";
 // inmovilizado (costo de oportunidad de la plata parada). Editable: hoy ~1,7%
 // mensual segun cauciones/tasa BCRA. Cambiar aca si cambia la tasa.
 const TASA_MENSUAL = 0.017;
+
+// ---- Helpers de moneda para el módulo de Inventario ----
+function tcInvActual() { return Number(document.getElementById('tcInv')?.value || 0); }
+function monedaInvActual() { return document.getElementById('monedaInv')?.value || 'ARS'; }
+function convertirInv(valorARS) {
+  const moneda = monedaInvActual();
+  if (moneda === 'ARS') return valorARS;
+  const tc = tcInvActual();
+  return tc > 0 ? valorARS / tc : null;
+}
+function formatoMonedaInv(valor) {
+  if (valor === null || valor === undefined) return '<span style="color:var(--naranja);font-size:11px">sin TC</span>';
+  const moneda = monedaInvActual();
+  if (moneda === 'USD') return 'U$S\u00a0' + Number(valor).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  return '$\u00a0' + Math.round(valor).toLocaleString('es-AR');
+}
+function formatoMonedaInvNum(valor) {
+  // Version sin HTML para contextos donde no se puede usar HTML
+  if (valor === null || valor === undefined) return '-';
+  const moneda = monedaInvActual();
+  if (moneda === 'USD') return 'U$S ' + Number(valor).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  return '$ ' + Math.round(valor).toLocaleString('es-AR');
+}
+function cambiarMonedaInv() {
+  const moneda = monedaInvActual();
+  const wrap = document.getElementById('tcInvWrap');
+  if (moneda === 'USD') {
+    wrap.style.display = 'flex';
+    if (!tcInvActual()) cargarTcInv();
+  } else {
+    wrap.style.display = 'none';
+  }
+  renderizarMonetariosInv();
+}
+async function cargarTcInv() {
+  const nota = document.getElementById('notaTcInv');
+  if (nota) nota.textContent = '⏳ cargando TC...';
+  try {
+    const resp = await fetchInv(WEB_APP_URL + '?action=cotizacion');
+    const data = await resp.json();
+    if (data.cotizacionUSD && data.cotizacionUSD.valor) {
+      document.getElementById('tcInv').value = Number(data.cotizacionUSD.valor);
+      if (nota) nota.textContent = 'BCRA ' + (data.cotizacionUSD.fecha || '');
+    } else {
+      if (nota) nota.textContent = '⚠ ingresá el TC';
+    }
+  } catch(e) {
+    if (nota) nota.textContent = '⚠ ingresá el TC';
+  }
+  renderizarMonetariosInv();
+}
+function renderizarMonetariosInv() {
+  renderizarDashboard();
+  renderizarTabla();
+  renderizarAlertas();
+  if (datosComprasActual.length > 0) renderizarCompras();
+}
+
+// --- Ayuda contextual ("i") ---
+// Muestra un globo explicativo cerca del icono tocado. Funciona igual con
+// click (desktop) o tap (mobile) -- no usa hover porque en celular no existe.
+function mostrarInfo(event, texto) {
+  event.stopPropagation();
+  const pop = document.getElementById("infoPopover");
+  const btn = event.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  pop.textContent = texto;
+  pop.classList.add("abierto");
+  // Posicionar debajo del icono, ajustando si se sale de la pantalla
+  let left = rect.right - 300;
+  if (left < 8) left = 8;
+  pop.style.left = left + "px";
+  pop.style.top = (rect.bottom + 8) + "px";
+}
+function cerrarInfo() {
+  document.getElementById("infoPopover").classList.remove("abierto");
+}
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".info-btn") && !e.target.closest("#infoPopover")) cerrarInfo();
+});
 
 // Helper de fetch con timeout: si el backend no responde en 30s, corta y
 // tira error en vez de dejar la UI colgada en "Cargando..." para siempre.
@@ -603,16 +772,20 @@ async function recargarDatos() { DATOS_INV = []; cargarDatosInv(); }
 function renderizarDashboard() {
   const cont = document.getElementById("dashboardStock");
   if (!cont) return;
+  const moneda = monedaInvActual();
   const total = DATOS_INV.length;
-  let criticos = 0, bajos = 0, conV2 = 0, valorInmovilizado = 0;
+  let criticos = 0, bajos = 0, conV2 = 0, valorInmovilizadoARS = 0;
   DATOS_INV.forEach(it => {
     const est = estadoArticulo(it);
     if (est === "critico") criticos++;
     else if (est === "bajo") bajos++;
     if (it.stockComprometidoV2 > 0) conV2++;
-    // Valor inmovilizado: stock teorico x costo unitario (si el backend lo trae)
-    if (it.costoUnitario && it.stockReal > 0) valorInmovilizado += it.stockReal * it.costoUnitario;
+    if (it.costoUnitario && it.stockReal > 0) valorInmovilizadoARS += it.stockReal * it.costoUnitario;
   });
+
+  const valorInmovilizado = convertirInv(valorInmovilizadoARS);
+  const costoFinanciero = valorInmovilizado !== null ? valorInmovilizado * TASA_MENSUAL : null;
+  const etiqMoneda = moneda === 'USD' ? ' (U$S)' : ' (ARS)';
 
   let html =
     "<div class='stat-box'><div class='num'>" + total.toLocaleString("es-AR") + "</div><div class='lab'>Artículos</div></div>" +
@@ -621,12 +794,9 @@ function renderizarDashboard() {
   if (conV2 > 0) {
     html += "<div class='stat-box'><div class='num' style='color:var(--naranja)'>" + conV2 + "</div><div class='lab'>V2 pendiente ajuste</div></div>";
   }
-  if (valorInmovilizado > 0) {
-    html += "<div class='stat-box'><div class='num' style='color:var(--azul)'>$" + Math.round(valorInmovilizado).toLocaleString("es-AR") + "</div><div class='lab'>Valor inmovilizado</div></div>";
-    // Costo financiero mensual: cuanto cuesta tener esa plata parada, segun la
-    // tasa mensual de referencia (editable). Es el costo de oportunidad real.
-    const costoFinanciero = valorInmovilizado * TASA_MENSUAL;
-    html += "<div class='stat-box'><div class='num' style='color:var(--rojo)'>$" + Math.round(costoFinanciero).toLocaleString("es-AR") + "</div><div class='lab'>Costo financiero / mes (" + (TASA_MENSUAL*100).toFixed(1) + "%)</div></div>";
+  if (valorInmovilizadoARS > 0) {
+    html += "<div class='stat-box'><div class='num' style='color:var(--azul)'>" + formatoMonedaInv(valorInmovilizado) + "</div><div class='lab'>Valor inmovilizado" + etiqMoneda + "</div></div>";
+    html += "<div class='stat-box'><div class='num' style='color:var(--rojo)'>" + formatoMonedaInv(costoFinanciero) + "</div><div class='lab'>Costo financiero / mes (" + (TASA_MENSUAL*100).toFixed(1) + "%)</div></div>";
   }
   cont.innerHTML = html;
 }
@@ -646,28 +816,31 @@ function ordenarPor(col) {
 // Devuelve el valor a comparar para ordenar, soporta columnas calculadas.
 function valorOrden(it, col) {
   switch(col) {
-    case "descripcion": return it.descripcion;
-    case "tipo": return it.tipo;
-    case "stockReal": return it.stockReal;
-    case "stockComprometido": return it.stockComprometido;
-    case "stockDisponible": return it.stockDisponible;
-    case "minimoEfectivo": return it.tipoAlerta === "dias" ? it.stockMinimoDias : it.stockMinimoUnidades;
-    case "diasDeStock": return it.diasDeStock;
-    case "frecuenciaReposicionDias": return it.frecuenciaReposicionDias || -1;
+    case "descripcion": return String(it.descripcion || '');
+    case "tipo": return String(it.tipo || '');
+    case "clasificacionABCXYZ": return String(it.clasificacionABCXYZ || 'ZZ');
+    case "stockReal": return Number(it.stockReal || 0);
+    case "stockComprometido": return Number(it.stockComprometido || 0);
+    case "stockDisponible": return Number(it.stockDisponible || 0);
+    case "minimoEfectivo": return Number(it.tipoAlerta === "dias" ? it.stockMinimoDias : it.stockMinimoUnidades) || 0;
+    case "diasDeStock": return Number(it.diasDeStock || 0);
+    case "frecuenciaReposicionDias": return Number(it.frecuenciaReposicionDias || -1);
     case "estadoOrden": {
       const est = estadoArticulo(it);
       return est === "critico" ? 0 : est === "bajo" ? 1 : 2;
     }
-    default: return it[col];
+    default: return it[col] ?? 0;
   }
 }
 function renderizarTabla() {
   const q = (document.getElementById("buscarStock").value || "").trim().toLowerCase();
   const fe = document.getElementById("filtroEstado").value;
   const ft = document.getElementById("filtroTipo").value;
+  const fabc = document.getElementById("filtroABC").value;
   let filas = DATOS_INV.filter(it => {
     if (q && !((it.descripcion + " " + it.codItem + " " + it.codigoConcatenado).toLowerCase().includes(q))) return false;
     if (ft && it.tipo !== ft) return false;
+    if (fabc && it.clasificacionABC !== fabc) return false;
     const est = estadoArticulo(it);
     if (fe === "ok" && est !== "ok") return false;
     if (fe === "bajo" && est !== "bajo") return false;
@@ -683,7 +856,7 @@ function renderizarTabla() {
     return ordenActual.asc ? va - vb : vb - va;
   });
   const tbody = document.getElementById("cuerpoTabla");
-  if (!filas.length) { tbody.innerHTML = "<tr><td colspan='10' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
+  if (!filas.length) { tbody.innerHTML = "<tr><td colspan='11' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
   tbody.innerHTML = filas.map((it, idx) => {
     const est = estadoArticulo(it);
     const badge = est === "ok" ? "<span class='badge badge-ok'>OK</span>" : est === "bajo" ? "<span class='badge badge-bajo'>Bajo</span>" : "<span class='badge badge-critico'>Critico</span>";
@@ -694,7 +867,7 @@ function renderizarTabla() {
       : "<span style='font-size:11px;color:var(--azul)'>📦 Producto</span>";
     const minTexto = it.tipoAlerta === "dias"
       ? (it.stockMinimoDias > 0 ? it.stockMinimoDias + "d" : "-")
-      : (it.stockMinimoUnidades > 0 ? it.stockMinimoUnidades.toLocaleString("es-AR") + "u" : "-");
+      : (it.stockMinimoUnidades > 0 ? Number(it.stockMinimoUnidades || 0).toLocaleString("es-AR") + "u" : "-");
     const frecTexto = it.frecuenciaReposicionDias ? Math.round(it.frecuenciaReposicionDias) + "d" : "<span style='color:#bbb'>Sin datos</span>";
     const tieneV2 = it.stockComprometidoV2 > 0;
     const filaEstilo = tieneV2 ? " style='background:#fff0e0'" : "";
@@ -703,17 +876,23 @@ function renderizarTabla() {
       : "";
     // Guardamos el indice real en DATOS_INV para el modal
     const idxReal = DATOS_INV.indexOf(it);
+    const colorABC = it.clasificacionABC === "A" ? "var(--rojo)" : it.clasificacionABC === "B" ? "var(--naranja)" : "var(--gris-texto)";
+    const claseBadge = it.clasificacionABCXYZ
+      ? "<span style='background:" + colorABC + ";color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px' title='ABC: importancia por facturación (A=más alto). XYZ: variabilidad de demanda (X=estable, Z=errática)'>" + it.clasificacionABCXYZ + "</span>"
+      : "<span style='color:#ccc;font-size:11px'>-</span>";
     return "<tr" + filaEstilo + "><td><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small>" + v2Badge + "</td>"
       + "<td>" + tipoTag + "</td>"
-      + "<td style='text-align:right;font-weight:700'>" + it.stockReal.toLocaleString("es-AR") + "</td>"
+      + "<td>" + claseBadge + "</td>"
+      + "<td style='text-align:right;font-weight:700'>" + Number(it.stockReal || 0).toLocaleString("es-AR") + "</td>"
       + "<td style='text-align:right'>" + comp + "</td>"
-      + "<td style='text-align:right;font-weight:700;color:" + colorDisp + "'>" + it.stockDisponible.toLocaleString("es-AR") + "</td>"
+      + "<td style='text-align:right;font-weight:700;color:" + colorDisp + "'>" + Number(it.stockDisponible || 0).toLocaleString("es-AR") + "</td>"
       + "<td style='text-align:right;color:var(--gris-texto)'>" + minTexto + "</td>"
       + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.diasDeStock > 0 ? Math.round(it.diasDeStock * 10) / 10 + "d" : "-") + "</td>"
       + "<td style='text-align:center;font-size:12px'>" + frecTexto + "</td>"
       + "<td>" + badge + "</td>"
       + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 8px' onclick='abrirModalMinimo(" + idxReal + ")'>Min.</button>"
-      + " <button type='button' class='btn btn-azul' style='font-size:11px;padding:4px 6px' title='Registrar movimiento' onclick='abrirMovRapido(" + idxReal + ")'>+Mov</button></td></tr>";
+      + " <button type='button' class='btn btn-azul' style='font-size:11px;padding:4px 6px' title='Registrar movimiento' onclick='abrirMovRapido(" + idxReal + ")'>+Mov</button>"
+      + " <button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 6px' title='Ver lotes/partidas (FIFO)' onclick='abrirModalPartidas(" + idxReal + ")'>📦 Lotes</button></td></tr>";
   }).join("");
   document.getElementById("pieDatos").textContent = filas.length + " articulo(s) mostrados.";
 }
@@ -737,6 +916,42 @@ function seleccionarTipoAlerta(tipo) {
 function cerrarModalMinimo() {
   document.getElementById("modalMinimo").classList.remove("abierto");
   articuloMinimoActual = null;
+}
+
+// --- Modal de Partidas / Lotes (FIFO) ---
+async function abrirModalPartidas(idx) {
+  const it = DATOS_INV[idx];
+  if (!it) return;
+  document.getElementById("infoArticuloPartidas").innerHTML =
+    "<b>" + it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor + "</b>"
+    + " &nbsp;|&nbsp; Stock teórico total: <b>" + Number(it.stockReal || 0).toLocaleString("es-AR") + "</b> u.";
+  document.getElementById("cuerpoPartidas").innerHTML = "<tr><td colspan='4' style='text-align:center;padding:16px;color:var(--gris-texto)'>Cargando...</td></tr>";
+  document.getElementById("modalPartidas").classList.add("abierto");
+  try {
+    const resp = await fetchInv(WEB_APP_URL + "?action=partidasArticulo&codigoConcatenado=" + encodeURIComponent(it.codigoConcatenado));
+    const data = await resp.json();
+    renderizarPartidas(data.items || []);
+  } catch(e) {
+    document.getElementById("cuerpoPartidas").innerHTML = "<tr><td colspan='4' style='text-align:center;padding:16px;color:var(--rojo)'>Error al cargar los lotes.</td></tr>";
+  }
+}
+function renderizarPartidas(items) {
+  const tbody = document.getElementById("cuerpoPartidas");
+  if (items.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='4' style='text-align:center;padding:16px;color:var(--gris-texto)'>Sin partidas registradas para este artículo (puede que las compras sean muy antiguas o no estén en el historial sincronizado).</td></tr>";
+    return;
+  }
+  tbody.innerHTML = items.map((p, i) => {
+    const filaEstilo = i === 0 ? " style='background:#e8f4ea;font-weight:700'" : "";
+    const etiquetaFifo = i === 0 ? " <span style='background:var(--verde);color:#fff;font-size:10px;padding:2px 6px;border-radius:8px'>SALE PRIMERO</span>" : "";
+    return "<tr" + filaEstilo + "><td>" + p.partida + etiquetaFifo + "</td>"
+      + "<td style='text-align:right'>" + p.unidadesCompradas.toLocaleString("es-AR") + "</td>"
+      + "<td>" + (p.fechaPrimeraCompra || "-") + "</td>"
+      + "<td style='text-align:right;color:var(--gris-texto)'>" + (p.diasAntiguedad > 0 ? p.diasAntiguedad + " días" : "-") + "</td></tr>";
+  }).join("");
+}
+function cerrarModalPartidas() {
+  document.getElementById("modalPartidas").classList.remove("abierto");
 }
 async function guardarConfigMinimo() {
   if (!articuloMinimoActual) return;
@@ -773,6 +988,59 @@ function ordenarPorAlertas(col) {
   else { ordenAlertas.col = col; ordenAlertas.asc = false; }
   renderizarAlertas();
 }
+
+// --- Recuento cíclico (qué contar hoy, según clase ABC) ---
+let cicloConteoActual = [];
+async function cargarCicloConteo() {
+  const cont = document.getElementById("listaCicloConteo");
+  cont.innerHTML = "Cargando...";
+  try {
+    const resp = await fetchInv(WEB_APP_URL + "?action=cicloConteo");
+    const data = await resp.json();
+    cicloConteoActual = data.items || [];
+    renderizarCicloConteo();
+  } catch(e) {
+    cont.innerHTML = "<span style='color:var(--rojo)'>Error al cargar el ciclo de conteo.</span>";
+  }
+}
+function renderizarCicloConteo() {
+  const cont = document.getElementById("listaCicloConteo");
+  if (cicloConteoActual.length === 0) {
+    cont.innerHTML = "<p style='color:var(--verde)'>✅ Todo al día — ningún artículo está vencido para recuento según su clase.</p>";
+    return;
+  }
+  const colorClase = { A: "var(--rojo)", B: "var(--naranja)", C: "var(--gris-texto)" };
+  const top = cicloConteoActual.slice(0, 15); // mostrar hasta 15 por dia, no abrumar
+  cont.innerHTML = "<table><thead><tr><th>Articulo</th><th>Clase</th><th style='text-align:right'>Sin contar</th><th></th></tr></thead><tbody>"
+    + top.map(it => {
+        const badge = "<span style='background:" + (colorClase[it.claseABC] || "#ccc") + ";color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px'>" + it.claseABC + "</span>";
+        const diasTexto = it.diasSinContar === null
+          ? "<span style='color:var(--rojo);font-weight:700'>Nunca contado</span>"
+          : it.diasSinContar + " días (recom.: " + it.frecuenciaDias + ")";
+        return "<tr><td><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " · " + it.ancho + "x" + it.largo + " " + it.micColor + "</small></td>"
+          + "<td>" + badge + "</td>"
+          + "<td style='text-align:right'>" + diasTexto + "</td>"
+          + "<td><button type='button' class='btn btn-azul' style='font-size:11px;padding:4px 10px' onclick='irAContarArticulo(\"" + it.codigoConcatenado + "\")'>Contar ahora</button></td></tr>";
+      }).join("")
+    + "</tbody></table>"
+    + (cicloConteoActual.length > 15 ? "<p style='font-size:12px;color:var(--gris-texto);margin-top:8px'>+" + (cicloConteoActual.length - 15) + " artículo(s) más vencidos, mostrando los 15 de mayor prioridad.</p>" : "");
+}
+// Salta a la pestaña Recuento con el artículo ya seleccionado, listo para contar.
+function irAContarArticulo(codigoConcatenado) {
+  cambiarTab("recuento");
+  const idx = DATOS_INV.findIndex(it => it.codigoConcatenado === codigoConcatenado);
+  if (idx === -1) return;
+  cambiarModoRecuento("individual");
+  document.getElementById("buscarArticuloRec").value = DATOS_INV[idx].descripcion;
+  filtrarArticulosRec();
+  setTimeout(() => {
+    const sel = document.getElementById("selectArticuloRec");
+    for (let i = 0; i < sel.options.length; i++) {
+      if (Number(sel.options[i].value) === idx) { sel.selectedIndex = i; seleccionarArticuloRec(); break; }
+    }
+  }, 100);
+}
+
 function renderizarAlertas() {
   const sinStock = DATOS_INV.filter(it => it.stockDisponible <= 0);
   const bajoMin = DATOS_INV.filter(it => {
@@ -957,6 +1225,7 @@ function cambiarTab(tab) {
     if (p) p.classList.toggle("activo", t === tab);
   });
   if (tab === "movimientos" && historialMovActual.length === 0) cargarHistorialMovimientos();
+  if (tab === "alertas" && !cicloConteoActual.length) cargarCicloConteo();
   if (tab === "recuento" && recuentoActual.length === 0) poblarSelectArticulosRec();
   if (tab === "compras" && datosComprasActual.length === 0) cargarSugerenciaCompra();
 }
@@ -971,8 +1240,8 @@ function abrirMovRapido(idx) {
   const it = articuloMovRapidoActual;
   document.getElementById("infoMovRapido").innerHTML =
     "<b>" + it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor + "</b>"
-    + " &nbsp;|&nbsp; Stock teórico: <b>" + it.stockReal.toLocaleString("es-AR") + "</b> u."
-    + " &nbsp;|&nbsp; Disponible: <b>" + it.stockDisponible.toLocaleString("es-AR") + "</b> u.";
+    + " &nbsp;|&nbsp; Stock teórico: <b>" + Number(it.stockReal || 0).toLocaleString("es-AR") + "</b> u."
+    + " &nbsp;|&nbsp; Disponible: <b>" + Number(it.stockDisponible || 0).toLocaleString("es-AR") + "</b> u.";
   document.getElementById("cantidadMovRapido").value = "";
   document.getElementById("motivoMovRapido").value = "";
   document.getElementById("obsMovRapido").value = "";
@@ -1220,14 +1489,31 @@ let ordenHistRec = { col: "Timestamp", asc: false };
 async function cargarHistorialRecuento() {
   const tbody = document.getElementById("cuerpoHistRec");
   if (!tbody) return;
-  tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;padding:16px;color:var(--gris-texto)'>Cargando...</td></tr>";
+  tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;padding:16px;color:var(--gris-texto)'>Cargando...</td></tr>";
   try {
     const resp = await fetchInv(WEB_APP_URL + "?action=historialRecuento");
     const data = await resp.json();
     historialRecActual = data.items || [];
     renderizarHistorialRecuento();
   } catch(e) {
-    tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;padding:16px;color:var(--rojo)'>Error al cargar el historial.</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;padding:16px;color:var(--rojo)'>Error al cargar el historial.</td></tr>";
+  }
+}
+// Marca un recuento como ya ajustado en el ERP (cierra el circulo entre lo
+// detectado en el conteo fisico y la correccion efectiva en el sistema).
+async function marcarRecuentoComoAjustado(clave) {
+  if (!clave) return;
+  try {
+    const resp = await fetchInv(WEB_APP_URL + "?action=marcarRecuentoAjustado&clave=" + encodeURIComponent(clave) + "&ajustado=true");
+    const data = await resp.json();
+    if (data.ok) {
+      mostrarBannerInv("exito", "Marcado como ajustado en el ERP.");
+      cargarHistorialRecuento();
+    } else {
+      mostrarBannerInv("fallo", "Error: " + (data.error || "desconocido"));
+    }
+  } catch(e) {
+    mostrarBannerInv("fallo", "Error de conexión.");
   }
 }
 function ordenarPorHistRec(col) {
@@ -1239,7 +1525,7 @@ function renderizarHistorialRecuento() {
   const tbody = document.getElementById("cuerpoHistRec");
   if (!tbody) return;
   if (historialRecActual.length === 0) {
-    tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;padding:16px;color:var(--gris-texto)'>Sin recuentos guardados todavía.</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;padding:16px;color:var(--gris-texto)'>Sin recuentos guardados todavía.</td></tr>";
     return;
   }
   const col = ordenHistRec.col;
@@ -1255,10 +1541,20 @@ function renderizarHistorialRecuento() {
     const dif = Number(r.Diferencia || 0);
     const colorDif = dif === 0 ? "var(--verde)" : dif > 0 ? "var(--azul)" : "var(--rojo)";
     const signo = dif > 0 ? "+" : "";
+    const estado = r.Estado || (dif !== 0 ? "Pendiente de ajustar en ERP" : "Sin diferencia");
+    let estadoTexto;
+    if (dif === 0) {
+      estadoTexto = "<span style='color:var(--gris-texto);font-size:11px'>— Sin diferencia</span>";
+    } else if (estado === "Ajustado en ERP") {
+      estadoTexto = "<span style='color:var(--verde);font-size:11px;font-weight:700'>✅ Ajustado en ERP</span>";
+    } else {
+      estadoTexto = "<button type='button' class='btn btn-gris' style='font-size:10px;padding:3px 8px;background:var(--naranja);color:#fff' onclick='marcarRecuentoComoAjustado(\"" + (r.Clave || "") + "\")' " + (r.Clave ? "" : "disabled title='Recuento sin clave (registro anterior a esta función)'") + ">⚠ Marcar ajustado</button>";
+    }
     return "<tr><td style='font-size:12px'>" + fechaTexto + "</td>"
       + "<td>" + (r.Descripcion || "") + "</td>"
       + "<td style='text-align:right'>" + r.StockTeorico + " / " + r.StockFisico + "</td>"
       + "<td style='text-align:right;font-weight:700;color:" + colorDif + "'>" + signo + dif + "</td>"
+      + "<td>" + estadoTexto + "</td>"
       + "<td style='font-size:12px'>" + (r.Usuario || "") + "</td></tr>";
   }).join("");
 }
@@ -1424,12 +1720,14 @@ function renderizarResumenCompras() {
   const alta = datosComprasActual.filter(i => i.urgencia === "Alta").length;
   const media = datosComprasActual.filter(i => i.urgencia === "Media").length;
   const baja = datosComprasActual.filter(i => i.urgencia === "Baja").length;
-  const inversionTotal = datosComprasActual.reduce((a, i) => a + i.inversionSugerida, 0);
+  const inversionTotalARS = datosComprasActual.reduce((a, i) => a + (i.inversionSugerida || 0), 0);
+  const inversionTotal = convertirInv(inversionTotalARS);
+  const moneda = monedaInvActual();
   document.getElementById("resumenCompras").innerHTML =
     "<div class='stat-box'><div class='num' style='color:var(--rojo)'>" + alta + "</div><div class='lab'>Urgencia alta</div></div>" +
     "<div class='stat-box'><div class='num' style='color:var(--naranja)'>" + media + "</div><div class='lab'>Urgencia media</div></div>" +
     "<div class='stat-box'><div class='num' style='color:var(--verde)'>" + baja + "</div><div class='lab'>Urgencia baja</div></div>" +
-    "<div class='stat-box'><div class='num' style='color:var(--azul)'>$" + Math.round(inversionTotal).toLocaleString('es-AR') + "</div><div class='lab'>Inversión total sugerida</div></div>";
+    "<div class='stat-box'><div class='num' style='color:var(--azul)'>" + formatoMonedaInv(inversionTotal) + "</div><div class='lab'>Inversión total sugerida (" + moneda + ")</div></div>";
 }
 
 function ordenarPorCompras(col) {
@@ -1442,7 +1740,9 @@ function valorOrdenCompras(it, col) {
   if (col === "urgenciaOrden") {
     return it.urgencia === "Alta" ? 0 : it.urgencia === "Media" ? 1 : 2;
   }
-  return it[col];
+  const v = it[col];
+  if (v === null || v === undefined) return 0;
+  return typeof v === "string" ? v : Number(v) || 0;
 }
 
 function renderizarCompras() {
@@ -1462,6 +1762,7 @@ function renderizarCompras() {
   });
 
   const tbody = document.getElementById("cuerpoCompras");
+  const moneda = monedaInvActual();
   if (filas.length === 0) {
     tbody.innerHTML = "<tr><td colspan='9' style='text-align:center;padding:20px;color:var(--verde)'>Sin artículos que requieran compra por ahora.</td></tr>";
     document.getElementById("pieCompras").textContent = "";
@@ -1469,22 +1770,24 @@ function renderizarCompras() {
   }
 
   tbody.innerHTML = filas.map(it => {
+    const costoConv = convertirInv(it.costoUnitario || 0);
+    const invConv = convertirInv(it.inversionSugerida || 0);
     const badgeUrg = it.urgencia === "Alta" ? "<span class='badge badge-critico'>🔴 Alta</span>"
       : it.urgencia === "Media" ? "<span class='badge badge-bajo'>🟡 Media</span>"
       : "<span class='badge badge-ok'>🟢 Baja</span>";
     const filaEstilo = it.urgencia === "Alta" ? " style='background:#fdeaea'" : "";
     return "<tr" + filaEstilo + "><td><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small></td>"
       + "<td style='font-size:12px'>" + (it.proveedor || "<span style='color:#bbb'>Sin datos</span>") + "</td>"
-      + "<td style='text-align:right'>" + it.demandaDiaria.toLocaleString("es-AR") + "</td>"
-      + "<td style='text-align:right'>" + it.leadTimeDias.toLocaleString("es-AR") + "d</td>"
-      + "<td style='text-align:right;font-weight:700'>" + it.stockActual.toLocaleString("es-AR") + "</td>"
-      + "<td style='text-align:right'>" + it.diasCoberturaActual.toLocaleString("es-AR") + "d</td>"
-      + "<td style='text-align:right;font-weight:700;color:var(--azul)'>" + it.cantidadSugerida.toLocaleString("es-AR") + "</td>"
-      + "<td style='text-align:right'>$" + Math.round(it.inversionSugerida).toLocaleString("es-AR") + "</td>"
+      + "<td style='text-align:right'>" + Number(it.demandaDiaria || 0).toLocaleString("es-AR") + "</td>"
+      + "<td style='text-align:right'>" + Number(it.leadTimeDias || 0).toLocaleString("es-AR") + "d</td>"
+      + "<td style='text-align:right;font-weight:700'>" + Number(it.stockActual || 0).toLocaleString("es-AR") + "</td>"
+      + "<td style='text-align:right'>" + Number(it.diasCoberturaActual || 0).toLocaleString("es-AR") + "d</td>"
+      + "<td style='text-align:right;font-weight:700;color:var(--azul)'>" + Number(it.cantidadSugerida || 0).toLocaleString("es-AR") + "</td>"
+      + "<td style='text-align:right'>" + formatoMonedaInv(invConv) + "</td>"
       + "<td>" + badgeUrg + "</td></tr>";
   }).join("");
 
-  document.getElementById("pieCompras").textContent = filas.length + " artículo(s) sugeridos para compra.";
+  document.getElementById("pieCompras").textContent = filas.length + " artículo(s) sugeridos para compra. Inversión en " + moneda + ".";
 }
 
 // --- Banner ---
