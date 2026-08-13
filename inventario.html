@@ -19,9 +19,9 @@
   .btn-gris{background:#eee;color:#444;border:1px solid var(--gris-borde);}
   .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end;}
   .filtros input,.filtros select{width:auto;flex:1;min-width:140px;}
-  table{width:100%;border-collapse:collapse;font-size:13px;}
-  th{background:var(--azul-oscuro);color:#fff;padding:8px 10px;text-align:left;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;}
-  td{padding:8px 10px;border-bottom:1px solid var(--gris-borde);vertical-align:middle;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{background:var(--azul-oscuro);color:#fff;padding:6px 7px;text-align:left;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;}
+  td{padding:5px 7px;border-bottom:1px solid var(--gris-borde);vertical-align:middle;}
   tr:hover td{background:#f7fafd;}
   .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
   .badge-ok{background:#d4edda;color:#155724;}
@@ -201,22 +201,21 @@
         <table>
           <thead>
             <tr>
-              <th onclick="ordenarPor('descripcion')">Articulo ⇅</th>
-              <th onclick="ordenarPor('tipo')">Tipo ⇅</th>
-              <th onclick="ordenarPor('clasificacionABCXYZ')" title="ABC: por facturación (A=más importante). XYZ: por variabilidad de demanda (X=estable, Z=errática)">Clase ⇅</th>
-              <th onclick="ordenarPor('stockReal')" style="text-align:right">Stock teórico ⇅</th>
-              <th style="text-align:right;background:#1e3a52" title="Ingresá el stock físico contado y confirmá con ✓ para registrar el recuento">Stock físico ✓</th>
-              <th onclick="ordenarPor('stockComprometido')" style="text-align:right">Comprometido ⇅</th>
-              <th onclick="ordenarPor('stockDisponible')" style="text-align:right">Disponible ⇅</th>
-              <th onclick="ordenarPor('minimoEfectivo')" style="text-align:right">Minimo ⇅</th>
-              <th onclick="ordenarPor('diasDeStock')" style="text-align:right">Dias stock ⇅</th>
-              <th onclick="ordenarPor('frecuenciaReposicionDias')">Frec. repos. ⇅</th>
+              <th onclick="ordenarPor('descripcion')">Artículo ⇅</th>
+              <th onclick="ordenarPor('clasificacionABCXYZ')" title="ABC: importancia por facturación. XYZ: variabilidad de demanda">Clase ⇅</th>
+              <th style="text-align:center;background:#1e3a52;min-width:80px" title="Ingresá el stock físico y confirmá con ✓">Fís.✓</th>
+              <th onclick="ordenarPor('stockReal')" style="text-align:right" title="Stock teórico (ERP)">Teórico ⇅</th>
+              <th onclick="ordenarPor('stockComprometido')" style="text-align:right" title="Comprometido en pedidos">Comp. ⇅</th>
+              <th onclick="ordenarPor('stockDisponible')" style="text-align:right" title="Disponible = Teórico − Comprometido">Dispon. ⇅</th>
+              <th onclick="ordenarPor('minimoEfectivo')" style="text-align:right" title="Stock mínimo configurado">Mín. ⇅</th>
+              <th onclick="ordenarPor('diasDeStock')" style="text-align:right" title="Días de cobertura actual">Días ⇅</th>
+              <th onclick="ordenarPor('frecuenciaReposicionDias')" title="Frecuencia de reposición promedio">Frec. ⇅</th>
               <th onclick="ordenarPor('estadoOrden')">Estado ⇅</th>
-              <th></th>
+              <th style="min-width:90px"></th>
             </tr>
           </thead>
           <tbody id="cuerpoTabla">
-            <tr><td colspan="12" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
+            <tr><td colspan="11" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
           </tbody>
         </table>
       </div>
@@ -954,37 +953,68 @@ async function toggleLotesInline(filId, idxReal, btn) {
     btn.textContent = "+";
     return;
   }
-  // Abrir y cargar si no hay datos aún
   fila.classList.add("abierta");
   btn.textContent = "−";
   const it = DATOS_INV[idxReal];
   if (!it) return;
   const celda = fila.querySelector("td > div");
   if (!celda) return;
-  if (celda.dataset.cargado === "1") return; // ya cargado
-  celda.dataset.cargado = "1";
+  // Solo salteamos la recarga si ya cargó bien (no si falló)
+  if (celda.dataset.cargado === "ok") return;
+  celda.innerHTML = "<span style='color:var(--gris-texto);font-size:12px'>⏳ Cargando lotes...</span>";
   try {
-    const resp = await fetchInv(WEB_APP_URL + "?action=partidasArticulo&codigoConcatenado=" + encodeURIComponent(it.codigoConcatenado));
-    const data = await resp.json();
+    const cc = it.codigoConcatenado;
+    if (!cc) throw new Error("Artículo sin código concatenado");
+    const resp = await fetchInv(WEB_APP_URL + "?action=partidasArticulo&codigoConcatenado=" + encodeURIComponent(cc));
+    if (!resp.ok) throw new Error("Error del servidor: " + resp.status);
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch(pe) { throw new Error("Respuesta inválida del servidor"); }
+    if (data.error) throw new Error(data.error);
     const items = data.items || [];
     if (items.length === 0) {
-      celda.innerHTML = "<span style='color:var(--gris-texto);font-size:12px'>Sin partidas registradas para este artículo.</span>";
+      celda.dataset.cargado = "ok";
+      celda.innerHTML = "<span style='color:var(--gris-texto);font-size:12px;padding:6px 8px;display:block'>Sin partidas registradas para este artículo.</span>";
       return;
     }
+    // Calcular el badge "SALE PRIMERO" con el orden FIFO original (ASC por fecha)
+    // antes de invertir para mostrar. El primero con remanente > 0 es el que sale primero.
+    const idxSalePrimero = items.findIndex(p => p.unidadesRemanentes > 0);
+    // Mostrar en orden DESC (más reciente arriba) — el usuario quiere ver lo nuevo primero
+    const itemsDesc = [...items].reverse();
+    celda.dataset.cargado = "ok";
     celda.innerHTML = "<table style='width:100%;font-size:12px;border-collapse:collapse'>"
-      + "<thead><tr style='background:var(--azul-claro)'><th style='padding:4px 8px;text-align:left'>Partida</th><th style='padding:4px 8px;text-align:right'>Comprado</th><th style='padding:4px 8px;text-align:right'>Remanente</th><th style='padding:4px 8px'>Primera compra</th><th style='padding:4px 8px;text-align:right'>Antigüedad</th></tr></thead><tbody>"
-      + items.map((p, i) => {
-          const esFirst = p.unidadesRemanentes > 0 && items.slice(0, i).every(x => x.unidadesRemanentes === 0);
-          const bg = esFirst ? "background:#e8f4ea;font-weight:700" : (i%2===0 ? "" : "background:#f7f9fb");
-          return "<tr style='" + bg + "'><td style='padding:4px 8px'>" + p.partida + (esFirst ? " <span style='background:var(--verde);color:#fff;font-size:10px;padding:1px 5px;border-radius:6px'>SALE PRIMERO</span>" : "") + "</td>"
-            + "<td style='padding:4px 8px;text-align:right'>" + p.unidadesCompradas.toLocaleString("es-AR") + "</td>"
-            + "<td style='padding:4px 8px;text-align:right;color:" + (p.unidadesRemanentes > 0 ? "var(--verde)" : "var(--gris-texto)") + ";font-weight:700'>" + p.unidadesRemanentes.toLocaleString("es-AR") + "</td>"
-            + "<td style='padding:4px 8px'>" + (p.fechaPrimeraCompra || "-") + "</td>"
-            + "<td style='padding:4px 8px;text-align:right;color:var(--gris-texto)'>" + (p.diasAntiguedad > 0 ? p.diasAntiguedad + "d" : "-") + "</td></tr>";
+      + "<thead><tr style='background:var(--azul-claro)'>"
+      + "<th style='padding:5px 8px;text-align:left'>Partida</th>"
+      + "<th style='padding:5px 8px;text-align:right'>Comprado</th>"
+      + "<th style='padding:5px 8px;text-align:right'>Remanente</th>"
+      + "<th style='padding:5px 8px'>Primera compra</th>"
+      + "<th style='padding:5px 8px;text-align:right'>Antigüedad</th>"
+      + "</tr></thead><tbody>"
+      + itemsDesc.map((p, i) => {
+          // El badge va en el lote que se identificó como "SALE PRIMERO" en el orden FIFO original
+          const esSalePrimero = idxSalePrimero >= 0 && p === items[idxSalePrimero];
+          const bg = esSalePrimero ? "background:#e8f4ea;font-weight:700"
+            : (p.unidadesRemanentes > 0 ? "background:#f0f8f0" : (i%2===0 ? "" : "background:#f7f9fb"));
+          const colorRem = p.unidadesRemanentes > 0 ? "var(--verde)" : "var(--gris-texto)";
+          return "<tr style='" + bg + "'>"
+            + "<td style='padding:5px 8px'>" + p.partida
+            + (esSalePrimero ? " <span style='background:var(--verde);color:#fff;font-size:10px;padding:1px 5px;border-radius:6px'>SALE PRIMERO</span>" : "")
+            + "</td>"
+            + "<td style='padding:5px 8px;text-align:right'>" + Number(p.unidadesCompradas || 0).toLocaleString("es-AR") + "</td>"
+            + "<td style='padding:5px 8px;text-align:right;color:" + colorRem + ";font-weight:700'>" + Number(p.unidadesRemanentes || 0).toLocaleString("es-AR") + "</td>"
+            + "<td style='padding:5px 8px'>" + (p.fechaPrimeraCompra || "-") + "</td>"
+            + "<td style='padding:5px 8px;text-align:right;color:var(--gris-texto)'>" + (p.diasAntiguedad > 0 ? p.diasAntiguedad + "d" : "-") + "</td>"
+            + "</tr>";
         }).join("")
       + "</tbody></table>";
   } catch(e) {
-    celda.innerHTML = "<span style='color:var(--rojo);font-size:12px'>Error al cargar los lotes.</span>";
+    // NO marcamos como cargado para que se pueda reintentar
+    celda.innerHTML = "<div style='padding:6px 8px'>"
+      + "<span style='color:var(--rojo);font-size:12px'>⚠ Error: " + (e.message || "no se pudieron cargar los lotes") + "</span>"
+      + " <button type='button' onclick='this.closest(\"tr\").previousSibling?.querySelector(\".fila-lote-toggle\")?.click()'"
+      + " style='font-size:11px;padding:2px 8px;background:var(--azul);color:#fff;border:none;border-radius:4px;cursor:pointer;margin-left:8px'>Reintentar</button>"
+      + "</div>";
   }
 }
 
@@ -1188,15 +1218,15 @@ function renderizarTabla() {
   }
 
   const tbody = document.getElementById("cuerpoTabla");
-  if (!filas.length) { tbody.innerHTML = "<tr><td colspan='12' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
+  if (!filas.length) { tbody.innerHTML = "<tr><td colspan='11' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
   tbody.innerHTML = filas.map((it, idx) => {
     const est = estadoArticulo(it);
     const badge = est === "ok" ? "<span class='badge badge-ok'>OK</span>" : est === "bajo" ? "<span class='badge badge-bajo'>Bajo</span>" : "<span class='badge badge-critico'>Critico</span>";
     const comp = it.stockComprometido > 0 ? "<span class='comprometido'>(-" + it.stockComprometido + " comp.)</span>" : "-";
     const colorDisp = est === "critico" ? "var(--rojo)" : est === "bajo" ? "var(--naranja)" : "var(--verde)";
     const tipoTag = it.tipo === "Insumo"
-      ? "<span style='font-size:11px;color:var(--gris-texto)'>🧱 Insumo</span>"
-      : "<span style='font-size:11px;color:var(--azul)'>📦 Producto</span>";
+      ? "<span style='font-size:10px;color:var(--gris-texto)'>🧱</span>"
+      : "<span style='font-size:10px;color:var(--azul)'>📦</span>";
     const minTexto = it.tipoAlerta === "dias"
       ? (it.stockMinimoDias > 0 ? it.stockMinimoDias + "d" : "-")
       : (it.stockMinimoUnidades > 0 ? Number(it.stockMinimoUnidades || 0).toLocaleString("es-AR") + "u" : "-");
@@ -1213,28 +1243,27 @@ function renderizarTabla() {
       ? "<span style='background:" + colorABC + ";color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px' title='ABC: importancia por facturación (A=más alto). XYZ: variabilidad de demanda (X=estable, Z=errática)'>" + it.clasificacionABCXYZ + "</span>"
       : "<span style='color:#ccc;font-size:11px'>-</span>";
     const filId = "lotes-" + idxReal;
-    return "<tr" + filaEstilo + "><td><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small>" + v2Badge + "</td>"
-      + "<td>" + tipoTag + "</td>"
+    return "<tr" + filaEstilo + "><td style='min-width:120px'><b>" + it.descripcion + "</b> " + tipoTag + "<br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small>" + v2Badge + "</td>"
       + "<td>" + claseBadge + "</td>"
-      + "<td style='text-align:right;font-weight:700'>" + Number(it.stockReal || 0).toLocaleString("es-AR") + "</td>"
-      + "<td style='text-align:right;padding:4px 6px;background:#f0f7ff'>"
-      + "<div style='display:flex;gap:3px;align-items:center;justify-content:flex-end'>"
+      + "<td style='text-align:right;padding:3px 5px;background:#f0f7ff'>"
+      + "<div style='display:flex;gap:2px;align-items:center;justify-content:flex-end'>"
       + "<input type='number' min='0' step='0.1' placeholder='—' id='sf_" + idxReal + "' "
-      + "style='width:70px;padding:3px 5px;text-align:right;font-size:12px;border:1px solid var(--gris-borde);border-radius:4px' "
-      + "onkeydown='if(event.key===\"Enter\"){confirmarStockFisico(' + idxReal + ');}'>"
+      + "style='width:52px;padding:2px 4px;text-align:right;font-size:11px;border:1px solid var(--gris-borde);border-radius:4px' "
+      + "onkeydown='if(event.key===\"Enter\"){confirmarStockFisico(" + idxReal + ");}'>"
       + "<button type='button' title='Confirmar recuento' onclick='confirmarStockFisico(" + idxReal + ")' "
-      + "style='background:var(--verde);color:#fff;border:none;border-radius:4px;padding:3px 7px;font-size:13px;cursor:pointer;flex-shrink:0'>✓</button>"
+      + "style='background:var(--verde);color:#fff;border:none;border-radius:4px;padding:2px 5px;font-size:12px;cursor:pointer;flex-shrink:0'>✓</button>"
       + "</div></td>"
+      + "<td style='text-align:right;font-weight:700'>" + Number(it.stockReal || 0).toLocaleString("es-AR") + "</td>"
       + "<td style='text-align:right'>" + comp + "</td>"
       + "<td style='text-align:right;font-weight:700;color:" + colorDisp + "'>" + Number(it.stockDisponible || 0).toLocaleString("es-AR") + "</td>"
       + "<td style='text-align:right;color:var(--gris-texto)'>" + minTexto + "</td>"
       + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.diasDeStock > 0 ? Math.round(it.diasDeStock * 10) / 10 + "d" : "-") + "</td>"
       + "<td style='text-align:center;font-size:12px'>" + frecTexto + "</td>"
       + "<td>" + badge + "</td>"
-      + "<td style='white-space:nowrap'><button type='button' class='btn btn-gris' style='font-size:11px;padding:4px 8px' onclick='abrirModalMinimo(" + idxReal + ")'>Min.</button>"
-      + " <button type='button' class='btn btn-azul' style='font-size:11px;padding:4px 6px' title='Registrar movimiento' onclick='abrirMovRapido(" + idxReal + ")'>+Mov</button>"
+      + "<td style='white-space:nowrap'><button type='button' class='btn btn-gris' style='font-size:10px;padding:3px 6px' onclick='abrirModalMinimo(" + idxReal + ")'>Mín.</button>"
+      + " <button type='button' class='btn btn-azul' style='font-size:10px;padding:3px 6px' title='Registrar movimiento' onclick='abrirMovRapido(" + idxReal + ")'>+Mov</button>"
       + " <button type='button' class='fila-lote-toggle' title='Ver / ocultar lotes' onclick='toggleLotesInline(\"" + filId + "\"," + idxReal + ",this)'>+</button></td></tr>"
-      + "<tr class='fila-lotes' id='" + filId + "'><td colspan='12' style='padding:0'><div style='padding:8px 16px'><span style='color:var(--gris-texto);font-size:12px'>Cargando lotes...</span></div></td></tr>";
+      + "<tr class='fila-lotes' id='" + filId + "'><td colspan='11' style='padding:0'><div style='padding:8px 16px'><span style='color:var(--gris-texto);font-size:12px'>Cargando lotes...</span></div></td></tr>";
   }).join("");
   document.getElementById("pieDatos").textContent = filas.length + " articulo(s) mostrados.";
 }
