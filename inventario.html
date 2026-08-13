@@ -62,7 +62,10 @@
   .filtro-custom-opcion:hover,.filtro-custom-opcion.focus{background:var(--azul-claro);}
   .filtro-custom-opcion.seleccionada{background:var(--azul);color:#fff;font-weight:700;}
   .filtro-custom-opcion.seleccionada:hover,.filtro-custom-opcion.seleccionada.focus{background:#1560a0;}
-  /* --- Tipo: pills compactos --- */
+  /* --- Quitar flechitas de inputs numéricos de stock físico --- */
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+  input[type=number]{-moz-appearance:textfield;}
   .tipo-checks{display:flex;gap:5px;align-items:center;flex-wrap:nowrap;}
   .tipo-check-btn{padding:5px 11px;border-radius:20px;border:1.5px solid var(--gris-borde);cursor:pointer;font-size:12px;font-weight:600;background:none;user-select:none;white-space:nowrap;}
   .tipo-check-btn.activo{border-color:var(--azul);background:var(--azul);color:#fff;}
@@ -890,7 +893,40 @@ function poblarFiltroProveedores() {
 // ================================================================
 // LOTES INLINE (expandible con + / -)
 // ================================================================
-// Confirma el stock físico ingresado directo en la tabla de Stock.
+// Suma los stocks físicos ingresados por lote y actualiza el input principal del artículo.
+// Se llama en tiempo real con oninput — el operador ve el total mientras escribe.
+function sumarLotesAlItem(idxReal) {
+  const inputPrincipal = document.getElementById("sf_" + idxReal);
+  if (!inputPrincipal) return;
+  // Buscar todos los inputs de lote de este artículo (sfl_idxReal_0, sfl_idxReal_1, ...)
+  let suma = 0;
+  let hayAlgunValor = false;
+  let i = 0;
+  while (true) {
+    const loteInput = document.getElementById("sfl_" + idxReal + "_" + i);
+    if (!loteInput) break;
+    const val = parseFloat(loteInput.value);
+    if (!isNaN(val) && val >= 0) {
+      suma += val;
+      hayAlgunValor = true;
+    }
+    i++;
+  }
+  if (hayAlgunValor) {
+    inputPrincipal.value = suma % 1 === 0 ? suma : suma.toFixed(2);
+    // Highlight visual para que sea obvio que se actualizó
+    inputPrincipal.style.background = "#fffde7";
+    inputPrincipal.style.borderColor = "var(--azul)";
+    inputPrincipal.style.fontWeight = "700";
+  } else {
+    inputPrincipal.value = "";
+    inputPrincipal.style.background = "";
+    inputPrincipal.style.borderColor = "";
+    inputPrincipal.style.fontWeight = "";
+  }
+}
+
+
 // Registra el recuento (teórico vs físico) con un clic al ✓.
 async function confirmarStockFisico(idx) {
   const it = DATOS_INV[idx];
@@ -983,6 +1019,8 @@ async function toggleLotesInline(filId, idxReal, btn) {
     // Mostrar en orden DESC (más reciente arriba) — el usuario quiere ver lo nuevo primero
     const itemsDesc = [...items].reverse();
     celda.dataset.cargado = "ok";
+    // Guardar referencia a los lotes en el DOM para poder sumar desde la función externa
+    celda.dataset.cantLotes = itemsDesc.length;
     celda.innerHTML = "<table style='width:100%;font-size:12px;border-collapse:collapse'>"
       + "<thead><tr style='background:var(--azul-claro)'>"
       + "<th style='padding:5px 8px;text-align:left'>Partida</th>"
@@ -990,13 +1028,14 @@ async function toggleLotesInline(filId, idxReal, btn) {
       + "<th style='padding:5px 8px;text-align:right'>Remanente</th>"
       + "<th style='padding:5px 8px'>Primera compra</th>"
       + "<th style='padding:5px 8px;text-align:right'>Antigüedad</th>"
+      + "<th style='padding:5px 8px;text-align:center;background:#1e3a52;color:#fff' title='Stock físico contado en este lote — la suma actualiza el total del artículo'>Fís. lote</th>"
       + "</tr></thead><tbody>"
       + itemsDesc.map((p, i) => {
-          // El badge va en el lote que se identificó como "SALE PRIMERO" en el orden FIFO original
           const esSalePrimero = idxSalePrimero >= 0 && p === items[idxSalePrimero];
           const bg = esSalePrimero ? "background:#e8f4ea;font-weight:700"
             : (p.unidadesRemanentes > 0 ? "background:#f0f8f0" : (i%2===0 ? "" : "background:#f7f9fb"));
           const colorRem = p.unidadesRemanentes > 0 ? "var(--verde)" : "var(--gris-texto)";
+          const loteInputId = "sfl_" + idxReal + "_" + i;
           return "<tr style='" + bg + "'>"
             + "<td style='padding:5px 8px'>" + p.partida
             + (esSalePrimero ? " <span style='background:var(--verde);color:#fff;font-size:10px;padding:1px 5px;border-radius:6px'>SALE PRIMERO</span>" : "")
@@ -1005,9 +1044,17 @@ async function toggleLotesInline(filId, idxReal, btn) {
             + "<td style='padding:5px 8px;text-align:right;color:" + colorRem + ";font-weight:700'>" + Number(p.unidadesRemanentes || 0).toLocaleString("es-AR") + "</td>"
             + "<td style='padding:5px 8px'>" + (p.fechaPrimeraCompra || "-") + "</td>"
             + "<td style='padding:5px 8px;text-align:right;color:var(--gris-texto)'>" + (p.diasAntiguedad > 0 ? p.diasAntiguedad + "d" : "-") + "</td>"
+            + "<td style='padding:4px 8px;background:#f0f7ff;text-align:center'>"
+            + "<input type='number' min='0' step='0.1' placeholder='—' id='" + loteInputId + "' "
+            + "style='width:65px;padding:2px 4px;text-align:right;font-size:11px;border:1px solid var(--gris-borde);border-radius:4px' "
+            + "oninput='sumarLotesAlItem(" + idxReal + ")'>"
+            + "</td>"
             + "</tr>";
         }).join("")
-      + "</tbody></table>";
+      + "</tbody></table>"
+      + "<div style='padding:5px 10px;font-size:11px;color:var(--gris-texto);background:#f7fafd'>"
+      + "💡 Completá el stock físico por lote — la suma se actualiza automáticamente en el campo del artículo. Luego confirmá con ✓."
+      + "</div>";
   } catch(e) {
     // NO marcamos como cargado para que se pueda reintentar
     celda.innerHTML = "<div style='padding:6px 8px'>"
@@ -1248,7 +1295,7 @@ function renderizarTabla() {
       + "<td style='text-align:right;padding:3px 5px;background:#f0f7ff'>"
       + "<div style='display:flex;gap:2px;align-items:center;justify-content:flex-end'>"
       + "<input type='number' min='0' step='0.1' placeholder='—' id='sf_" + idxReal + "' "
-      + "style='width:52px;padding:2px 4px;text-align:right;font-size:11px;border:1px solid var(--gris-borde);border-radius:4px' "
+      + "style='width:65px;padding:2px 4px;text-align:right;font-size:11px;border:1px solid var(--gris-borde);border-radius:4px' "
       + "onkeydown='if(event.key===\"Enter\"){confirmarStockFisico(" + idxReal + ");}'>"
       + "<button type='button' title='Confirmar recuento' onclick='confirmarStockFisico(" + idxReal + ")' "
       + "style='background:var(--verde);color:#fff;border:none;border-radius:4px;padding:2px 5px;font-size:12px;cursor:pointer;flex-shrink:0'>✓</button>"
