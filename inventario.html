@@ -20,7 +20,10 @@
   .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end;}
   .filtros input,.filtros select{width:auto;flex:1;min-width:140px;}
   table{width:100%;border-collapse:collapse;font-size:12px;}
-  th{background:var(--azul-oscuro);color:#fff;padding:6px 7px;text-align:left;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:var(--alto-header,0px);z-index:15;}
+  th{background:var(--azul-oscuro);color:#fff;padding:6px 7px;text-align:left;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;}
+  /* Encabezado fijo dentro de un contenedor con scroll propio (ver .tabla-scroll) */
+  .tabla-scroll{max-height:65vh;overflow-y:auto;overflow-x:auto;border:1px solid var(--gris-borde);border-radius:6px;}
+  .tabla-scroll th{position:sticky;top:0;z-index:15;}
   td{padding:5px 7px;border-bottom:1px solid var(--gris-borde);vertical-align:middle;}
   tr:hover td{background:#f7fafd;}
   .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
@@ -212,7 +215,7 @@
         </div>
       </div>
       <div id="totalesVisibles" style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;background:#eef4fb;border:1px solid var(--gris-borde);border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:13px"></div>
-      <div style="overflow-x:auto">
+      <div class="tabla-scroll">
         <table>
           <thead>
             <tr>
@@ -725,19 +728,6 @@ function renderizarMonetariosInv() {
   if (datosComprasActual.length > 0) renderizarCompras();
 }
 
-// Mide la altura real del header fijo de la app y la expone como variable
-// CSS, para que el encabezado de la tabla de Stock (position:sticky) quede
-// pegado justo debajo — sin adivinar un valor fijo que se desalinea según
-// el ancho de pantalla (el header puede ocupar 1 o 2 líneas según el espacio).
-function ajustarAlturaHeaderSticky() {
-  const header = document.getElementById("appHeader");
-  if (!header || header.style.display === "none") return;
-  const alto = header.getBoundingClientRect().height;
-  document.documentElement.style.setProperty("--alto-header", alto + "px");
-}
-window.addEventListener("resize", ajustarAlturaHeaderSticky);
-window.addEventListener("load", ajustarAlturaHeaderSticky);
-
 // --- Ayuda contextual ("i") ---
 // Muestra un globo explicativo cerca del icono tocado. Funciona igual con
 // click (desktop) o tap (mobile) -- no usa hover porque en celular no existe.
@@ -1072,7 +1062,6 @@ function autenticarInv(usuario) {
   document.getElementById("appHeader").style.display = "flex";
   document.getElementById("appMain").style.display = "block";
   document.getElementById("usuarioLogueado").textContent = usuario;
-  ajustarAlturaHeaderSticky();
   cargarDatosInv();
 }
 
