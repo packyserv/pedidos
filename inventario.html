@@ -1124,21 +1124,31 @@ async function cargarDatosInv() {
 async function recargarDatos() { DATOS_INV = []; cargarDatosInv(); }
 
 // --- Dashboard resumen (arriba del panel de Stock) ---
+const DIAS_ESTANCADO = 180; // 6 meses sin venta
 function renderizarDashboard() {
   const cont = document.getElementById("dashboardStock");
   if (!cont) return;
   const moneda = monedaInvActual();
   const total = DATOS_INV.length;
-  let criticos = 0, bajos = 0, conV2 = 0, valorInmovilizadoARS = 0;
+  let criticos = 0, bajos = 0, conV2 = 0, valorInmovilizadoARS = 0, valorEstancadoARS = 0;
   DATOS_INV.forEach(it => {
     const est = estadoArticulo(it);
     if (est === "critico") criticos++;
     else if (est === "bajo") bajos++;
     if (it.stockComprometidoV2 > 0) conV2++;
-    if (it.costoUnitario && it.stockReal > 0) valorInmovilizadoARS += it.stockReal * it.costoUnitario;
+    if (it.costoUnitario && it.stockReal > 0) {
+      const valorArticulo = it.stockReal * it.costoUnitario;
+      valorInmovilizadoARS += valorArticulo;
+      // Estancado: sin venta en los últimos 6 meses (diasSinVenta null =
+      // nunca se vendió, también cuenta como estancado; los insumos no
+      // tienen este dato y quedan fuera de este cálculo).
+      const sinVentaReciente = it.diasSinVenta === null ? (it.tipo !== 'Insumo') : it.diasSinVenta > DIAS_ESTANCADO;
+      if (sinVentaReciente) valorEstancadoARS += valorArticulo;
+    }
   });
 
   const valorInmovilizado = convertirInv(valorInmovilizadoARS);
+  const valorEstancado = convertirInv(valorEstancadoARS);
   const costoFinanciero = valorInmovilizado !== null ? valorInmovilizado * TASA_MENSUAL : null;
   const etiqMoneda = moneda === 'USD' ? ' (U$S)' : ' (ARS)';
 
@@ -1151,6 +1161,9 @@ function renderizarDashboard() {
   }
   if (valorInmovilizadoARS > 0) {
     html += "<div class='stat-box'><button class='info-btn' onclick=\"mostrarInfo(event, 'Valor total del stock que tenés en depósito, calculado como: cantidad de cada artículo × su costo unitario de compra.\\n\\nEs plata que está inmovilizada en mercadería en vez de circulando en el negocio.')\">i</button><div class='num' style='color:var(--azul)'>" + formatoCompacto(valorInmovilizado, moneda) + "</div><div class='lab'>Valor inmovilizado" + etiqMoneda + "</div></div>";
+    if (valorEstancadoARS > 0) {
+      html += "<div class='stat-box' style='border-color:var(--rojo)'><button class='info-btn' onclick=\"mostrarInfo(event, 'Parte del Valor inmovilizado que corresponde a artículos SIN venta en los últimos 6 meses (o que nunca se vendieron).\\n\\nEs la porción de plata parada con mayor riesgo: no solo está inmovilizada, sino que además no está rotando. Candidatos a liquidar, promocionar o dar de baja.')\">i</button><div class='num' style='color:var(--rojo)'>" + formatoCompacto(valorEstancado, moneda) + "</div><div class='lab'>↳ Estancado (sin venta 6+ meses)</div></div>";
+    }
     html += "<div class='stat-box'><button class='info-btn' onclick=\"mostrarInfo(event, 'Cuánto te cuesta por mes tener esa plata parada en stock, en vez de invertida o disponible.\\n\\nSe calcula como: Valor inmovilizado x tasa mensual de referencia (" + (TASA_MENSUAL*100).toFixed(1) + "%). Es el costo de oportunidad del capital atado al inventario.')\">i</button><div class='num' style='color:var(--rojo)'>" + formatoCompacto(costoFinanciero, moneda) + "</div><div class='lab'>Costo financiero / mes (" + (TASA_MENSUAL*100).toFixed(1) + "%)</div></div>";
   }
   cont.innerHTML = html;
