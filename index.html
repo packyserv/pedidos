@@ -3609,7 +3609,24 @@ function validarFormulario() {
   if (!horario.value) { marcarInvalido('campoHorario'); errores.push('Seleccioná el horario de entrega.'); } else marcarValido('campoHorario');
 
   const vendedor = document.getElementById('vendedor');
-  if (!vendedor.value) { marcarInvalido('campoVendedor'); errores.push('Seleccioná un vendedor.'); } else marcarValido('campoVendedor');
+  const vendedorEfectivo = vendedor.value || _codVendedorLogueado || '';
+  if (!vendedorEfectivo) {
+    marcarInvalido('campoVendedor');
+    // Si el campo estaba oculto (login), lo mostramos para que el usuario
+    // pueda elegirlo manualmente en vez de quedar bloqueado sin poder corregirlo.
+    const campoVend = document.getElementById('campoVendedor');
+    if (campoVend && campoVend.style.display === 'none') campoVend.style.display = '';
+    errores.push('Seleccioná un vendedor.');
+  } else {
+    marcarValido('campoVendedor');
+    // Si el valor viene del login pero el <select> quedo vacio por algun
+    // motivo, lo resincronizamos para que el resto del formulario (que lee
+    // vendedor.value en varios lugares) tenga el valor correcto.
+    if (!vendedor.value && _codVendedorLogueado) {
+      vendedor.value = _codVendedorLogueado;
+      resyncCombo('vendedor');
+    }
+  }
 
   if (!clienteSeleccionado) { marcarInvalido('campoCliente'); errores.push('Seleccioná un cliente de la lista.'); } else marcarValido('campoCliente');
 

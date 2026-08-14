@@ -183,6 +183,16 @@
             <div class="filtro-custom-opcion" data-val="C" onclick="seleccionarFC('fcABC','C','⚪ Clase C',event)">⚪ Clase C (baja rotación)</div>
           </div>
         </div>
+        <div class="filtro-custom" id="fcXYZ">
+          <button class="filtro-custom-trigger" type="button" id="fcXYZTrig" onclick="toggleFiltroCustom('fcXYZ')" onkeydown="teclasFC(event,'fcXYZ')">Variabilidad XYZ</button>
+          <div class="filtro-custom-lista" id="fcXYZLista">
+            <input class="filtro-custom-buscar" type="text" placeholder="Buscar..." oninput="filtrarOpciones('fcXYZ',this.value)" onkeydown="teclasFC(event,'fcXYZ')">
+            <div class="filtro-custom-opcion seleccionada" data-val="" onclick="seleccionarFC('fcXYZ','','Variabilidad XYZ',event)">Todas las variabilidades</div>
+            <div class="filtro-custom-opcion" data-val="X" onclick="seleccionarFC('fcXYZ','X','🟢 Clase X',event)">🟢 Clase X (demanda estable)</div>
+            <div class="filtro-custom-opcion" data-val="Y" onclick="seleccionarFC('fcXYZ','Y','🟡 Clase Y',event)">🟡 Clase Y (variación moderada)</div>
+            <div class="filtro-custom-opcion" data-val="Z" onclick="seleccionarFC('fcXYZ','Z','🔴 Clase Z',event)">🔴 Clase Z (demanda errática)</div>
+          </div>
+        </div>
         <div class="filtro-custom" id="fcProv">
           <button class="filtro-custom-trigger" type="button" id="fcProvTrig" onclick="toggleFiltroCustom('fcProv')" onkeydown="teclasFC(event,'fcProv')">Proveedor</button>
           <div class="filtro-custom-lista" id="fcProvLista">
@@ -206,11 +216,11 @@
             <tr>
               <th onclick="ordenarPor('descripcion')">Artículo ⇅</th>
               <th onclick="ordenarPor('clasificacionABCXYZ')" title="ABC: importancia por facturación. XYZ: variabilidad de demanda">Clase ⇅</th>
-              <th style="text-align:center;background:#1e3a52;min-width:80px" title="Ingresá el stock físico y confirmá con ✓">Fís.✓</th>
               <th onclick="ordenarPor('stockReal')" style="text-align:right" title="Stock teórico (ERP)">Teórico ⇅</th>
               <th onclick="ordenarPor('stockComprometido')" style="text-align:right" title="Comprometido en pedidos">Comp. ⇅</th>
               <th onclick="ordenarPor('stockDisponible')" style="text-align:right" title="Disponible = Teórico − Comprometido">Dispon. ⇅</th>
-              <th onclick="ordenarPor('minimoEfectivo')" style="text-align:right" title="Stock mínimo configurado">Mín. ⇅</th>
+              <th onclick="ordenarPor('minUnidades')" style="text-align:right" title="Mínimo configurado en unidades">Mín. (u) ⇅</th>
+              <th onclick="ordenarPor('minDias')" style="text-align:right" title="Mínimo configurado en días de cobertura">Mín. (d) ⇅</th>
               <th onclick="ordenarPor('diasDeStock')" style="text-align:right" title="Días de cobertura actual">Días ⇅</th>
               <th onclick="ordenarPor('frecuenciaReposicionDias')" title="Frecuencia de reposición promedio">Frec. ⇅</th>
               <th onclick="ordenarPor('estadoOrden')">Estado ⇅</th>
@@ -218,7 +228,7 @@
             </tr>
           </thead>
           <tbody id="cuerpoTabla">
-            <tr><td colspan="11" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
+            <tr><td colspan="10" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
           </tbody>
         </table>
       </div>
@@ -226,47 +236,40 @@
     </div>
 
     <!-- Panel de movimiento rápido desde Inventario -->
-    <div id="panelMovRapido" style="display:none" class="card" style="border:2px solid var(--azul)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h2 style="margin:0;padding:0;border:none">Registrar movimiento</h2>
-        <button type="button" class="btn btn-gris" style="font-size:12px;padding:4px 10px" onclick="cerrarMovRapido()">✕ Cerrar</button>
-      </div>
-      <div id="infoMovRapido" style="background:var(--azul-claro);padding:10px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
-        <div style="flex:1;min-width:140px">
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Tipo</label>
-          <div class="pills">
-            <button type="button" class="pill-tipo activa-entrada" id="pillEntradaRapido" onclick="seleccionarTipoRapido('entrada')">▲ Entrada</button>
-            <button type="button" class="pill-tipo" id="pillSalidaRapido" onclick="seleccionarTipoRapido('salida')">▼ Salida</button>
+    <div id="overlayMovRapido" class="modal-overlay" onclick="if(event.target===this) cerrarMovRapido()">
+      <div class="modal" style="max-width:640px;border-top:4px solid var(--azul)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h3 style="margin:0" id="tituloMovRapido">Registrar movimiento</h3>
+          <button type="button" class="btn btn-gris" style="font-size:12px;padding:4px 10px" onclick="cerrarMovRapido()">✕</button>
+        </div>
+        <div id="infoMovRapido" style="background:var(--azul-claro);padding:10px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+          <div style="flex:1;min-width:140px">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Tipo</label>
+            <div class="pills">
+              <button type="button" class="pill-tipo activa-entrada" id="pillEntradaRapido" onclick="seleccionarTipoRapido('entrada')">▲ Entrada</button>
+              <button type="button" class="pill-tipo" id="pillSalidaRapido" onclick="seleccionarTipoRapido('salida')">▼ Salida</button>
+            </div>
+          </div>
+          <div style="flex:1;min-width:120px">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Cantidad</label>
+            <input type="number" id="cantidadMovRapido" min="1" placeholder="0" style="width:100%;padding:8px;border:1px solid var(--gris-borde);border-radius:6px">
+          </div>
+          <div style="flex:2;min-width:180px">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Motivo</label>
+            <select id="motivoMovRapido" style="width:100%;padding:8px;border:1px solid var(--gris-borde);border-radius:6px">
+              <option value="">Elegí el tipo primero...</option>
+            </select>
+          </div>
+          <div style="flex:2;min-width:160px">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Observación (opcional)</label>
+            <input type="text" id="obsMovRapido" placeholder="Detalle adicional..." style="width:100%;padding:8px;border:1px solid var(--gris-borde);border-radius:6px">
           </div>
         </div>
-        <div style="flex:1;min-width:120px">
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Cantidad</label>
-          <input type="number" id="cantidadMovRapido" min="1" placeholder="0" style="width:100%;padding:8px;border:1px solid var(--gris-borde);border-radius:6px">
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button type="button" class="btn btn-gris" style="flex:1" onclick="cerrarMovRapido()">Cancelar</button>
+          <button type="button" class="btn btn-verde" style="flex:2" onclick="confirmarMovRapido()">✅ Registrar</button>
         </div>
-        <div style="flex:2;min-width:180px">
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Motivo</label>
-          <select id="motivoMovRapido" style="width:100%;padding:8px;border:1px solid var(--gris-borde);border-radius:6px">
-            <option value="">Seleccioná el motivo...</option>
-            <optgroup label="Entradas">
-              <option value="Compra">Compra</option>
-              <option value="Produccion">Producción</option>
-              <option value="Devolucion cliente">Devolución de cliente</option>
-              <option value="Ajuste positivo">Ajuste positivo</option>
-            </optgroup>
-            <optgroup label="Salidas">
-              <option value="Venta">Venta / despacho</option>
-              <option value="Merma">Merma / daño</option>
-              <option value="Devolucion proveedor">Devolución a proveedor</option>
-              <option value="Ajuste negativo">Ajuste negativo</option>
-            </optgroup>
-          </select>
-        </div>
-        <div style="flex:2;min-width:160px">
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Observación (opcional)</label>
-          <input type="text" id="obsMovRapido" placeholder="Detalle adicional..." style="width:100%;padding:8px;border:1px solid var(--gris-borde);border-radius:6px">
-        </div>
-        <button type="button" class="btn btn-verde" onclick="confirmarMovRapido()" style="padding:9px 20px;flex-shrink:0">✅ Registrar</button>
       </div>
     </div>
   </div>
@@ -745,7 +748,7 @@ let DATOS_INV = [];
 let articuloMovSeleccionado = null;
 let tipoMovActual = "entrada";
 let ordenActual = { col: "", asc: true }; // "" = orden por impacto por defecto
-let FILTROS_ACTIVOS = { estado: [], abc: [], proveedor: [], tipo: "todos" };
+let FILTROS_ACTIVOS = { estado: [], abc: [], xyz: [], proveedor: [], tipo: "todos" };
 let usuarioActual = "";
 let articuloMinimoActual = null;
 
@@ -769,9 +772,18 @@ function filtrarOpciones(id, q) {
     op.style.display = (!q2 || op.textContent.toLowerCase().includes(q2)) ? "" : "none";
   });
 }
+// Configuración de cada filtro custom: a qué clave de FILTROS_ACTIVOS mapea
+// y cuál es su label por defecto cuando no hay nada seleccionado.
+const FC_CONFIG = {
+  fcEstado: { key: "estado", label: "Todos los status" },
+  fcABC:    { key: "abc",    label: "Clase ABC" },
+  fcXYZ:    { key: "xyz",    label: "Variabilidad XYZ" },
+  fcProv:   { key: "proveedor", label: "Proveedor" },
+};
+
 function seleccionarFC(id, valor, label, event) {
   const ctrlKey = event && (event.ctrlKey || event.metaKey);
-  const filtroKey = id === "fcEstado" ? "estado" : id === "fcABC" ? "abc" : "proveedor";
+  const filtroKey = FC_CONFIG[id]?.key || id;
   const opts = document.querySelectorAll("#" + id + "Lista .filtro-custom-opcion");
 
   if (!ctrlKey || valor === "") {
@@ -805,7 +817,7 @@ function seleccionarFC(id, valor, label, event) {
   // Actualizar label del trigger
   const trig = document.getElementById(id + "Trig");
   const activos2 = FILTROS_ACTIVOS[filtroKey];
-  const defaultLabel = id === "fcEstado" ? "Todos los status" : id === "fcABC" ? "Clase ABC" : "Proveedor";
+  const defaultLabel = FC_CONFIG[id]?.label || "Filtro";
   if (trig) {
     if (activos2.length === 0) {
       trig.textContent = defaultLabel;
@@ -893,92 +905,7 @@ function poblarFiltroProveedores() {
 // ================================================================
 // LOTES INLINE (expandible con + / -)
 // ================================================================
-// Suma los stocks físicos ingresados por lote y actualiza el input principal del artículo.
-// Se llama en tiempo real con oninput — el operador ve el total mientras escribe.
-function sumarLotesAlItem(idxReal) {
-  const inputPrincipal = document.getElementById("sf_" + idxReal);
-  if (!inputPrincipal) return;
-  // Buscar todos los inputs de lote de este artículo (sfl_idxReal_0, sfl_idxReal_1, ...)
-  let suma = 0;
-  let hayAlgunValor = false;
-  let i = 0;
-  while (true) {
-    const loteInput = document.getElementById("sfl_" + idxReal + "_" + i);
-    if (!loteInput) break;
-    const val = parseFloat(loteInput.value);
-    if (!isNaN(val) && val >= 0) {
-      suma += val;
-      hayAlgunValor = true;
-    }
-    i++;
-  }
-  if (hayAlgunValor) {
-    inputPrincipal.value = suma % 1 === 0 ? suma : suma.toFixed(2);
-    // Highlight visual para que sea obvio que se actualizó
-    inputPrincipal.style.background = "#fffde7";
-    inputPrincipal.style.borderColor = "var(--azul)";
-    inputPrincipal.style.fontWeight = "700";
-  } else {
-    inputPrincipal.value = "";
-    inputPrincipal.style.background = "";
-    inputPrincipal.style.borderColor = "";
-    inputPrincipal.style.fontWeight = "";
-  }
-}
-
-
-// Registra el recuento (teórico vs físico) con un clic al ✓.
-async function confirmarStockFisico(idx) {
-  const it = DATOS_INV[idx];
-  if (!it) return;
-  const input = document.getElementById("sf_" + idx);
-  if (!input) return;
-  const val = input.value.trim();
-  if (val === "") {
-    input.focus();
-    return;
-  }
-  const fisico = parseFloat(val);
-  if (isNaN(fisico) || fisico < 0) {
-    mostrarBannerInv("fallo", "Ingresá un valor válido mayor o igual a cero.");
-    input.focus();
-    return;
-  }
-  const desc = it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor;
-  const teorico = it.stockReal || 0;
-  const diferencia = fisico - teorico;
-  const diferTexto = diferencia === 0 ? "Sin diferencia" : (diferencia > 0 ? "+" + diferencia : diferencia) + " u.";
-  try {
-    const payload = {
-      usuario: usuarioActual,
-      items: [{
-        codigoConcatenado: it.codigoConcatenado,
-        descripcion: desc,
-        stockTeorico: teorico,
-        stockFisico: fisico,
-        observacion: "Carga directa desde panel de Stock",
-      }]
-    };
-    const resp = await fetchInv(WEB_APP_URL + "?action=registrarRecuento", {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload),
-    });
-    const data = await resp.json();
-    if (data.ok) {
-      // Feedback visual en el input: lo pinta según si hay diferencia o no
-      input.value = "";
-      input.style.background = diferencia === 0 ? "#d4edda" : "#fff3cd";
-      input.placeholder = fisico.toLocaleString("es-AR");
-      setTimeout(() => { input.style.background = ""; input.placeholder = "—"; }, 3000);
-      mostrarBannerInv("exito", "✅ Recuento registrado — " + desc + " · Teórico: " + teorico + " · Físico: " + fisico + " · " + diferTexto);
-    } else {
-      mostrarBannerInv("fallo", "Error al registrar: " + (data.error || "desconocido"));
-    }
-  } catch(e) {
-    mostrarBannerInv("fallo", "Error de conexión al registrar el recuento.");
-  }
-}
+// Registra el recuento (teórico vs físico) — usado desde la pestaña Recuento.
 
 async function toggleLotesInline(filId, idxReal, btn) {
   const fila = document.getElementById(filId);
@@ -1019,8 +946,6 @@ async function toggleLotesInline(filId, idxReal, btn) {
     // Mostrar en orden DESC (más reciente arriba) — el usuario quiere ver lo nuevo primero
     const itemsDesc = [...items].reverse();
     celda.dataset.cargado = "ok";
-    // Guardar referencia a los lotes en el DOM para poder sumar desde la función externa
-    celda.dataset.cantLotes = itemsDesc.length;
     celda.innerHTML = "<table style='width:100%;font-size:12px;border-collapse:collapse'>"
       + "<thead><tr style='background:var(--azul-claro)'>"
       + "<th style='padding:5px 8px;text-align:left'>Partida</th>"
@@ -1028,14 +953,14 @@ async function toggleLotesInline(filId, idxReal, btn) {
       + "<th style='padding:5px 8px;text-align:right'>Remanente</th>"
       + "<th style='padding:5px 8px'>Primera compra</th>"
       + "<th style='padding:5px 8px;text-align:right'>Antigüedad</th>"
-      + "<th style='padding:5px 8px;text-align:center;background:#1e3a52;color:#fff' title='Stock físico contado en este lote — la suma actualiza el total del artículo'>Fís. lote</th>"
+      + "<th style='padding:5px 8px;text-align:center'>Acción</th>"
       + "</tr></thead><tbody>"
       + itemsDesc.map((p, i) => {
           const esSalePrimero = idxSalePrimero >= 0 && p === items[idxSalePrimero];
           const bg = esSalePrimero ? "background:#e8f4ea;font-weight:700"
             : (p.unidadesRemanentes > 0 ? "background:#f0f8f0" : (i%2===0 ? "" : "background:#f7f9fb"));
           const colorRem = p.unidadesRemanentes > 0 ? "var(--verde)" : "var(--gris-texto)";
-          const loteInputId = "sfl_" + idxReal + "_" + i;
+          const partidaEsc = String(p.partida || "").replace(/'/g, "&#39;");
           return "<tr style='" + bg + "'>"
             + "<td style='padding:5px 8px'>" + p.partida
             + (esSalePrimero ? " <span style='background:var(--verde);color:#fff;font-size:10px;padding:1px 5px;border-radius:6px'>SALE PRIMERO</span>" : "")
@@ -1044,17 +969,12 @@ async function toggleLotesInline(filId, idxReal, btn) {
             + "<td style='padding:5px 8px;text-align:right;color:" + colorRem + ";font-weight:700'>" + Number(p.unidadesRemanentes || 0).toLocaleString("es-AR") + "</td>"
             + "<td style='padding:5px 8px'>" + (p.fechaPrimeraCompra || "-") + "</td>"
             + "<td style='padding:5px 8px;text-align:right;color:var(--gris-texto)'>" + (p.diasAntiguedad > 0 ? p.diasAntiguedad + "d" : "-") + "</td>"
-            + "<td style='padding:4px 8px;background:#f0f7ff;text-align:center'>"
-            + "<input type='number' min='0' step='0.1' placeholder='—' id='" + loteInputId + "' "
-            + "style='width:65px;padding:2px 4px;text-align:right;font-size:11px;border:1px solid var(--gris-borde);border-radius:4px' "
-            + "oninput='sumarLotesAlItem(" + idxReal + ")'>"
+            + "<td style='padding:4px 8px;text-align:center'>"
+            + "<button type='button' class='btn btn-azul' style='font-size:10px;padding:3px 8px' title='Registrar movimiento en este lote' onclick='abrirMovRapido(" + idxReal + ",\"" + partidaEsc + "\")'>+Mov</button>"
             + "</td>"
             + "</tr>";
         }).join("")
-      + "</tbody></table>"
-      + "<div style='padding:5px 10px;font-size:11px;color:var(--gris-texto);background:#f7fafd'>"
-      + "💡 Completá el stock físico por lote — la suma se actualiza automáticamente en el campo del artículo. Luego confirmá con ✓."
-      + "</div>";
+      + "</tbody></table>";
   } catch(e) {
     // NO marcamos como cargado para que se pueda reintentar
     celda.innerHTML = "<div style='padding:6px 8px'>"
@@ -1194,7 +1114,8 @@ function valorOrden(it, col) {
     case "stockReal": return Number(it.stockReal || 0);
     case "stockComprometido": return Number(it.stockComprometido || 0);
     case "stockDisponible": return Number(it.stockDisponible || 0);
-    case "minimoEfectivo": return Number(it.tipoAlerta === "dias" ? it.stockMinimoDias : it.stockMinimoUnidades) || 0;
+    case "minUnidades": return Number(it.stockMinimoUnidades) || 0;
+    case "minDias": return Number(it.stockMinimoDias) || 0;
     case "diasDeStock": return Number(it.diasDeStock || 0);
     case "frecuenciaReposicionDias": return Number(it.frecuenciaReposicionDias || -1);
     case "estadoOrden": {
@@ -1213,6 +1134,7 @@ function renderizarTabla() {
   // Nuevos filtros custom (multiselección)
   const filtrosEstado = FILTROS_ACTIVOS.estado;
   const filtrosABC = FILTROS_ACTIVOS.abc;
+  const filtrosXYZ = FILTROS_ACTIVOS.xyz;
   const filtrosProv = FILTROS_ACTIVOS.proveedor;
   const tipoSeleccionado = FILTROS_ACTIVOS.tipo; // "todos","producto","insumo"
 
@@ -1222,6 +1144,7 @@ function renderizarTabla() {
     if (tipoSeleccionado === "producto" && it.tipo !== "Producto Terminado") return false;
     if (tipoSeleccionado === "insumo" && it.tipo !== "Insumo") return false;
     if (filtrosABC.length > 0 && !filtrosABC.includes(it.clasificacionABC)) return false;
+    if (filtrosXYZ.length > 0 && !filtrosXYZ.includes(it.clasificacionXYZ)) return false;
     if (filtrosProv.length > 0 && !filtrosProv.includes(it.proveedor || "")) return false;
     if (filtrosEstado.length > 0) {
       const est = estadoArticulo(it);
@@ -1265,7 +1188,7 @@ function renderizarTabla() {
   }
 
   const tbody = document.getElementById("cuerpoTabla");
-  if (!filas.length) { tbody.innerHTML = "<tr><td colspan='11' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
+  if (!filas.length) { tbody.innerHTML = "<tr><td colspan='10' style='text-align:center;padding:20px;color:var(--gris-texto)'>Sin resultados.</td></tr>"; return; }
   tbody.innerHTML = filas.map((it, idx) => {
     const est = estadoArticulo(it);
     const badge = est === "ok" ? "<span class='badge badge-ok'>OK</span>" : est === "bajo" ? "<span class='badge badge-bajo'>Bajo</span>" : "<span class='badge badge-critico'>Critico</span>";
@@ -1274,9 +1197,8 @@ function renderizarTabla() {
     const tipoTag = it.tipo === "Insumo"
       ? "<span style='font-size:10px;color:var(--gris-texto)'>🧱</span>"
       : "<span style='font-size:10px;color:var(--azul)'>📦</span>";
-    const minTexto = it.tipoAlerta === "dias"
-      ? (it.stockMinimoDias > 0 ? it.stockMinimoDias + "d" : "-")
-      : (it.stockMinimoUnidades > 0 ? Number(it.stockMinimoUnidades || 0).toLocaleString("es-AR") + "u" : "-");
+    const minUnidTexto = it.stockMinimoUnidades > 0 ? Number(it.stockMinimoUnidades).toLocaleString("es-AR") + "u" : "-";
+    const minDiasTexto = it.stockMinimoDias > 0 ? it.stockMinimoDias + "d" : "-";
     const frecTexto = it.frecuenciaReposicionDias ? Math.round(it.frecuenciaReposicionDias) + "d" : "<span style='color:#bbb'>Sin datos</span>";
     const tieneV2 = it.stockComprometidoV2 > 0;
     const filaEstilo = tieneV2 ? " style='background:#fff0e0'" : "";
@@ -1292,25 +1214,18 @@ function renderizarTabla() {
     const filId = "lotes-" + idxReal;
     return "<tr" + filaEstilo + "><td style='min-width:120px'><b>" + it.descripcion + "</b> " + tipoTag + "<br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small>" + v2Badge + "</td>"
       + "<td>" + claseBadge + "</td>"
-      + "<td style='text-align:right;padding:3px 5px;background:#f0f7ff'>"
-      + "<div style='display:flex;gap:2px;align-items:center;justify-content:flex-end'>"
-      + "<input type='number' min='0' step='0.1' placeholder='—' id='sf_" + idxReal + "' "
-      + "style='width:65px;padding:2px 4px;text-align:right;font-size:11px;border:1px solid var(--gris-borde);border-radius:4px' "
-      + "onkeydown='if(event.key===\"Enter\"){confirmarStockFisico(" + idxReal + ");}'>"
-      + "<button type='button' title='Confirmar recuento' onclick='confirmarStockFisico(" + idxReal + ")' "
-      + "style='background:var(--verde);color:#fff;border:none;border-radius:4px;padding:2px 5px;font-size:12px;cursor:pointer;flex-shrink:0'>✓</button>"
-      + "</div></td>"
       + "<td style='text-align:right;font-weight:700'>" + Number(it.stockReal || 0).toLocaleString("es-AR") + "</td>"
       + "<td style='text-align:right'>" + comp + "</td>"
       + "<td style='text-align:right;font-weight:700;color:" + colorDisp + "'>" + Number(it.stockDisponible || 0).toLocaleString("es-AR") + "</td>"
-      + "<td style='text-align:right;color:var(--gris-texto)'>" + minTexto + "</td>"
+      + "<td style='text-align:right;color:var(--gris-texto)' title='Mínimo en unidades'>" + minUnidTexto + "</td>"
+      + "<td style='text-align:right;color:var(--gris-texto)' title='Mínimo en días de cobertura'>" + minDiasTexto + "</td>"
       + "<td style='text-align:right;color:var(--gris-texto)'>" + (it.diasDeStock > 0 ? Math.round(it.diasDeStock * 10) / 10 + "d" : "-") + "</td>"
       + "<td style='text-align:center;font-size:12px'>" + frecTexto + "</td>"
       + "<td>" + badge + "</td>"
       + "<td style='white-space:nowrap'><button type='button' class='btn btn-gris' style='font-size:10px;padding:3px 6px' onclick='abrirModalMinimo(" + idxReal + ")'>Mín.</button>"
       + " <button type='button' class='btn btn-azul' style='font-size:10px;padding:3px 6px' title='Registrar movimiento' onclick='abrirMovRapido(" + idxReal + ")'>+Mov</button>"
       + " <button type='button' class='fila-lote-toggle' title='Ver / ocultar lotes' onclick='toggleLotesInline(\"" + filId + "\"," + idxReal + ",this)'>+</button></td></tr>"
-      + "<tr class='fila-lotes' id='" + filId + "'><td colspan='11' style='padding:0'><div style='padding:8px 16px'><span style='color:var(--gris-texto);font-size:12px'>Cargando lotes...</span></div></td></tr>";
+      + "<tr class='fila-lotes' id='" + filId + "'><td colspan='10' style='padding:0'><div style='padding:8px 16px'><span style='color:var(--gris-texto);font-size:12px'>Cargando lotes...</span></div></td></tr>";
   }).join("");
   document.getElementById("pieDatos").textContent = filas.length + " articulo(s) mostrados.";
 }
@@ -1651,31 +1566,62 @@ function cambiarTab(tab) {
 // --- MOVIMIENTO RAPIDO DESDE INVENTARIO ---
 let articuloMovRapidoActual = null;
 let tipoMovRapidoActual = "entrada";
+let partidaMovRapidoActual = null; // si no es null, el movimiento es a nivel lote
 
-function abrirMovRapido(idx) {
+// Motivos de movimiento, separados por tipo. El select de Motivo se repuebla
+// según el Tipo elegido, para no mostrar motivos de Entrada al hacer una Salida (y viceversa).
+const MOTIVOS_MOV = {
+  entrada: [
+    { value: "Compra", label: "Compra" },
+    { value: "Produccion", label: "Producción" },
+    { value: "Devolucion cliente", label: "Devolución de cliente" },
+    { value: "Ajuste positivo", label: "Ajuste positivo" },
+  ],
+  salida: [
+    { value: "Venta", label: "Venta / despacho" },
+    { value: "Merma", label: "Merma / daño" },
+    { value: "Devolucion proveedor", label: "Devolución a proveedor" },
+    { value: "Ajuste negativo", label: "Ajuste negativo" },
+  ],
+};
+function poblarMotivosMovRapido(tipo) {
+  const sel = document.getElementById("motivoMovRapido");
+  const motivos = MOTIVOS_MOV[tipo] || [];
+  sel.innerHTML = "<option value=''>Seleccioná el motivo...</option>"
+    + motivos.map(m => "<option value='" + m.value + "'>" + m.label + "</option>").join("");
+}
+
+// partida: opcional — si se pasa, el movimiento queda registrado a nivel lote
+// (se guarda en la observación para trazabilidad, ya que Movimientos_Stock
+// no discrimina por lote en el ERP).
+function abrirMovRapido(idx, partida) {
   articuloMovRapidoActual = DATOS_INV[idx];
   if (!articuloMovRapidoActual) return;
   const it = articuloMovRapidoActual;
+  partidaMovRapidoActual = partida || null;
+  document.getElementById("tituloMovRapido").textContent = partida
+    ? "Registrar movimiento — Lote " + partida
+    : "Registrar movimiento";
   document.getElementById("infoMovRapido").innerHTML =
     "<b>" + it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor + "</b>"
+    + (partida ? " &nbsp;|&nbsp; Lote: <b>" + partida + "</b>" : "")
     + " &nbsp;|&nbsp; Stock teórico: <b>" + Number(it.stockReal || 0).toLocaleString("es-AR") + "</b> u."
     + " &nbsp;|&nbsp; Disponible: <b>" + Number(it.stockDisponible || 0).toLocaleString("es-AR") + "</b> u.";
   document.getElementById("cantidadMovRapido").value = "";
-  document.getElementById("motivoMovRapido").value = "";
   document.getElementById("obsMovRapido").value = "";
   seleccionarTipoRapido("entrada");
-  const panel = document.getElementById("panelMovRapido");
-  panel.style.display = "block";
-  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  document.getElementById("overlayMovRapido").classList.add("abierto");
 }
 function cerrarMovRapido() {
-  document.getElementById("panelMovRapido").style.display = "none";
+  document.getElementById("overlayMovRapido").classList.remove("abierto");
   articuloMovRapidoActual = null;
+  partidaMovRapidoActual = null;
 }
 function seleccionarTipoRapido(tipo) {
   tipoMovRapidoActual = tipo;
   document.getElementById("pillEntradaRapido").className = "pill-tipo" + (tipo === "entrada" ? " activa-entrada" : "");
   document.getElementById("pillSalidaRapido").className = "pill-tipo" + (tipo === "salida" ? " activa-salida" : "");
+  poblarMotivosMovRapido(tipo);
 }
 async function confirmarMovRapido() {
   if (!articuloMovRapidoActual) return;
@@ -1683,7 +1629,10 @@ async function confirmarMovRapido() {
   if (!(cantidad > 0)) { mostrarBannerInv("fallo", "Ingresá una cantidad mayor a cero."); return; }
   const motivo = document.getElementById("motivoMovRapido").value;
   if (!motivo) { mostrarBannerInv("fallo", "Seleccioná el motivo."); return; }
-  const obs = document.getElementById("obsMovRapido").value;
+  let obs = document.getElementById("obsMovRapido").value;
+  if (partidaMovRapidoActual) {
+    obs = "[Lote " + partidaMovRapidoActual + "] " + (obs || "");
+  }
   const it = articuloMovRapidoActual;
   const desc = it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor;
   try {
@@ -1695,7 +1644,7 @@ async function confirmarMovRapido() {
     const resp = await fetchInv(url);
     const data = await resp.json();
     if (data.ok) {
-      mostrarBannerInv("exito", (tipoMovRapidoActual === "entrada" ? "▲ Entrada" : "▼ Salida") + " de " + cantidad + " u. registrada para " + it.descripcion);
+      mostrarBannerInv("exito", (tipoMovRapidoActual === "entrada" ? "▲ Entrada" : "▼ Salida") + " de " + cantidad + " u. registrada para " + it.descripcion + (partidaMovRapidoActual ? " (Lote " + partidaMovRapidoActual + ")" : ""));
       cerrarMovRapido();
       cargarHistorialMovimientos();
     } else {
