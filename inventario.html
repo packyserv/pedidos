@@ -663,6 +663,14 @@ const CLAVE_RESET_INV = "0000";
 // mensual segun cauciones/tasa BCRA. Cambiar aca si cambia la tasa.
 const TASA_MENSUAL = 0.017;
 
+// Costo de almacenamiento estimado (deposito propio, costo bajo): 2% anual
+// del valor del stock, prorrateado a mensual. Se usa solo sobre el stock
+// ESTANCADO -- es la porcion de plata parada que ademas ocupa espacio fisico
+// sin generar ninguna rotacion. No hay medicion real de m2/m3 por articulo,
+// asi que se estima como % del valor (metodo estandar cuando falta ese dato).
+const TASA_ALMACENAMIENTO_ANUAL = 0.02;
+const TASA_ALMACENAMIENTO_MENSUAL = TASA_ALMACENAMIENTO_ANUAL / 12;
+
 // ---- Helpers de moneda para el módulo de Inventario ----
 function tcInvActual() { return Number(document.getElementById('tcInv')?.value || 0); }
 function monedaInvActual() { return document.getElementById('monedaInv')?.value || 'ARS'; }
@@ -1124,13 +1132,14 @@ async function cargarDatosInv() {
 async function recargarDatos() { DATOS_INV = []; cargarDatosInv(); }
 
 // --- Dashboard resumen (arriba del panel de Stock) ---
-const DIAS_ESTANCADO = 180; // 6 meses sin venta
+const DIAS_ESTANCADO_6M = 180; // 6 meses sin venta
+const DIAS_ESTANCADO_12M = 365; // 12 meses sin venta (subconjunto mas critico dentro del de 6M)
 function renderizarDashboard() {
   const cont = document.getElementById("dashboardStock");
   if (!cont) return;
   const moneda = monedaInvActual();
   const total = DATOS_INV.length;
-  let criticos = 0, bajos = 0, conV2 = 0, valorInmovilizadoARS = 0, valorEstancadoARS = 0;
+  let criticos = 0, bajos = 0, conV2 = 0, valorInmovilizadoARS = 0, valorEstancado6mARS = 0, valorEstancado12mARS = 0;
   DATOS_INV.forEach(it => {
     const est = estadoArticulo(it);
     if (est === "critico") criticos++;
@@ -1139,16 +1148,20 @@ function renderizarDashboard() {
     if (it.costoUnitario && it.stockReal > 0) {
       const valorArticulo = it.stockReal * it.costoUnitario;
       valorInmovilizadoARS += valorArticulo;
-      // Estancado: sin venta en los últimos 6 meses (diasSinVenta null =
-      // nunca se vendió, también cuenta como estancado; los insumos no
-      // tienen este dato y quedan fuera de este cálculo).
-      const sinVentaReciente = it.diasSinVenta === null ? (it.tipo !== 'Insumo') : it.diasSinVenta > DIAS_ESTANCADO;
-      if (sinVentaReciente) valorEstancadoARS += valorArticulo;
+      // Estancado: sin venta en la ventana correspondiente (diasSinVenta null
+      // = nunca se vendió, también cuenta como estancado en ambos cortes; los
+      // insumos no tienen este dato y quedan fuera de este cálculo).
+      const esInsumo = it.tipo === 'Insumo';
+      const sinVenta6m = it.diasSinVenta === null ? !esInsumo : it.diasSinVenta > DIAS_ESTANCADO_6M;
+      const sinVenta12m = it.diasSinVenta === null ? !esInsumo : it.diasSinVenta > DIAS_ESTANCADO_12M;
+      if (sinVenta6m) valorEstancado6mARS += valorArticulo;
+      if (sinVenta12m) valorEstancado12mARS += valorArticulo;
     }
   });
 
   const valorInmovilizado = convertirInv(valorInmovilizadoARS);
-  const valorEstancado = convertirInv(valorEstancadoARS);
+  const valorEstancado6m = convertirInv(valorEstancado6mARS);
+  const valorEstancado12m = convertirInv(valorEstancado12mARS);
   const costoFinanciero = valorInmovilizado !== null ? valorInmovilizado * TASA_MENSUAL : null;
   const etiqMoneda = moneda === 'USD' ? ' (U$S)' : ' (ARS)';
 
@@ -1161,8 +1174,19 @@ function renderizarDashboard() {
   }
   if (valorInmovilizadoARS > 0) {
     html += "<div class='stat-box'><button class='info-btn' onclick=\"mostrarInfo(event, 'Valor total del stock que tenés en depósito, calculado como: cantidad de cada artículo × su costo unitario de compra.\\n\\nEs plata que está inmovilizada en mercadería en vez de circulando en el negocio.')\">i</button><div class='num' style='color:var(--azul)'>" + formatoCompacto(valorInmovilizado, moneda) + "</div><div class='lab'>Valor inmovilizado" + etiqMoneda + "</div></div>";
-    if (valorEstancadoARS > 0) {
-      html += "<div class='stat-box' style='border-color:var(--rojo)'><button class='info-btn' onclick=\"mostrarInfo(event, 'Parte del Valor inmovilizado que corresponde a artículos SIN venta en los últimos 6 meses (o que nunca se vendieron).\\n\\nEs la porción de plata parada con mayor riesgo: no solo está inmovilizada, sino que además no está rotando. Candidatos a liquidar, promocionar o dar de baja.')\">i</button><div class='num' style='color:var(--rojo)'>" + formatoCompacto(valorEstancado, moneda) + "</div><div class='lab'>↳ Estancado (sin venta 6+ meses)</div></div>";
+    if (valorEstancado6mARS > 0) {
+      html += "<div class='stat-box' style='border-color:var(--naranja)'><button class='info-btn' onclick=\"mostrarInfo(event, 'Parte del Valor inmovilizado que corresponde a artículos SIN venta en los últimos 6 meses (o que nunca se vendieron).\\n\\nEs la porción de plata parada con riesgo: no solo está inmovilizada, sino que además no está rotando. Candidatos a revisar antes de que empeore.')\">i</button><div class='num' style='color:var(--naranja)'>" + formatoCompacto(valorEstancado6m, moneda) + "</div><div class='lab'>↳ Estancado 6M (sin venta 6+ meses)</div></div>";
+      const costoFinanciero6m = valorEstancado6m !== null ? valorEstancado6m * TASA_MENSUAL : null;
+      html += "<div class='stat-box' style='border-color:var(--naranja)'><button class='info-btn' onclick=\"mostrarInfo(event, 'Cuánto te cuesta por mes tener parada específicamente la plata del stock estancado a 6 meses.\\n\\nSe calcula como: Valor estancado 6M x tasa mensual de referencia (" + (TASA_MENSUAL*100).toFixed(1) + "%).')\">i</button><div class='num' style='color:var(--naranja)'>" + formatoCompacto(costoFinanciero6m, moneda) + "</div><div class='lab'>↳ Costo financiero 6M / mes</div></div>";
+      const costoAlmacen6m = valorEstancado6m !== null ? valorEstancado6m * TASA_ALMACENAMIENTO_MENSUAL : null;
+      html += "<div class='stat-box' style='border-color:var(--naranja)'><button class='info-btn' onclick=\"mostrarInfo(event, 'Costo estimado de almacenamiento del stock estancado a 6 meses, calculado como el " + (TASA_ALMACENAMIENTO_ANUAL*100).toFixed(0) + "% anual del valor (prorrateado a mensual).\\n\\nEs una estimación: no medimos m² o m³ real por artículo.')\">i</button><div class='num' style='color:var(--naranja)'>" + formatoCompacto(costoAlmacen6m, moneda) + "</div><div class='lab'>↳ Almacenamiento 6M / mes</div></div>";
+    }
+    if (valorEstancado12mARS > 0) {
+      html += "<div class='stat-box' style='border-color:var(--rojo)'><button class='info-btn' onclick=\"mostrarInfo(event, 'Parte del Valor inmovilizado que corresponde a artículos SIN venta en los últimos 12 meses (o que nunca se vendieron).\\n\\nEs el subconjunto MÁS crítico dentro del Estancado 6M: llevan un año entero sin rotar. Son los primeros candidatos a liquidar, promocionar o dar de baja definitivamente.')\">i</button><div class='num' style='color:var(--rojo)'>" + formatoCompacto(valorEstancado12m, moneda) + "</div><div class='lab'>↳ Estancado 12M (sin venta 12+ meses)</div></div>";
+      const costoFinanciero12m = valorEstancado12m !== null ? valorEstancado12m * TASA_MENSUAL : null;
+      html += "<div class='stat-box' style='border-color:var(--rojo)'><button class='info-btn' onclick=\"mostrarInfo(event, 'Cuánto te cuesta por mes tener parada específicamente la plata del stock estancado a 12 meses.\\n\\nSe calcula como: Valor estancado 12M x tasa mensual de referencia (" + (TASA_MENSUAL*100).toFixed(1) + "%). Es el costo de oportunidad más urgente de resolver.')\">i</button><div class='num' style='color:var(--rojo)'>" + formatoCompacto(costoFinanciero12m, moneda) + "</div><div class='lab'>↳ Costo financiero 12M / mes</div></div>";
+      const costoAlmacen12m = valorEstancado12m !== null ? valorEstancado12m * TASA_ALMACENAMIENTO_MENSUAL : null;
+      html += "<div class='stat-box' style='border-color:var(--rojo)'><button class='info-btn' onclick=\"mostrarInfo(event, 'Costo estimado de almacenamiento del stock estancado a 12 meses, calculado como el " + (TASA_ALMACENAMIENTO_ANUAL*100).toFixed(0) + "% anual del valor (prorrateado a mensual).\\n\\nSumado al costo financiero 12M, te da el costo total mensual de mantener ese stock parado hace un año o más.')\">i</button><div class='num' style='color:var(--rojo)'>" + formatoCompacto(costoAlmacen12m, moneda) + "</div><div class='lab'>↳ Almacenamiento 12M / mes</div></div>";
     }
     html += "<div class='stat-box'><button class='info-btn' onclick=\"mostrarInfo(event, 'Cuánto te cuesta por mes tener esa plata parada en stock, en vez de invertida o disponible.\\n\\nSe calcula como: Valor inmovilizado x tasa mensual de referencia (" + (TASA_MENSUAL*100).toFixed(1) + "%). Es el costo de oportunidad del capital atado al inventario.')\">i</button><div class='num' style='color:var(--rojo)'>" + formatoCompacto(costoFinanciero, moneda) + "</div><div class='lab'>Costo financiero / mes (" + (TASA_MENSUAL*100).toFixed(1) + "%)</div></div>";
   }
