@@ -1424,10 +1424,13 @@ async function aplicarMinimoMasivo() {
   const dias = Number(document.getElementById("inputMinimoMasivoDias").value);
   if (!(dias >= 0)) { mostrarBannerInv("fallo", "Ingresá un valor de días válido."); return; }
   try {
-    const resp = await fetchInv(WEB_APP_URL + "?action=guardarStockMinimoMasivo", {
+    // Se usa POST con "accion" en el body (mismo patron que reconoce doPost
+    // en Code.gs) en vez de "?action=" por GET, porque la lista de codigos
+    // puede ser larga y superar el limite de longitud de una URL.
+    const resp = await fetchInv(WEB_APP_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ codigos, minDias: dias }),
+      body: JSON.stringify({ accion: "guardarStockMinimoMasivo", codigos, minDias: dias }),
     });
     const data = await resp.json();
     if (data.ok) {
