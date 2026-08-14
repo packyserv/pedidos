@@ -184,6 +184,7 @@
             <div class="filtro-custom-opcion" data-val="A" onclick="seleccionarFC('fcABC','A','🔴 Clase A',event)">🔴 Clase A (alta facturación)</div>
             <div class="filtro-custom-opcion" data-val="B" onclick="seleccionarFC('fcABC','B','🟠 Clase B',event)">🟠 Clase B (Media Rotación)</div>
             <div class="filtro-custom-opcion" data-val="C" onclick="seleccionarFC('fcABC','C','⚪ Clase C',event)">⚪ Clase C (baja rotación)</div>
+            <div class="filtro-custom-opcion" data-val="D" onclick="seleccionarFC('fcABC','D','⬜ Sin actividad',event)">⬜ Sin actividad (12+ meses)</div>
           </div>
         </div>
         <div class="filtro-custom" id="fcXYZ">
@@ -1276,9 +1277,12 @@ function renderizarTabla() {
       : "";
     // Guardamos el indice real en DATOS_INV para el modal
     const idxReal = DATOS_INV.indexOf(it);
-    const colorABC = it.clasificacionABC === "A" ? "var(--rojo)" : it.clasificacionABC === "B" ? "var(--naranja)" : "var(--gris-texto)";
+    const colorABC = it.clasificacionABC === "A" ? "var(--rojo)"
+      : it.clasificacionABC === "B" ? "var(--naranja)"
+      : it.clasificacionABC === "D" ? "#bbb"
+      : "var(--gris-texto)";
     const claseBadge = it.clasificacionABCXYZ
-      ? "<span style='background:" + colorABC + ";color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px' title='ABC: importancia por facturación (A=más alto). XYZ: variabilidad de demanda (X=estable, Z=errática)'>" + it.clasificacionABCXYZ + "</span>"
+      ? "<span style='background:" + colorABC + ";color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px' title='" + (it.clasificacionABC === "D" ? "Sin actividad (venta/compra) en los últimos 12 meses" : "ABC: importancia por facturación (A=más alto). XYZ: variabilidad de demanda (X=estable, Z=errática)") + "'>" + it.clasificacionABCXYZ + "</span>"
       : "<span style='color:#ccc;font-size:11px'>-</span>";
     const filId = "lotes-" + idxReal;
     return "<tr" + filaEstilo + "><td style='min-width:120px'><b>" + it.descripcion + "</b> " + tipoTag + "<br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small>" + v2Badge + "</td>"
