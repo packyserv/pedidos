@@ -20,7 +20,7 @@
   .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end;}
   .filtros input,.filtros select{width:auto;flex:1;min-width:140px;}
   table{width:100%;border-collapse:collapse;font-size:12px;}
-  th{background:var(--azul-oscuro);color:#fff;padding:6px 7px;text-align:left;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;}
+  th{background:var(--azul-oscuro);color:#fff;padding:6px 7px;text-align:left;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:56px;z-index:15;}
   td{padding:5px 7px;border-bottom:1px solid var(--gris-borde);vertical-align:middle;}
   tr:hover td{background:#f7fafd;}
   .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
@@ -179,7 +179,7 @@
             <input class="filtro-custom-buscar" type="text" placeholder="Buscar..." oninput="filtrarOpciones('fcABC',this.value)" onkeydown="teclasFC(event,'fcABC')">
             <div class="filtro-custom-opcion seleccionada" data-val="" onclick="seleccionarFC('fcABC','','Clase ABC',event)">Todas las clases</div>
             <div class="filtro-custom-opcion" data-val="A" onclick="seleccionarFC('fcABC','A','🔴 Clase A',event)">🔴 Clase A (alta facturación)</div>
-            <div class="filtro-custom-opcion" data-val="B" onclick="seleccionarFC('fcABC','B','🟠 Clase B',event)">🟠 Clase B</div>
+            <div class="filtro-custom-opcion" data-val="B" onclick="seleccionarFC('fcABC','B','🟠 Clase B',event)">🟠 Clase B (Media Rotación)</div>
             <div class="filtro-custom-opcion" data-val="C" onclick="seleccionarFC('fcABC','C','⚪ Clase C',event)">⚪ Clase C (baja rotación)</div>
           </div>
         </div>
@@ -201,6 +201,7 @@
           </div>
         </div>
         <button type="button" class="btn btn-gris" style="padding:6px 12px;font-size:13px;white-space:nowrap" onclick="recargarDatos()">↺ Actualizar</button>
+        <button type="button" class="btn btn-azul" style="padding:6px 12px;font-size:13px;white-space:nowrap" onclick="abrirModalMinimoMasivo()" title="Aplica el mínimo en días a todos los artículos que cumplan los filtros activos">📅 Mín. días (masivo)</button>
       </div>
       <div class="filtros" style="margin-bottom:10px;align-items:center">
         <span style="font-size:12px;font-weight:600;color:var(--gris-texto);white-space:nowrap">Tipo:</span>
@@ -210,6 +211,7 @@
           <button type="button" class="tipo-check-btn" id="checkInsumoLbl" onclick="toggleTipo('insumo')"><input id="checkInsumo"> 🧱 Insumo</button>
         </div>
       </div>
+      <div id="totalesVisibles" style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;background:#eef4fb;border:1px solid var(--gris-borde);border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:13px"></div>
       <div style="overflow-x:auto">
         <table>
           <thead>
@@ -596,6 +598,25 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modalMinimoMasivo">
+  <div class="modal">
+    <h3>📅 Cargar Mín. (días) de forma masiva</h3>
+    <div id="infoMinimoMasivo" style="font-size:13px;color:var(--gris-texto);margin-bottom:14px;background:var(--azul-claro);padding:10px;border-radius:6px"></div>
+    <div class="campo">
+      <label>Días mínimos de cobertura a aplicar</label>
+      <input type="number" id="inputMinimoMasivoDias" min="0" placeholder="Ej: 30">
+      <div style="font-size:12px;color:var(--gris-texto);margin-top:4px">
+        Se va a aplicar únicamente a los <b id="cantArticulosMasivo">0</b> artículo(s) que están visibles con los filtros actuales.
+        Los que quedaron excluidos por el filtro no se modifican. Este valor queda guardado hasta que lo vuelvas a cargar o modificar.
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button type="button" class="btn btn-gris" style="flex:1" onclick="cerrarModalMinimoMasivo()">Cancelar</button>
+      <button type="button" class="btn btn-azul" style="flex:2" onclick="aplicarMinimoMasivo()">Aplicar a los visibles</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalPartidas">
   <div class="modal" style="max-width:640px">
     <h3>📦 Lotes / Partidas — orden FIFO</h3>
@@ -656,8 +677,9 @@ function formatoCompacto(valor, moneda) {
   if (valor === null || valor === undefined) return '-';
   const prefijo = moneda === 'USD' ? 'U$S ' : '$ ';
   const abs = Math.abs(valor);
-  if (abs >= 1e9) return prefijo + (valor / 1e9).toLocaleString('es-AR', {maximumFractionDigits:2}) + 'B';
-  if (abs >= 1e6) return prefijo + (valor / 1e6).toLocaleString('es-AR', {maximumFractionDigits:2}) + 'M';
+  // Tope en "M" (millones): a partir de miles de millones seguimos mostrando
+  // en M con más dígitos, en vez de saltar a "B" que confunde en español.
+  if (abs >= 1e6) return prefijo + (valor / 1e6).toLocaleString('es-AR', {maximumFractionDigits:0}) + 'M';
   if (abs >= 1e3) return prefijo + (valor / 1e3).toLocaleString('es-AR', {maximumFractionDigits:1}) + 'K';
   return prefijo + Math.round(valor).toLocaleString('es-AR');
 }
@@ -1228,6 +1250,30 @@ function renderizarTabla() {
       + "<tr class='fila-lotes' id='" + filId + "'><td colspan='10' style='padding:0'><div style='padding:8px 16px'><span style='color:var(--gris-texto);font-size:12px'>Cargando lotes...</span></div></td></tr>";
   }).join("");
   document.getElementById("pieDatos").textContent = filas.length + " articulo(s) mostrados.";
+
+  // Totales de los items visibles (respetan los filtros aplicados)
+  const totCont = document.getElementById("totalesVisibles");
+  if (totCont) {
+    let sumTeorico = 0, sumDisponible = 0, sumValorARS = 0, criticos = 0, bajos = 0;
+    filas.forEach(it => {
+      sumTeorico += Number(it.stockReal || 0);
+      sumDisponible += Number(it.stockDisponible || 0);
+      if (it.costoUnitario && it.stockReal > 0) sumValorARS += it.stockReal * it.costoUnitario;
+      const est = estadoArticulo(it);
+      if (est === "critico") criticos++;
+      else if (est === "bajo") bajos++;
+    });
+    const valorConv = convertirInv(sumValorARS);
+    totCont.innerHTML =
+      "<span><b>" + filas.length.toLocaleString("es-AR") + "</b> artículo(s)</span>"
+      + "<span style='color:var(--gris-borde)'>|</span>"
+      + "<span>Teórico total: <b>" + sumTeorico.toLocaleString("es-AR") + "</b> u.</span>"
+      + "<span style='color:var(--gris-borde)'>|</span>"
+      + "<span>Disponible total: <b style='color:var(--verde)'>" + sumDisponible.toLocaleString("es-AR") + "</b> u.</span>"
+      + (sumValorARS > 0 ? "<span style='color:var(--gris-borde)'>|</span><span>Valor: <b style='color:var(--azul)'>" + formatoCompacto(valorConv, monedaInvActual()) + "</b></span>" : "")
+      + (criticos > 0 ? "<span style='color:var(--gris-borde)'>|</span><span style='color:var(--rojo)'>" + criticos + " crítico(s)</span>" : "")
+      + (bajos > 0 ? "<span style='color:var(--gris-borde)'>|</span><span style='color:var(--naranja)'>" + bajos + " bajo(s)</span>" : "");
+  }
 }
 
 // --- Modal minimo ---
@@ -1320,6 +1366,86 @@ function ordenarPorAlertas(col) {
   if (ordenAlertas.col === col) ordenAlertas.asc = !ordenAlertas.asc;
   else { ordenAlertas.col = col; ordenAlertas.asc = false; }
   renderizarAlertas();
+}
+
+// --- Carga masiva de Mín. (días) sobre los artículos visibles según filtros ---
+function obtenerCodigosVisibles() {
+  // Reutiliza el mismo criterio de filtrado que renderizarTabla, para que la
+  // carga masiva aplique exactamente a lo que el usuario está viendo.
+  const q = (document.getElementById("buscarStock").value || "").trim().toLowerCase();
+  const tokens = q.split(/\s+/).filter(Boolean);
+  const filtrosEstado = FILTROS_ACTIVOS.estado;
+  const filtrosABC = FILTROS_ACTIVOS.abc;
+  const filtrosXYZ = FILTROS_ACTIVOS.xyz;
+  const filtrosProv = FILTROS_ACTIVOS.proveedor;
+  const tipoSeleccionado = FILTROS_ACTIVOS.tipo;
+  return DATOS_INV.filter(it => {
+    const texto = (it.descripcion + " " + it.codItem + " " + it.codigoConcatenado + " " + (it.proveedor||"")).toLowerCase();
+    if (tokens.length > 0 && !tokens.every(t => texto.includes(t))) return false;
+    if (tipoSeleccionado === "producto" && it.tipo !== "Producto Terminado") return false;
+    if (tipoSeleccionado === "insumo" && it.tipo !== "Insumo") return false;
+    if (filtrosABC.length > 0 && !filtrosABC.includes(it.clasificacionABC)) return false;
+    if (filtrosXYZ.length > 0 && !filtrosXYZ.includes(it.clasificacionXYZ)) return false;
+    if (filtrosProv.length > 0 && !filtrosProv.includes(it.proveedor || "")) return false;
+    if (filtrosEstado.length > 0) {
+      const est = estadoArticulo(it);
+      const pasa = filtrosEstado.some(fe => {
+        if (fe === "ok") return est === "ok";
+        if (fe === "bajo") return est === "bajo";
+        if (fe === "critico") return est === "critico";
+        if (fe === "comprometido") return it.stockComprometido > 0;
+        if (fe === "v2") return it.stockComprometidoV2 > 0;
+        return true;
+      });
+      if (!pasa) return false;
+    }
+    return true;
+  }).map(it => it.codigoConcatenado);
+}
+function abrirModalMinimoMasivo() {
+  const codigos = obtenerCodigosVisibles();
+  document.getElementById("cantArticulosMasivo").textContent = codigos.length;
+  document.getElementById("infoMinimoMasivo").innerHTML =
+    codigos.length === 0
+      ? "⚠ No hay artículos visibles con los filtros actuales."
+      : "Se va a aplicar a <b>" + codigos.length + "</b> artículo(s) — los que están visibles ahora mismo con la búsqueda y los filtros activos.";
+  document.getElementById("inputMinimoMasivoDias").value = "";
+  document.getElementById("modalMinimoMasivo").classList.add("abierto");
+}
+function cerrarModalMinimoMasivo() {
+  document.getElementById("modalMinimoMasivo").classList.remove("abierto");
+}
+async function aplicarMinimoMasivo() {
+  const codigos = obtenerCodigosVisibles();
+  if (codigos.length === 0) { mostrarBannerInv("fallo", "No hay artículos visibles para aplicar."); return; }
+  const dias = Number(document.getElementById("inputMinimoMasivoDias").value);
+  if (!(dias >= 0)) { mostrarBannerInv("fallo", "Ingresá un valor de días válido."); return; }
+  try {
+    const resp = await fetchInv(WEB_APP_URL + "?action=guardarStockMinimoMasivo", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ codigos, minDias: dias }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      // Actualizar localmente sin esperar un nuevo fetch completo
+      const set = new Set(codigos);
+      DATOS_INV.forEach(it => {
+        if (set.has(it.codigoConcatenado)) {
+          it.tipoAlerta = "dias";
+          it.stockMinimoDias = dias;
+        }
+      });
+      cerrarModalMinimoMasivo();
+      renderizarTabla();
+      renderizarAlertas();
+      mostrarBannerInv("exito", "✅ Mínimo de " + dias + " días aplicado a " + data.actualizados + " artículo(s).");
+    } else {
+      mostrarBannerInv("fallo", "Error al aplicar: " + (data.error || "desconocido"));
+    }
+  } catch(e) {
+    mostrarBannerInv("fallo", "Error de conexión al aplicar la carga masiva.");
+  }
 }
 
 // --- Recuento cíclico (qué contar hoy, según clase ABC) ---
