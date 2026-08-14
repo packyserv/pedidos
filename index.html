@@ -1589,13 +1589,26 @@ function poblarSelectVendedores() {
     selVendedor.appendChild(opt);
   });
 
+  // Los vendedores especiales (DIRECCION/MARKETING) no vienen del Excel/sync,
+  // asi que no estan en DATOS.vendedores. Si el login actual es uno de ellos,
+  // hay que reinyectar la opcion aca tambien -- esta funcion se llama de nuevo
+  // en cada cargarDatos() y borra el <select> por completo.
+  if (_codVendedorLogueado && VENDEDORES_SIN_FILTRO.includes(_codVendedorLogueado)) {
+    const opt = document.createElement('option');
+    opt.value = _codVendedorLogueado;
+    opt.textContent = _codVendedorLogueado === 'DIRECCION' ? 'DIRECCIÓN' : 'MARKETING';
+    selVendedor.appendChild(opt);
+    selVendedor.value = _codVendedorLogueado;
+    resyncCombo('vendedor');
+  }
+
   if (lista.length === 0) {
     mostrarBanner('fallo', '⚠ No hay vendedores cargados todavía — revisá que la sincronización con el Excel haya corrido.');
   }
 
   // Recordar el ultimo vendedor usado en este dispositivo
   const ultimoVendedor = localStorage.getItem('ultimoVendedorPys');
-  if (ultimoVendedor) {
+  if (ultimoVendedor && !_codVendedorLogueado) {
     const existe = lista.find(v => v.CodVendedor === ultimoVendedor);
     if (existe) {
       selVendedor.value = ultimoVendedor;
@@ -4459,6 +4472,23 @@ function autenticarVendedor(codVendedor) {
 
   // Ocultar el campo Vendedor del formulario — ya está fijo por el login
   document.getElementById('campoVendedor').style.display = 'none';
+
+  // Si es un vendedor especial (DIRECCION/MARKETING), no existe en
+  // DATOS.vendedores (viene del Excel/sync, sin usuarios especiales). Sin
+  // esta opcion inyectada, el <select> real del formulario no tiene donde
+  // asignar el value y queda vacio — se pierde el vendedor "elegido" y la
+  // validacion final falla con "Seleccioná un vendedor" sin poder corregirlo
+  // (el campo esta oculto). Se agrega la opcion a mano antes de preseleccionar.
+  if (VENDEDORES_SIN_FILTRO.includes(codVendedor)) {
+    const selForm = document.getElementById('vendedor');
+    if (selForm && !selForm.querySelector('option[value="' + codVendedor + '"]')) {
+      const opt = document.createElement('option');
+      opt.value = codVendedor;
+      opt.textContent = codVendedor === 'DIRECCION' ? 'DIRECCIÓN' : 'MARKETING';
+      selForm.appendChild(opt);
+    }
+    selForm.value = codVendedor;
+  }
 
   // Pre-seleccionar el vendedor en el formulario
   window._vendedorPreseleccionado = codVendedor;
