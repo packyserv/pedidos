@@ -40,7 +40,8 @@
   .pill-tipo.activa-entrada{border-color:var(--verde);background:var(--verde);color:#fff;}
   .pill-tipo.activa-salida{border-color:var(--rojo);background:var(--rojo);color:#fff;}
   .resumen-alertas{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
-  .stat-box{flex:1;min-width:120px;background:var(--superficie);border-radius:8px;border:1px solid var(--gris-borde);padding:14px;text-align:center;}
+  .stat-box{flex:1;min-width:120px;background:var(--superficie);border-radius:8px;border:1px solid var(--gris-borde);padding:14px;text-align:center;position:relative;}
+  .stat-box .info-btn{position:absolute;top:6px;right:6px;width:16px;height:16px;font-size:10px;}
   .stat-box .num{font-size:28px;font-weight:700;}
   .stat-box .lab{font-size:12px;color:var(--gris-texto);margin-top:4px;}
   .tab-bar{display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--gris-borde);}
@@ -1142,15 +1143,15 @@ function renderizarDashboard() {
   const etiqMoneda = moneda === 'USD' ? ' (U$S)' : ' (ARS)';
 
   let html =
-    "<div class='stat-box'><div class='num'>" + total.toLocaleString("es-AR") + "</div><div class='lab'>Artículos</div></div>" +
-    "<div class='stat-box'><div class='num' style='color:var(--rojo)'>" + criticos + "</div><div class='lab'>Sin stock / crítico</div></div>" +
-    "<div class='stat-box'><div class='num' style='color:var(--naranja)'>" + bajos + "</div><div class='lab'>Stock bajo</div></div>";
+    "<div class='stat-box'><button class='info-btn' onclick=\"mostrarInfo(event, 'Cantidad total de artículos distintos en el catálogo, aplicando los filtros activos (tipo, búsqueda, clase, etc).')\">i</button><div class='num'>" + total.toLocaleString("es-AR") + "</div><div class='lab'>Artículos</div></div>" +
+    "<div class='stat-box'><button class='info-btn' onclick=\"mostrarInfo(event, 'Artículos con stock disponible en cero o negativo (Crítico), es decir que no podés vender/despachar más sin reponer.')\">i</button><div class='num' style='color:var(--rojo)'>" + criticos + "</div><div class='lab'>Sin stock / crítico</div></div>" +
+    "<div class='stat-box'><button class='info-btn' onclick=\"mostrarInfo(event, 'Artículos que todavía tienen stock, pero ya cruzaron el mínimo configurado (en unidades, en días de cobertura, o ambos según cómo lo hayas definido en cada uno).')\">i</button><div class='num' style='color:var(--naranja)'>" + bajos + "</div><div class='lab'>Stock bajo</div></div>";
   if (conV2 > 0) {
     html += "<div class='stat-box'><div class='num' style='color:var(--naranja)'>" + conV2 + "</div><div class='lab'>V2 pendiente ajuste</div></div>";
   }
   if (valorInmovilizadoARS > 0) {
-    html += "<div class='stat-box'><div class='num' style='color:var(--azul)'>" + formatoCompacto(valorInmovilizado, moneda) + "</div><div class='lab'>Valor inmovilizado" + etiqMoneda + "</div></div>";
-    html += "<div class='stat-box'><div class='num' style='color:var(--rojo)'>" + formatoCompacto(costoFinanciero, moneda) + "</div><div class='lab'>Costo financiero / mes (" + (TASA_MENSUAL*100).toFixed(1) + "%)</div></div>";
+    html += "<div class='stat-box'><button class='info-btn' onclick=\"mostrarInfo(event, 'Valor total del stock que tenés en depósito, calculado como: cantidad de cada artículo × su costo unitario de compra.\\n\\nEs plata que está \\\"parada\\\" en mercadería en vez de circulando en el negocio.')\">i</button><div class='num' style='color:var(--azul)'>" + formatoCompacto(valorInmovilizado, moneda) + "</div><div class='lab'>Valor inmovilizado" + etiqMoneda + "</div></div>";
+    html += "<div class='stat-box'><button class='info-btn' onclick=\"mostrarInfo(event, 'Cuánto te cuesta por mes tener esa plata parada en stock, en vez de invertida o disponible.\\n\\nSe calcula como: Valor inmovilizado × tasa mensual de referencia (" + (TASA_MENSUAL*100).toFixed(1) + "%). Es el costo de oportunidad del capital atado al inventario.')\">i</button><div class='num' style='color:var(--rojo)'>" + formatoCompacto(costoFinanciero, moneda) + "</div><div class='lab'>Costo financiero / mes (" + (TASA_MENSUAL*100).toFixed(1) + "%)</div></div>";
   }
   cont.innerHTML = html;
 }
@@ -1158,16 +1159,16 @@ function renderizarDashboard() {
 // --- Tabla stock ---
 function estadoArticulo(it) {
   if (it.stockDisponible <= 0) return "critico";
-  if (it.tipoAlerta === "ambos") {
-    // "Lo que suceda primero": dispara bajo stock si CUALQUIERA de los dos
-    // criterios (unidades o dias) se cumple, no hace falta que sean ambos.
+  // Default: "Lo que suceda primero" (si no hay tipoAlerta configurado, se
+  // evalúan ambos criterios en vez de asumir "unidades" como antes).
+  if (it.tipoAlerta === "ambos" || !it.tipoAlerta) {
     const bajoPorDias = it.stockMinimoDias > 0 && it.diasDeStock > 0 && it.diasDeStock <= it.stockMinimoDias;
     const bajoPorUnid = it.stockMinimoUnidades > 0 && it.stockDisponible <= it.stockMinimoUnidades;
     if (bajoPorDias || bajoPorUnid) return "bajo";
     return "ok";
   }
   if (it.tipoAlerta === "dias" && it.stockMinimoDias > 0 && it.diasDeStock > 0 && it.diasDeStock <= it.stockMinimoDias) return "bajo";
-  if (it.tipoAlerta !== "dias" && it.stockMinimoUnidades > 0 && it.stockDisponible <= it.stockMinimoUnidades) return "bajo";
+  if (it.tipoAlerta === "unidades" && it.stockMinimoUnidades > 0 && it.stockDisponible <= it.stockMinimoUnidades) return "bajo";
   return "ok";
 }
 function ordenarPor(col) {
