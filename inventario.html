@@ -581,6 +581,7 @@
     <div class="campo">
       <label>¿Qué criterio dispara la alerta para este artículo?</label>
       <div class="pills">
+        <button type="button" class="pill-tipo" id="pillTipoAmbos" onclick="seleccionarTipoAlerta('ambos')">Lo que suceda primero</button>
         <button type="button" class="pill-tipo" id="pillTipoUnidades" onclick="seleccionarTipoAlerta('unidades')">Unidades</button>
         <button type="button" class="pill-tipo" id="pillTipoDias" onclick="seleccionarTipoAlerta('dias')">Días de cobertura</button>
       </div>
@@ -932,6 +933,16 @@ function poblarFiltroProveedores() {
 // ================================================================
 // Registra el recuento (teórico vs físico) — usado desde la pestaña Recuento.
 
+// Despliega/colapsa la sub-tabla de lotes SIN stock remanente, dentro del
+// panel de lotes de un artículo (los lotes con stock ya se ven por defecto).
+function toggleLotesSinStock(id, btn) {
+  const cont = document.getElementById(id);
+  if (!cont) return;
+  const abierto = cont.style.display !== "none";
+  cont.style.display = abierto ? "none" : "block";
+  btn.textContent = abierto ? "+" : "−";
+}
+
 async function toggleLotesInline(filId, idxReal, btn) {
   const fila = document.getElementById(filId);
   if (!fila) return;
@@ -970,36 +981,61 @@ async function toggleLotesInline(filId, idxReal, btn) {
     const idxSalePrimero = items.findIndex(p => p.unidadesRemanentes > 0);
     // Mostrar en orden DESC (más reciente arriba) — el usuario quiere ver lo nuevo primero
     const itemsDesc = [...items].reverse();
+    // Por defecto solo se muestran los lotes CON remanente (los que realmente
+    // importan para vender/despachar). Los agotados quedan colapsados detrás
+    // de un "+ Ver lotes sin stock" para no saturar la vista.
+    const conStock = itemsDesc.filter(p => p.unidadesRemanentes > 0);
+    const sinStock = itemsDesc.filter(p => !(p.unidadesRemanentes > 0));
     celda.dataset.cargado = "ok";
-    celda.innerHTML = "<table style='width:100%;font-size:12px;border-collapse:collapse'>"
-      + "<thead><tr style='background:var(--azul-claro)'>"
+
+    const filaLote = (p, i) => {
+      const esSalePrimero = idxSalePrimero >= 0 && p === items[idxSalePrimero];
+      const bg = esSalePrimero ? "background:#e8f4ea;font-weight:700"
+        : (p.unidadesRemanentes > 0 ? "background:#f0f8f0" : (i%2===0 ? "" : "background:#f7f9fb"));
+      const colorRem = p.unidadesRemanentes > 0 ? "var(--verde)" : "var(--gris-texto)";
+      const partidaEsc = String(p.partida || "").replace(/'/g, "&#39;");
+      return "<tr style='" + bg + "'>"
+        + "<td style='padding:5px 8px'>" + p.partida
+        + (esSalePrimero ? " <span style='background:var(--verde);color:#fff;font-size:10px;padding:1px 5px;border-radius:6px'>SALE PRIMERO</span>" : "")
+        + "</td>"
+        + "<td style='padding:5px 8px;text-align:right'>" + Number(p.unidadesCompradas || 0).toLocaleString("es-AR") + "</td>"
+        + "<td style='padding:5px 8px;text-align:right;color:" + colorRem + ";font-weight:700'>" + Number(p.unidadesRemanentes || 0).toLocaleString("es-AR") + "</td>"
+        + "<td style='padding:5px 8px'>" + (p.fechaPrimeraCompra || "-") + "</td>"
+        + "<td style='padding:5px 8px;text-align:right;color:var(--gris-texto)'>" + (p.diasAntiguedad > 0 ? p.diasAntiguedad + "d" : "-") + "</td>"
+        + "<td style='padding:4px 8px;text-align:center'>"
+        + "<button type='button' class='btn btn-azul' style='font-size:10px;padding:3px 8px' title='Registrar movimiento en este lote' onclick='abrirMovRapido(" + idxReal + ",\"" + partidaEsc + "\")'>+Mov</button>"
+        + "</td>"
+        + "</tr>";
+    };
+
+    const encabezado = "<thead><tr style='background:var(--azul-claro)'>"
       + "<th style='padding:5px 8px;text-align:left'>Partida</th>"
       + "<th style='padding:5px 8px;text-align:right'>Comprado</th>"
       + "<th style='padding:5px 8px;text-align:right'>Remanente</th>"
       + "<th style='padding:5px 8px'>Primera compra</th>"
       + "<th style='padding:5px 8px;text-align:right'>Antigüedad</th>"
       + "<th style='padding:5px 8px;text-align:center'>Acción</th>"
-      + "</tr></thead><tbody>"
-      + itemsDesc.map((p, i) => {
-          const esSalePrimero = idxSalePrimero >= 0 && p === items[idxSalePrimero];
-          const bg = esSalePrimero ? "background:#e8f4ea;font-weight:700"
-            : (p.unidadesRemanentes > 0 ? "background:#f0f8f0" : (i%2===0 ? "" : "background:#f7f9fb"));
-          const colorRem = p.unidadesRemanentes > 0 ? "var(--verde)" : "var(--gris-texto)";
-          const partidaEsc = String(p.partida || "").replace(/'/g, "&#39;");
-          return "<tr style='" + bg + "'>"
-            + "<td style='padding:5px 8px'>" + p.partida
-            + (esSalePrimero ? " <span style='background:var(--verde);color:#fff;font-size:10px;padding:1px 5px;border-radius:6px'>SALE PRIMERO</span>" : "")
-            + "</td>"
-            + "<td style='padding:5px 8px;text-align:right'>" + Number(p.unidadesCompradas || 0).toLocaleString("es-AR") + "</td>"
-            + "<td style='padding:5px 8px;text-align:right;color:" + colorRem + ";font-weight:700'>" + Number(p.unidadesRemanentes || 0).toLocaleString("es-AR") + "</td>"
-            + "<td style='padding:5px 8px'>" + (p.fechaPrimeraCompra || "-") + "</td>"
-            + "<td style='padding:5px 8px;text-align:right;color:var(--gris-texto)'>" + (p.diasAntiguedad > 0 ? p.diasAntiguedad + "d" : "-") + "</td>"
-            + "<td style='padding:4px 8px;text-align:center'>"
-            + "<button type='button' class='btn btn-azul' style='font-size:10px;padding:3px 8px' title='Registrar movimiento en este lote' onclick='abrirMovRapido(" + idxReal + ",\"" + partidaEsc + "\")'>+Mov</button>"
-            + "</td>"
-            + "</tr>";
-        }).join("")
-      + "</tbody></table>";
+      + "</tr></thead>";
+
+    const idSinStock = "lotesinstock-" + idxReal;
+    let html = "";
+    if (conStock.length > 0) {
+      html += "<table style='width:100%;font-size:12px;border-collapse:collapse'>" + encabezado
+        + "<tbody>" + conStock.map(filaLote).join("") + "</tbody></table>";
+    } else {
+      html += "<div style='padding:8px;font-size:12px;color:var(--gris-texto)'>Ningún lote con stock remanente.</div>";
+    }
+    if (sinStock.length > 0) {
+      html += "<div style='padding:6px 8px'>"
+        + "<button type='button' class='fila-lote-toggle' style='font-size:11px' onclick='toggleLotesSinStock(\"" + idSinStock + "\", this)'>+</button> "
+        + "<span style='font-size:12px;color:var(--gris-texto)'>Ver " + sinStock.length + " lote(s) sin stock</span>"
+        + "</div>"
+        + "<div id='" + idSinStock + "' style='display:none'>"
+        + "<table style='width:100%;font-size:12px;border-collapse:collapse'>" + encabezado
+        + "<tbody>" + sinStock.map(filaLote).join("") + "</tbody></table>"
+        + "</div>";
+    }
+    celda.innerHTML = html;
   } catch(e) {
     // NO marcamos como cargado para que se pueda reintentar
     celda.innerHTML = "<div style='padding:6px 8px'>"
@@ -1121,6 +1157,14 @@ function renderizarDashboard() {
 // --- Tabla stock ---
 function estadoArticulo(it) {
   if (it.stockDisponible <= 0) return "critico";
+  if (it.tipoAlerta === "ambos") {
+    // "Lo que suceda primero": dispara bajo stock si CUALQUIERA de los dos
+    // criterios (unidades o dias) se cumple, no hace falta que sean ambos.
+    const bajoPorDias = it.stockMinimoDias > 0 && it.diasDeStock > 0 && it.diasDeStock <= it.stockMinimoDias;
+    const bajoPorUnid = it.stockMinimoUnidades > 0 && it.stockDisponible <= it.stockMinimoUnidades;
+    if (bajoPorDias || bajoPorUnid) return "bajo";
+    return "ok";
+  }
   if (it.tipoAlerta === "dias" && it.stockMinimoDias > 0 && it.diasDeStock > 0 && it.diasDeStock <= it.stockMinimoDias) return "bajo";
   if (it.tipoAlerta !== "dias" && it.stockMinimoUnidades > 0 && it.stockDisponible <= it.stockMinimoUnidades) return "bajo";
   return "ok";
@@ -1280,20 +1324,21 @@ function renderizarTabla() {
 }
 
 // --- Modal minimo ---
-let tipoAlertaModalActual = "unidades";
+let tipoAlertaModalActual = "ambos";
 function abrirModalMinimo(idx) {
   articuloMinimoActual = DATOS_INV[idx];
   if (!articuloMinimoActual) return;
   document.getElementById("infoArticuloMin").textContent = articuloMinimoActual.descripcion + " - Stock teórico: " + articuloMinimoActual.stockReal + " u. - " + (articuloMinimoActual.diasDeStock > 0 ? Math.round(articuloMinimoActual.diasDeStock*10)/10 + " dias de cobertura actual" : "");
   document.getElementById("inputStockMinimoUnidades").value = articuloMinimoActual.stockMinimoUnidades || 0;
   document.getElementById("inputStockMinimoDias").value = articuloMinimoActual.stockMinimoDias || 0;
-  seleccionarTipoAlerta(articuloMinimoActual.tipoAlerta || "unidades");
+  seleccionarTipoAlerta(articuloMinimoActual.tipoAlerta || "ambos");
   document.getElementById("modalMinimo").classList.add("abierto");
 }
 function seleccionarTipoAlerta(tipo) {
   tipoAlertaModalActual = tipo;
   document.getElementById("pillTipoUnidades").className = "pill-tipo" + (tipo === "unidades" ? " activa-entrada" : "");
   document.getElementById("pillTipoDias").className = "pill-tipo" + (tipo === "dias" ? " activa-entrada" : "");
+  document.getElementById("pillTipoAmbos").className = "pill-tipo" + (tipo === "ambos" ? " activa-entrada" : "");
 }
 function cerrarModalMinimo() {
   document.getElementById("modalMinimo").classList.remove("abierto");
