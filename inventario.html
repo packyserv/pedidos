@@ -409,7 +409,7 @@
       </p>
 
       <div class="filtros" style="margin-bottom:6px">
-        <input type="text" id="buscarRecuento" placeholder="Buscar por código, descripción, medida..." oninput="renderizarRecuentoPrincipal()" style="flex:2;min-width:180px;padding:8px 10px;font-size:14px">
+        <input type="text" id="buscarRecuento" placeholder="Buscar por código, descripción, medida..." oninput="buscarRecuentoInput()" style="flex:2;min-width:180px;padding:8px 10px;font-size:14px">
         <div class="filtro-custom" id="fcRecABC">
           <button class="filtro-custom-trigger" type="button" id="fcRecABCTrig" onclick="toggleFiltroCustom('fcRecABC')" onkeydown="teclasFC(event,'fcRecABC')">Clase ABC</button>
           <div class="filtro-custom-lista" id="fcRecABCLista">
@@ -432,15 +432,19 @@
             <div class="filtro-custom-opcion" data-val="contadoHoy" onclick="seleccionarFC('fcRecEstado','contadoHoy','Ya contado en esta sesion',event)">✅ Ya contado en esta sesión</div>
           </div>
         </div>
-        <div class="filtro-custom" id="fcRecAncho">
+        <div class="filtro-custom" id="fcRecCategoria" style="flex:0 0 130px;min-width:130px">
+          <button class="filtro-custom-trigger" type="button" id="fcRecCategoriaTrig" onclick="toggleFiltroCustom('fcRecCategoria')" onkeydown="teclasFC(event,'fcRecCategoria')">Categoría</button>
+          <div class="filtro-custom-lista" id="fcRecCategoriaLista"></div>
+        </div>
+        <div class="filtro-custom" id="fcRecAncho" style="flex:0 0 84px;min-width:84px">
           <button class="filtro-custom-trigger" type="button" id="fcRecAnchoTrig" onclick="toggleFiltroCustom('fcRecAncho')" onkeydown="teclasFC(event,'fcRecAncho')">Ancho</button>
           <div class="filtro-custom-lista" id="fcRecAnchoLista"></div>
         </div>
-        <div class="filtro-custom" id="fcRecLargo">
+        <div class="filtro-custom" id="fcRecLargo" style="flex:0 0 84px;min-width:84px">
           <button class="filtro-custom-trigger" type="button" id="fcRecLargoTrig" onclick="toggleFiltroCustom('fcRecLargo')" onkeydown="teclasFC(event,'fcRecLargo')">Largo</button>
           <div class="filtro-custom-lista" id="fcRecLargoLista"></div>
         </div>
-        <div class="filtro-custom" id="fcRecMic">
+        <div class="filtro-custom" id="fcRecMic" style="flex:0 0 84px;min-width:84px">
           <button class="filtro-custom-trigger" type="button" id="fcRecMicTrig" onclick="toggleFiltroCustom('fcRecMic')" onkeydown="teclasFC(event,'fcRecMic')">Mic/Color</button>
           <div class="filtro-custom-lista" id="fcRecMicLista"></div>
         </div>
@@ -827,7 +831,7 @@ let articuloMovSeleccionado = null;
 let tipoMovActual = "entrada";
 let ordenActual = { col: "", asc: true }; // "" = orden por impacto por defecto
 let FILTROS_ACTIVOS = { estado: [], abc: [], xyz: [], proveedor: [], tipo: "todos" };
-let FILTROS_ACTIVOS_REC = { abc: [], estadoRec: [], ancho: [], largo: [], mic: [], tipo: "todos" };
+let FILTROS_ACTIVOS_REC = { categoria: [], abc: [], estadoRec: [], ancho: [], largo: [], mic: [], tipo: "todos" };
 let usuarioActual = "";
 let articuloMinimoActual = null;
 
@@ -858,11 +862,12 @@ const FC_CONFIG = {
   fcABC:    { key: "abc",    label: "Clase ABC" },
   fcXYZ:    { key: "xyz",    label: "Variabilidad XYZ" },
   fcProv:   { key: "proveedor", label: "Proveedor" },
-  fcRecABC:    { key: "abc",    label: "Clase ABC",           activos: () => FILTROS_ACTIVOS_REC, render: () => renderizarRecuentoPrincipal() },
-  fcRecEstado: { key: "estadoRec", label: "Estado de recuento", activos: () => FILTROS_ACTIVOS_REC, render: () => renderizarRecuentoPrincipal() },
-  fcRecAncho:  { key: "ancho",  label: "Ancho",     activos: () => FILTROS_ACTIVOS_REC, render: () => renderizarRecuentoPrincipal() },
-  fcRecLargo:  { key: "largo",  label: "Largo",     activos: () => FILTROS_ACTIVOS_REC, render: () => renderizarRecuentoPrincipal() },
-  fcRecMic:    { key: "mic",    label: "Mic/Color", activos: () => FILTROS_ACTIVOS_REC, render: () => renderizarRecuentoPrincipal() },
+  fcRecABC:      { key: "abc",       label: "Clase ABC",           activos: () => FILTROS_ACTIVOS_REC, render: () => refrescarRecuentoConCascada() },
+  fcRecEstado:   { key: "estadoRec", label: "Estado de recuento",  activos: () => FILTROS_ACTIVOS_REC, render: () => refrescarRecuentoConCascada() },
+  fcRecCategoria:{ key: "categoria", label: "Categoría",           activos: () => FILTROS_ACTIVOS_REC, render: () => refrescarRecuentoConCascada() },
+  fcRecAncho:    { key: "ancho",     label: "Ancho",               activos: () => FILTROS_ACTIVOS_REC, render: () => refrescarRecuentoConCascada() },
+  fcRecLargo:    { key: "largo",     label: "Largo",               activos: () => FILTROS_ACTIVOS_REC, render: () => refrescarRecuentoConCascada() },
+  fcRecMic:      { key: "mic",       label: "Mic/Color",           activos: () => FILTROS_ACTIVOS_REC, render: () => refrescarRecuentoConCascada() },
 };
 
 function seleccionarFC(id, valor, label, event) {
@@ -988,13 +993,22 @@ function poblarFiltroProveedores() {
   });
 }
 
-// Puebla los filtros de la pestaña Recuento (Ancho / Largo / Mic-Color) con
-// los valores reales que existen en el catálogo — nada hardcodeado.
-function poblarFiltroGenerico(id, campo, labelTodos) {
+// Puebla un filtro custom con los valores que existen en un subconjunto de
+// datos ya filtrado (para cascada), preservando la seleccion vigente y
+// quitando automaticamente los valores que dejaron de ser posibles.
+function poblarFiltroGenerico(id, campo, labelTodos, filtroKey, dataset) {
   const lista = document.getElementById(id + "Lista");
   if (!lista) return;
-  const valores = [...new Set(DATOS_INV.map(it => String(it[campo] || "").trim()).filter(Boolean))]
+  const base = dataset || DATOS_INV;
+  const valores = [...new Set(base.map(it => String(it[campo] || "").trim()).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
+
+  // Cascada: si algo que estaba seleccionado ya no es posible con la
+  // combinacion actual de los demas filtros, se saca solo.
+  const seleccionPrevia = FILTROS_ACTIVOS_REC[filtroKey] || [];
+  const seleccionValida = seleccionPrevia.filter(v => valores.includes(v));
+  FILTROS_ACTIVOS_REC[filtroKey] = seleccionValida;
+
   const buscar = document.createElement("input");
   buscar.className = "filtro-custom-buscar";
   buscar.type = "text";
@@ -1003,20 +1017,75 @@ function poblarFiltroGenerico(id, campo, labelTodos) {
   buscar.onkeydown = function(e) { teclasFC(e, id); };
   lista.innerHTML = "";
   lista.appendChild(buscar);
+  const sinSeleccion = seleccionValida.length === 0;
   lista.insertAdjacentHTML("beforeend",
-    "<div class='filtro-custom-opcion seleccionada' data-val='' onclick='seleccionarFC(\"" + id + "\",\"\",\"" + labelTodos + "\",event)'>" + labelTodos + "</div>"
+    "<div class='filtro-custom-opcion" + (sinSeleccion ? " seleccionada" : "") + "' data-val='' onclick='seleccionarFC(\"" + id + "\",\"\",\"" + labelTodos + "\",event)'>" + labelTodos + "</div>"
   );
   valores.forEach(v => {
     const vEsc = v.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    const sel = seleccionValida.includes(v) ? " seleccionada" : "";
     lista.insertAdjacentHTML("beforeend",
-      "<div class='filtro-custom-opcion' data-val='" + vEsc + "' onclick='seleccionarFC(\"" + id + "\",\"" + vEsc + "\",\"" + vEsc + "\",event)'>" + v + "</div>"
+      "<div class='filtro-custom-opcion" + sel + "' data-val='" + vEsc + "' onclick='seleccionarFC(\"" + id + "\",\"" + vEsc + "\",\"" + vEsc + "\",event)'>" + v + "</div>"
     );
   });
+
+  const trig = document.getElementById(id + "Trig");
+  if (trig) {
+    if (sinSeleccion) { trig.textContent = labelTodos; trig.classList.remove("tiene-filtro"); }
+    else {
+      const nombres = seleccionValida.join(", ");
+      trig.textContent = nombres.length > 16 ? nombres.slice(0, 14) + "…" : nombres;
+      trig.classList.add("tiene-filtro");
+    }
+  }
+}
+
+// Aplica todos los filtros de Recuento vigentes. "excluirCascada" (opcional)
+// omite uno de los 4 filtros dimensionales — se usa para calcular que
+// opciones siguen siendo posibles PARA ESE filtro segun los demas.
+function aplicarFiltrosRecuento(excluirCascada) {
+  const qRaw = (document.getElementById("buscarRecuento")?.value || "").trim();
+  const tokens = qRaw.split(/\s+/).filter(Boolean).map(normalizarBusqueda);
+  const { categoria, abc, estadoRec, ancho, largo, mic, tipo } = FILTROS_ACTIVOS_REC;
+  return DATOS_INV.filter(it => {
+    const haystack = normalizarBusqueda(it.descripcion + " " + it.codItem + " " + it.codigoConcatenado + " " + it.ancho + " " + it.largo + " " + it.micColor);
+    if (tokens.length > 0 && !tokens.every(t => haystack.includes(t))) return false;
+    if (tipo === "producto" && it.tipo !== "Producto Terminado") return false;
+    if (tipo === "insumo" && it.tipo !== "Insumo") return false;
+    if (abc.length > 0 && !abc.includes(it.clasificacionABC)) return false;
+    if (excluirCascada !== "categoria" && categoria.length > 0 && !categoria.includes(String(it.codItem || ""))) return false;
+    if (excluirCascada !== "ancho" && ancho.length > 0 && !ancho.includes(String(it.ancho || ""))) return false;
+    if (excluirCascada !== "largo" && largo.length > 0 && !largo.includes(String(it.largo || ""))) return false;
+    if (excluirCascada !== "mic" && mic.length > 0 && !mic.includes(String(it.micColor || ""))) return false;
+    if (estadoRec.length > 0) {
+      const est = estadoRecuentoInfo(it.codigoConcatenado).status;
+      const contado = recuentoActual.some(r => r.codigoConcatenado === it.codigoConcatenado);
+      const pasa = estadoRec.some(fe => fe === "contadoHoy" ? contado : est === fe);
+      if (!pasa) return false;
+    }
+    return true;
+  });
+}
+
+// Repuebla los 4 filtros dimensionales EN CASCADA: cada uno solo muestra
+// las opciones que siguen siendo posibles dado lo que ya esta elegido en
+// los otros tres (mas busqueda/ABC/estado).
+function actualizarOpcionesCascadaRecuento() {
+  poblarFiltroGenerico("fcRecCategoria", "codItem", "Categoría", "categoria", aplicarFiltrosRecuento("categoria"));
+  poblarFiltroGenerico("fcRecAncho", "ancho", "Ancho", "ancho", aplicarFiltrosRecuento("ancho"));
+  poblarFiltroGenerico("fcRecLargo", "largo", "Largo", "largo", aplicarFiltrosRecuento("largo"));
+  poblarFiltroGenerico("fcRecMic", "micColor", "Mic/Color", "mic", aplicarFiltrosRecuento("mic"));
+}
+function refrescarRecuentoConCascada() {
+  actualizarOpcionesCascadaRecuento();
+  renderizarRecuentoPrincipal();
+}
+function buscarRecuentoInput() {
+  actualizarOpcionesCascadaRecuento();
+  renderizarRecuentoPrincipal();
 }
 function poblarFiltrosRecuento() {
-  poblarFiltroGenerico("fcRecAncho", "ancho", "Ancho");
-  poblarFiltroGenerico("fcRecLargo", "largo", "Largo");
-  poblarFiltroGenerico("fcRecMic", "micColor", "Mic/Color");
+  actualizarOpcionesCascadaRecuento();
 }
 
 // ================================================================
@@ -1661,9 +1730,9 @@ function irAContarArticulo(codigoConcatenado) {
   const idx = DATOS_INV.findIndex(it => it.codigoConcatenado === codigoConcatenado);
   if (idx === -1) return;
   // Limpiamos otros filtros y buscamos puntualmente este articulo
-  FILTROS_ACTIVOS_REC = { abc: [], estadoRec: [], ancho: [], largo: [], mic: [], tipo: "todos" };
+  FILTROS_ACTIVOS_REC = { categoria: [], abc: [], estadoRec: [], ancho: [], largo: [], mic: [], tipo: "todos" };
   document.getElementById("buscarRecuento").value = DATOS_INV[idx].codigoConcatenado;
-  renderizarRecuentoPrincipal();
+  refrescarRecuentoConCascada();
   setTimeout(() => {
     const input = document.getElementById("fisicoRec-" + idx);
     if (input) { input.focus(); input.select(); }
@@ -1980,7 +2049,7 @@ function toggleTipoRec(tipo) {
     if (lbl) lbl.classList.toggle("activo", t === tipo);
     if (cb) cb.checked = (t === tipo);
   });
-  renderizarRecuentoPrincipal();
+  refrescarRecuentoConCascada();
 }
 
 // Estado del recuento ciclico de un articulo: nunca contado / vencido / al dia.
@@ -2017,32 +2086,8 @@ function valorOrdenRecuento(it, col, entrada) {
 function renderizarRecuentoPrincipal() {
   const tbody = document.getElementById("cuerpoRecuentoPrincipal");
   if (!tbody) return;
-  const qRaw = (document.getElementById("buscarRecuento").value || "").trim();
-  const tokens = qRaw.split(/\s+/).filter(Boolean).map(normalizarBusqueda);
-  const filtrosABC = FILTROS_ACTIVOS_REC.abc;
-  const filtrosEstadoRec = FILTROS_ACTIVOS_REC.estadoRec;
-  const filtrosAncho = FILTROS_ACTIVOS_REC.ancho;
-  const filtrosLargo = FILTROS_ACTIVOS_REC.largo;
-  const filtrosMic = FILTROS_ACTIVOS_REC.mic;
-  const tipoSel = FILTROS_ACTIVOS_REC.tipo;
 
-  let filas = DATOS_INV.filter(it => {
-    const haystack = normalizarBusqueda(it.descripcion + " " + it.codItem + " " + it.codigoConcatenado + " " + it.ancho + " " + it.largo + " " + it.micColor);
-    if (tokens.length > 0 && !tokens.every(t => haystack.includes(t))) return false;
-    if (tipoSel === "producto" && it.tipo !== "Producto Terminado") return false;
-    if (tipoSel === "insumo" && it.tipo !== "Insumo") return false;
-    if (filtrosABC.length > 0 && !filtrosABC.includes(it.clasificacionABC)) return false;
-    if (filtrosAncho.length > 0 && !filtrosAncho.includes(String(it.ancho || ""))) return false;
-    if (filtrosLargo.length > 0 && !filtrosLargo.includes(String(it.largo || ""))) return false;
-    if (filtrosMic.length > 0 && !filtrosMic.includes(String(it.micColor || ""))) return false;
-    if (filtrosEstadoRec.length > 0) {
-      const est = estadoRecuentoInfo(it.codigoConcatenado).status;
-      const contado = recuentoActual.some(r => r.codigoConcatenado === it.codigoConcatenado);
-      const pasa = filtrosEstadoRec.some(fe => fe === "contadoHoy" ? contado : est === fe);
-      if (!pasa) return false;
-    }
-    return true;
-  });
+  let filas = aplicarFiltrosRecuento(null);
 
   const col = ordenRecuentoTabla.col;
   if (!col) {
@@ -2141,7 +2186,7 @@ let cantFisicaContexto = null;
 function abrirModalCantidadFisica(idxReal, modo) {
   const it = DATOS_INV[idxReal];
   if (!it) return;
-  cantFisicaContexto = { idxReal, modo };
+  cantFisicaContexto = { tipo: "principal", idxReal, modo };
   document.getElementById("tituloModalCantFisica").textContent = modo === "restar" ? "Restar cantidad" : "Sumar cantidad";
   document.getElementById("labelModalCantFisica").textContent = modo === "restar" ? "Cantidad a restar" : "Cantidad a sumar";
   const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
@@ -2149,6 +2194,21 @@ function abrirModalCantidadFisica(idxReal, modo) {
   document.getElementById("infoModalCantFisica").innerHTML =
     "<b>" + it.descripcion + "</b> " + it.ancho + "x" + it.largo + " " + it.micColor
     + "<br>Físico actual: <b>" + formatoNumRec(actual) + "</b>";
+  const input = document.getElementById("inputModalCantFisica");
+  input.value = "";
+  document.getElementById("modalCantidadFisica").classList.add("abierto");
+  setTimeout(() => input.focus(), 80);
+}
+// Version del modal para el Fisico contado de un LOTE especifico dentro
+// del desglose expandido de un articulo.
+function abrirModalCantidadLote(idxReal, inputId, statusId, teoricoLote, loteLabel, modo) {
+  cantFisicaContexto = { tipo: "lote", idxReal, inputId, statusId, teoricoLote, modo };
+  document.getElementById("tituloModalCantFisica").textContent = modo === "restar" ? "Restar cantidad" : "Sumar cantidad";
+  document.getElementById("labelModalCantFisica").textContent = modo === "restar" ? "Cantidad a restar" : "Cantidad a sumar";
+  const inputLote = document.getElementById(inputId);
+  const actual = inputLote && inputLote.value !== "" ? Number(inputLote.value) : 0;
+  document.getElementById("infoModalCantFisica").innerHTML =
+    "Lote <b>" + loteLabel + "</b><br>Físico actual: <b>" + formatoNumRec(actual) + "</b>";
   const input = document.getElementById("inputModalCantFisica");
   input.value = "";
   document.getElementById("modalCantidadFisica").classList.add("abierto");
@@ -2163,7 +2223,18 @@ function confirmarCantidadFisica() {
   const valor = Number(document.getElementById("inputModalCantFisica").value);
   if (!(valor > 0)) { mostrarBannerInv("fallo", "Ingresá una cantidad mayor a cero."); return; }
   const delta = cantFisicaContexto.modo === "restar" ? -valor : valor;
-  ajustarFisicoRec(cantFisicaContexto.idxReal, delta);
+  if (cantFisicaContexto.tipo === "lote") {
+    const input = document.getElementById(cantFisicaContexto.inputId);
+    if (input) {
+      const actual = input.value !== "" ? Number(input.value) : 0;
+      const nuevo = Math.max(0, actual + delta);
+      input.value = nuevo;
+      recalcularSumaLotes(cantFisicaContexto.idxReal);
+      actualizarStatusLote(cantFisicaContexto.statusId, String(nuevo), cantFisicaContexto.teoricoLote);
+    }
+  } else {
+    ajustarFisicoRec(cantFisicaContexto.idxReal, delta);
+  }
   cerrarModalCantidadFisica();
 }
 
@@ -2246,15 +2317,25 @@ async function toggleLotesRecuento(filId, idxReal, btn) {
     }
     const itemsDesc = [...items].reverse(); // mas reciente arriba
     let tabla = "<table style='width:100%;font-size:14px;border-collapse:collapse'><thead><tr>"
-      + "<th style='text-align:left;padding:6px'>Lote</th><th style='text-align:right;padding:6px'>Teórico lote</th>"
-      + "<th style='text-align:left;padding:6px'>Antigüedad</th><th style='text-align:center;padding:6px'>Físico contado</th></tr></thead><tbody>";
-    itemsDesc.forEach(p => {
-      const pEsc = String(p.partida).replace(/"/g, "&quot;");
+      + "<th style='text-align:left;padding:6px'>Lote</th><th style='text-align:left;padding:6px'>Antigüedad</th>"
+      + "<th style='text-align:right;padding:6px'>Teórico lote</th><th style='text-align:center;padding:6px'>Físico contado</th>"
+      + "<th style='text-align:left;padding:6px'>Status Ajuste</th></tr></thead><tbody>";
+    itemsDesc.forEach((p, i) => {
+      const pEsc = String(p.partida).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      const inputId = "loteFisico-" + idxReal + "-" + i;
+      const statusId = "loteStatus-" + idxReal + "-" + i;
+      const teoricoLote = Number(p.unidadesRemanentes || 0);
       tabla += "<tr><td style='padding:6px'>" + p.partida + "</td>"
-        + "<td style='text-align:right;padding:6px'>" + formatoNumRec(p.unidadesRemanentes) + "</td>"
         + "<td style='padding:6px;color:var(--gris-texto)'>" + (p.diasAntiguedad > 0 ? p.diasAntiguedad + " días" : "-") + "</td>"
-        + "<td style='text-align:center;padding:6px'><input type='number' min='0' data-lote=\"" + pEsc + "\" class='input-fisico-lote'"
-        + " style='width:70px;text-align:center;padding:5px;font-size:14px;border:1px solid var(--gris-borde);border-radius:6px' oninput='recalcularSumaLotes(" + idxReal + ")'></td></tr>";
+        + "<td style='text-align:right;padding:6px'>" + formatoNumRec(teoricoLote) + "</td>"
+        + "<td style='text-align:center;padding:6px'><div style='display:flex;align-items:center;justify-content:center;gap:5px'>"
+          + "<button type='button' class='btn-fisico' style='width:32px;height:32px;font-size:16px' onclick='abrirModalCantidadLote(" + idxReal + ",\"" + inputId + "\",\"" + statusId + "\"," + teoricoLote + ",\"" + pEsc + "\",\"restar\")'>−</button>"
+          + "<input type='number' min='0' data-lote=\"" + pEsc + "\" class='input-fisico-lote' id='" + inputId + "'"
+          + " style='width:80px;text-align:center;padding:5px;font-size:14px;border:1px solid var(--gris-borde);border-radius:6px'"
+          + " oninput='recalcularSumaLotes(" + idxReal + "); actualizarStatusLote(\"" + statusId + "\", this.value, " + teoricoLote + ")'>"
+          + "<button type='button' class='btn-fisico' style='width:32px;height:32px;font-size:16px' onclick='abrirModalCantidadLote(" + idxReal + ",\"" + inputId + "\",\"" + statusId + "\"," + teoricoLote + ",\"" + pEsc + "\",\"sumar\")'>+</button>"
+        + "</div></td>"
+        + "<td style='padding:6px' id='" + statusId + "'><span class='badge-sincontar'>Sin contar</span></td></tr>";
     });
     tabla += "</tbody></table>"
       + "<div style='margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap'>"
@@ -2273,6 +2354,17 @@ function recalcularSumaLotes(idxReal) {
   fila.querySelectorAll(".input-fisico-lote").forEach(i => { if (i.value !== "") suma += Number(i.value) || 0; });
   const span = document.getElementById("sumaLotesRec-" + idxReal);
   if (span) { span.textContent = formatoNumRec(suma); span.dataset.raw = suma; }
+}
+// Pinta el badge de Status Ajuste de UNA fila de lote (Ajustado/Ajustar/Sin contar).
+function actualizarStatusLote(statusId, valor, teoricoLote) {
+  const celda = document.getElementById(statusId);
+  if (!celda) return;
+  if (valor === "" || valor === null || valor === undefined) {
+    celda.innerHTML = "<span class='badge-sincontar'>Sin contar</span>";
+    return;
+  }
+  const dif = Number(valor) - Number(teoricoLote || 0);
+  celda.innerHTML = dif === 0 ? "<span class='badge-ajustado'>Ajustado</span>" : "<span class='badge-ajustar'>Ajustar</span>";
 }
 function usarSumaLotesEnFisico(idxReal) {
   const it = DATOS_INV[idxReal];
