@@ -32,7 +32,7 @@
   .badge-critico{background:#f8d7da;color:#721c24;}
   /* --- Recuento: tabla grande y tactil (tablet/celular en el deposito) --- */
   .tabla-recuento{border-collapse:collapse;width:100%;}
-  .tabla-recuento th{font-size:14px;padding:10px 10px;cursor:pointer;white-space:nowrap;background:#f4f7fa;position:sticky;top:0;z-index:15;}
+  .tabla-recuento th{font-size:14px;padding:10px 10px;cursor:pointer;white-space:nowrap;background:#f4f7fa;color:var(--azul-oscuro);position:sticky;top:0;z-index:15;}
   .tabla-recuento td{font-size:16px;padding:10px 10px;vertical-align:middle;border-top:1px solid var(--gris-borde);}
   .badge-ajustado{display:inline-block;background:#1b5e35;color:#fff;padding:4px 12px;border-radius:12px;font-size:13px;font-weight:700;white-space:nowrap;}
   .badge-ajustar{display:inline-block;background:var(--rojo);color:#fff;padding:4px 12px;border-radius:12px;font-size:13px;font-weight:700;white-space:nowrap;}
@@ -42,7 +42,7 @@
   .badge-aldia{display:inline-block;background:#d4edda;color:#155724;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
   .btn-fisico{width:42px;height:42px;font-size:22px;font-weight:700;border-radius:8px;border:1px solid var(--gris-borde);background:#fff;cursor:pointer;line-height:1;}
   .btn-fisico:active{background:var(--azul-claro);}
-  .input-fisico-rec{width:76px;height:42px;text-align:center;font-size:18px;font-weight:700;border:2px solid var(--gris-borde);border-radius:8px;}
+  .input-fisico-rec{width:118px;height:44px;text-align:center;font-size:18px;font-weight:700;border:2px solid var(--gris-borde);border-radius:8px;padding:0 4px;}
   .input-fisico-rec.tiene-valor{border-color:var(--azul);}
   .fila-lotes-rec{display:none;}
   .fila-lotes-rec.abierta{display:table-row;}
@@ -599,6 +599,21 @@
     </div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button type="button" class="btn btn-gris" style="flex:1" onclick="cerrarModalDetalleV2()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCantidadFisica">
+  <div class="modal" style="max-width:360px">
+    <h3 id="tituloModalCantFisica">Sumar cantidad</h3>
+    <div id="infoModalCantFisica" style="font-size:13px;color:var(--gris-texto);margin-bottom:14px"></div>
+    <div class="campo">
+      <label id="labelModalCantFisica">Cantidad a sumar</label>
+      <input type="number" id="inputModalCantFisica" min="0" step="any" placeholder="0" style="font-size:20px;text-align:center;padding:10px" onkeydown="if(event.key==='Enter') confirmarCantidadFisica()">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button type="button" class="btn btn-gris" style="flex:1" onclick="cerrarModalCantidadFisica()">Cancelar</button>
+      <button type="button" class="btn btn-verde" style="flex:2" onclick="confirmarCantidadFisica()">Confirmar</button>
     </div>
   </div>
 </div>
@@ -1940,6 +1955,13 @@ async function confirmarMovRapido() {
 // --- MODULO RECUENTO ---
 let recuentoActual = []; // [{codigoConcatenado, descripcion, stockTeorico, stockFisico, observacion}]
 
+// Formatea numeros para la pestaña Recuento: separador de miles siempre,
+// y decimales SOLO si el numero no es entero (maximo 2).
+function formatoNumRec(n) {
+  const num = Number(n) || 0;
+  return num.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
 // Quita acentos, pasa a minusculas y saca espacios/guiones/puntos, para que
 // la busqueda funcione aunque el usuario tipee distinto (con o sin espacios,
 // con o sin acentos, con o sin guiones).
@@ -2067,12 +2089,12 @@ function renderizarRecuentoPrincipal() {
       + "<td><button type='button' class='lote-toggle-rec' title='Ver / contar lotes' onclick='toggleLotesRecuento(\"" + filId + "\"," + idxReal + ",this)'>+</button></td>"
       + "<td style='min-width:170px'><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " · " + it.ancho + "x" + it.largo + " " + it.micColor + "</small><br>" + estRecBadge + "</td>"
       + "<td>" + claseBadge + "</td>"
-      + "<td style='text-align:right;font-weight:700'>" + teorico.toLocaleString("es-AR") + "</td>"
+      + "<td style='text-align:right;font-weight:700'>" + formatoNumRec(teorico) + "</td>"
       + "<td style='text-align:center'><div style='display:flex;align-items:center;justify-content:center;gap:6px'>"
-        + "<button type='button' class='btn-fisico' onclick='ajustarFisicoRec(" + idxReal + ",-1)'>−</button>"
+        + "<button type='button' class='btn-fisico' onclick='abrirModalCantidadFisica(" + idxReal + ",\"restar\")'>−</button>"
         + "<input type='number' min='0' class='input-fisico-rec" + (fisicoVal !== "" ? " tiene-valor" : "") + "' id='fisicoRec-" + idxReal + "' value='" + fisicoVal + "'"
         + " oninput='actualizarFisicoRecInline(" + idxReal + ",this.value,false)' onchange='actualizarFisicoRecInline(" + idxReal + ",this.value,true)'>"
-        + "<button type='button' class='btn-fisico' onclick='ajustarFisicoRec(" + idxReal + ",1)'>+</button>"
+        + "<button type='button' class='btn-fisico' onclick='abrirModalCantidadFisica(" + idxReal + ",\"sumar\")'>+</button>"
       + "</div></td>"
       + "<td id='ajusteRec-" + idxReal + "' style='text-align:right'>" + ajusteHtml + "</td>"
       + "<td id='statusRec-" + idxReal + "'>" + statusHtml + "</td></tr>"
@@ -2090,7 +2112,7 @@ function calcularAjusteYStatus(fisicoVal, teorico) {
   const signo = dif > 0 ? "+" : "";
   const colorDif = dif === 0 ? "var(--verde)" : dif > 0 ? "var(--azul)" : "var(--rojo)";
   return {
-    ajusteHtml: "<b style='color:" + colorDif + "'>" + signo + dif + "</b>",
+    ajusteHtml: "<b style='color:" + colorDif + "'>" + signo + formatoNumRec(dif) + "</b>",
     statusHtml: dif === 0 ? "<span class='badge-ajustado'>Ajustado</span>" : "<span class='badge-ajustar'>Ajustar</span>",
   };
 }
@@ -2113,7 +2135,38 @@ function renderizarResumenRecuento(filas) {
     + "<span style='color:var(--gris-texto)'>Total pendiente de guardar: <b>" + recuentoActual.length + "</b></span>";
 }
 
-// Botones +/- : suman o restan 1 al Fisico y confirman el cambio de una.
+// Botones +/-: abren un modal para tipear la cantidad a sumar o restar
+// (en vez de ir de a 1), util para conteos con cajas/pallets grandes.
+let cantFisicaContexto = null;
+function abrirModalCantidadFisica(idxReal, modo) {
+  const it = DATOS_INV[idxReal];
+  if (!it) return;
+  cantFisicaContexto = { idxReal, modo };
+  document.getElementById("tituloModalCantFisica").textContent = modo === "restar" ? "Restar cantidad" : "Sumar cantidad";
+  document.getElementById("labelModalCantFisica").textContent = modo === "restar" ? "Cantidad a restar" : "Cantidad a sumar";
+  const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
+  const actual = entrada && entrada.stockFisico !== "" ? Number(entrada.stockFisico) : 0;
+  document.getElementById("infoModalCantFisica").innerHTML =
+    "<b>" + it.descripcion + "</b> " + it.ancho + "x" + it.largo + " " + it.micColor
+    + "<br>Físico actual: <b>" + formatoNumRec(actual) + "</b>";
+  const input = document.getElementById("inputModalCantFisica");
+  input.value = "";
+  document.getElementById("modalCantidadFisica").classList.add("abierto");
+  setTimeout(() => input.focus(), 80);
+}
+function cerrarModalCantidadFisica() {
+  document.getElementById("modalCantidadFisica").classList.remove("abierto");
+  cantFisicaContexto = null;
+}
+function confirmarCantidadFisica() {
+  if (!cantFisicaContexto) return;
+  const valor = Number(document.getElementById("inputModalCantFisica").value);
+  if (!(valor > 0)) { mostrarBannerInv("fallo", "Ingresá una cantidad mayor a cero."); return; }
+  const delta = cantFisicaContexto.modo === "restar" ? -valor : valor;
+  ajustarFisicoRec(cantFisicaContexto.idxReal, delta);
+  cerrarModalCantidadFisica();
+}
+
 function ajustarFisicoRec(idx, delta) {
   const it = DATOS_INV[idx];
   if (!it) return;
@@ -2198,7 +2251,7 @@ async function toggleLotesRecuento(filId, idxReal, btn) {
     itemsDesc.forEach(p => {
       const pEsc = String(p.partida).replace(/"/g, "&quot;");
       tabla += "<tr><td style='padding:6px'>" + p.partida + "</td>"
-        + "<td style='text-align:right;padding:6px'>" + Number(p.unidadesRemanentes).toLocaleString("es-AR") + "</td>"
+        + "<td style='text-align:right;padding:6px'>" + formatoNumRec(p.unidadesRemanentes) + "</td>"
         + "<td style='padding:6px;color:var(--gris-texto)'>" + (p.diasAntiguedad > 0 ? p.diasAntiguedad + " días" : "-") + "</td>"
         + "<td style='text-align:center;padding:6px'><input type='number' min='0' data-lote=\"" + pEsc + "\" class='input-fisico-lote'"
         + " style='width:70px;text-align:center;padding:5px;font-size:14px;border:1px solid var(--gris-borde);border-radius:6px' oninput='recalcularSumaLotes(" + idxReal + ")'></td></tr>";
@@ -2219,13 +2272,13 @@ function recalcularSumaLotes(idxReal) {
   let suma = 0;
   fila.querySelectorAll(".input-fisico-lote").forEach(i => { if (i.value !== "") suma += Number(i.value) || 0; });
   const span = document.getElementById("sumaLotesRec-" + idxReal);
-  if (span) span.textContent = suma;
+  if (span) { span.textContent = formatoNumRec(suma); span.dataset.raw = suma; }
 }
 function usarSumaLotesEnFisico(idxReal) {
   const it = DATOS_INV[idxReal];
   if (!it) return;
   const span = document.getElementById("sumaLotesRec-" + idxReal);
-  const suma = span ? Number(span.textContent) || 0 : 0;
+  const suma = span ? Number(span.dataset.raw || 0) : 0;
   const input = document.getElementById("fisicoRec-" + idxReal);
   if (input) { input.value = suma; }
   actualizarFisicoRecInline(idxReal, String(suma), true);
@@ -2357,8 +2410,8 @@ function renderizarHistorialRecuento() {
     }
     return "<tr><td style='font-size:12px'>" + fechaTexto + "</td>"
       + "<td>" + (r.Descripcion || "") + "</td>"
-      + "<td style='text-align:right'>" + r.StockTeorico + " / " + r.StockFisico + "</td>"
-      + "<td style='text-align:right;font-weight:700;color:" + colorDif + "'>" + signo + dif + "</td>"
+      + "<td style='text-align:right'>" + formatoNumRec(r.StockTeorico) + " / " + formatoNumRec(r.StockFisico) + "</td>"
+      + "<td style='text-align:right;font-weight:700;color:" + colorDif + "'>" + signo + formatoNumRec(dif) + "</td>"
       + "<td>" + estadoTexto + "</td>"
       + "<td style='font-size:12px'>" + (r.Usuario || "") + "</td></tr>";
   }).join("");
