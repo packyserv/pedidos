@@ -30,6 +30,23 @@
   .badge-ok{background:#d4edda;color:#155724;}
   .badge-bajo{background:#fff3cd;color:#856404;}
   .badge-critico{background:#f8d7da;color:#721c24;}
+  /* --- Recuento: tabla grande y tactil (tablet/celular en el deposito) --- */
+  .tabla-recuento{border-collapse:collapse;width:100%;}
+  .tabla-recuento th{font-size:14px;padding:10px 10px;cursor:pointer;white-space:nowrap;background:#f4f7fa;position:sticky;top:0;z-index:15;}
+  .tabla-recuento td{font-size:16px;padding:10px 10px;vertical-align:middle;border-top:1px solid var(--gris-borde);}
+  .badge-ajustado{display:inline-block;background:#1b5e35;color:#fff;padding:4px 12px;border-radius:12px;font-size:13px;font-weight:700;white-space:nowrap;}
+  .badge-ajustar{display:inline-block;background:var(--rojo);color:#fff;padding:4px 12px;border-radius:12px;font-size:13px;font-weight:700;white-space:nowrap;}
+  .badge-sincontar{display:inline-block;background:#e9ecef;color:#666;padding:4px 12px;border-radius:12px;font-size:13px;font-weight:700;white-space:nowrap;}
+  .badge-nuncacontado{display:inline-block;background:var(--rojo);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
+  .badge-vencido{display:inline-block;background:var(--naranja);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
+  .badge-aldia{display:inline-block;background:#d4edda;color:#155724;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
+  .btn-fisico{width:42px;height:42px;font-size:22px;font-weight:700;border-radius:8px;border:1px solid var(--gris-borde);background:#fff;cursor:pointer;line-height:1;}
+  .btn-fisico:active{background:var(--azul-claro);}
+  .input-fisico-rec{width:76px;height:42px;text-align:center;font-size:18px;font-weight:700;border:2px solid var(--gris-borde);border-radius:8px;}
+  .input-fisico-rec.tiene-valor{border-color:var(--azul);}
+  .fila-lotes-rec{display:none;}
+  .fila-lotes-rec.abierta{display:table-row;}
+  .lote-toggle-rec{width:34px;height:34px;font-size:18px;font-weight:700;border-radius:50%;border:1px solid var(--azul);background:#fff;color:var(--azul);cursor:pointer;line-height:1;}
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(18,41,63,.55);z-index:50;align-items:center;justify-content:center;padding:16px;}
   .modal-overlay.abierto{display:flex;}
   .modal{background:#fff;border-radius:var(--radio);padding:24px;max-width:480px;width:100%;}
@@ -385,69 +402,79 @@
     <div class="card">
       <div class="con-info">
         <h2 style="margin:0;padding:0;border:none">Recuento fisico de stock</h2>
-        <button class="info-btn" onclick="mostrarInfo(event, 'Contá lo que hay físicamente en el depósito y compáralo contra lo que dice el sistema (\"stock teórico\"). Si hay diferencia, se guarda automáticamente como \"pendiente de ajustar\" para que después alguien lo cargue en Bejerman.\n\nDos modos: artículo por artículo (buscás uno y contás), o planilla completa (contás todo el catálogo de una vez).')">i</button>
+        <button class="info-btn" onclick="mostrarInfo(event, 'Contá lo que hay físicamente en el depósito y compáralo contra lo que dice el sistema (\"stock teórico\").\n\nEscribí el valor contado en la columna \"Stock Físico\" (o usá los botones +/-). La diferencia y el estado del ajuste se calculan solos.\n\nTocá el botón ⊕ junto a un artículo para ver y contar sus lotes por separado.\n\nCuando termines, tocá \"Guardar recuento\" para mandar todo a Google Sheets.')">i</button>
       </div>
       <p style="font-size:13px;color:var(--gris-texto);margin-bottom:14px">
-        Contá el stock físico y compará contra el teórico del sistema. Al finalizar podés exportar las diferencias a CSV para cargarlas en Bejerman.
+        Contá el stock físico y compará contra el teórico del sistema. Al finalizar, guardá en Google Sheets o exportá a CSV para cargar en Bejerman.
       </p>
-      <div class="pills" style="margin-bottom:16px">
-        <button type="button" class="pill-tipo activa-entrada" id="modoRecIndividual" onclick="cambiarModoRecuento('individual')">Articulo por articulo</button>
-        <button type="button" class="pill-tipo" id="modoRecPlanilla" onclick="cambiarModoRecuento('planilla')">Planilla completa</button>
-      </div>
 
-      <!-- Modo individual -->
-      <div id="recuentoIndividual">
-        <div class="campo">
-          <label>Buscar articulo</label>
-          <input type="text" id="buscarArticuloRec" placeholder="Buscar por codigo o descripcion..." oninput="filtrarArticulosRec()">
-          <select id="selectArticuloRec" size="5" style="margin-top:6px;height:100px" onchange="seleccionarArticuloRec()"></select>
+      <div class="filtros" style="margin-bottom:6px">
+        <input type="text" id="buscarRecuento" placeholder="Buscar por código, descripción, medida..." oninput="renderizarRecuentoPrincipal()" style="flex:2;min-width:180px;padding:8px 10px;font-size:14px">
+        <div class="filtro-custom" id="fcRecABC">
+          <button class="filtro-custom-trigger" type="button" id="fcRecABCTrig" onclick="toggleFiltroCustom('fcRecABC')" onkeydown="teclasFC(event,'fcRecABC')">Clase ABC</button>
+          <div class="filtro-custom-lista" id="fcRecABCLista">
+            <input class="filtro-custom-buscar" type="text" placeholder="Buscar..." oninput="filtrarOpciones('fcRecABC',this.value)" onkeydown="teclasFC(event,'fcRecABC')">
+            <div class="filtro-custom-opcion seleccionada" data-val="" onclick="seleccionarFC('fcRecABC','','Clase ABC',event)">Todas las clases</div>
+            <div class="filtro-custom-opcion" data-val="A" onclick="seleccionarFC('fcRecABC','A','🔴 Clase A',event)">🔴 Clase A</div>
+            <div class="filtro-custom-opcion" data-val="B" onclick="seleccionarFC('fcRecABC','B','🟠 Clase B',event)">🟠 Clase B</div>
+            <div class="filtro-custom-opcion" data-val="C" onclick="seleccionarFC('fcRecABC','C','⚪ Clase C',event)">⚪ Clase C</div>
+            <div class="filtro-custom-opcion" data-val="D" onclick="seleccionarFC('fcRecABC','D','⬜ Sin actividad',event)">⬜ Sin actividad</div>
+          </div>
         </div>
-        <div id="recArtInfo" style="display:none;background:var(--azul-claro);padding:10px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
-        <div class="campo">
-          <label>Stock fisico contado</label>
-          <input type="number" id="inputFisicoRec" min="0" placeholder="0">
+        <div class="filtro-custom" id="fcRecEstado">
+          <button class="filtro-custom-trigger" type="button" id="fcRecEstadoTrig" onclick="toggleFiltroCustom('fcRecEstado')" onkeydown="teclasFC(event,'fcRecEstado')">Estado de recuento</button>
+          <div class="filtro-custom-lista" id="fcRecEstadoLista">
+            <input class="filtro-custom-buscar" type="text" placeholder="Buscar..." oninput="filtrarOpciones('fcRecEstado',this.value)" onkeydown="teclasFC(event,'fcRecEstado')">
+            <div class="filtro-custom-opcion seleccionada" data-val="" onclick="seleccionarFC('fcRecEstado','','Estado de recuento',event)">Todos</div>
+            <div class="filtro-custom-opcion" data-val="nunca" onclick="seleccionarFC('fcRecEstado','nunca','Nunca contado',event)">🔴 Nunca contado</div>
+            <div class="filtro-custom-opcion" data-val="vencido" onclick="seleccionarFC('fcRecEstado','vencido','Vencido para contar',event)">🟠 Vencido para contar</div>
+            <div class="filtro-custom-opcion" data-val="aldia" onclick="seleccionarFC('fcRecEstado','aldia','Al dia',event)">🟢 Al día</div>
+            <div class="filtro-custom-opcion" data-val="contadoHoy" onclick="seleccionarFC('fcRecEstado','contadoHoy','Ya contado en esta sesion',event)">✅ Ya contado en esta sesión</div>
+          </div>
         </div>
-        <div class="campo">
-          <label>Observacion (opcional)</label>
-          <input type="text" id="obsFisicoRec" placeholder="Ubicacion, novedad, etc...">
+        <div class="filtro-custom" id="fcRecAncho">
+          <button class="filtro-custom-trigger" type="button" id="fcRecAnchoTrig" onclick="toggleFiltroCustom('fcRecAncho')" onkeydown="teclasFC(event,'fcRecAncho')">Ancho</button>
+          <div class="filtro-custom-lista" id="fcRecAnchoLista"></div>
         </div>
-        <button type="button" class="btn btn-verde" style="width:100%" onclick="agregarConteoIndividual()">Agregar al recuento</button>
-      </div>
-
-      <!-- Modo planilla -->
-      <div id="recuentoPlanilla" style="display:none">
-        <input type="text" id="buscarPlanillaRec" placeholder="Filtrar la lista..." oninput="renderizarPlanillaRecuento()" style="margin-bottom:10px">
-        <div style="overflow-x:auto; max-height:400px; overflow-y:auto; border:1px solid var(--gris-borde); border-radius:6px">
-          <table>
-            <thead>
-              <tr>
-              <th onclick="ordenarPorPlanilla('descripcion')" style="cursor:pointer">Articulo ⇅</th>
-              <th onclick="ordenarPorPlanilla('stockReal')" style="text-align:right;cursor:pointer">Teorico ⇅</th>
-              <th style="text-align:center">Fisico contado</th>
-            </tr>
-            </thead>
-            <tbody id="cuerpoPlanillaRec"></tbody>
-          </table>
+        <div class="filtro-custom" id="fcRecLargo">
+          <button class="filtro-custom-trigger" type="button" id="fcRecLargoTrig" onclick="toggleFiltroCustom('fcRecLargo')" onkeydown="teclasFC(event,'fcRecLargo')">Largo</button>
+          <div class="filtro-custom-lista" id="fcRecLargoLista"></div>
+        </div>
+        <div class="filtro-custom" id="fcRecMic">
+          <button class="filtro-custom-trigger" type="button" id="fcRecMicTrig" onclick="toggleFiltroCustom('fcRecMic')" onkeydown="teclasFC(event,'fcRecMic')">Mic/Color</button>
+          <div class="filtro-custom-lista" id="fcRecMicLista"></div>
         </div>
       </div>
-    </div>
+      <div class="filtros" style="margin-bottom:10px;align-items:center">
+        <span style="font-size:12px;font-weight:600;color:var(--gris-texto);white-space:nowrap">Tipo:</span>
+        <div class="tipo-checks">
+          <button type="button" class="tipo-check-btn activo" id="checkRecTodosLbl" onclick="toggleTipoRec('todos')"><input id="checkRecTodos"> Todos</button>
+          <button type="button" class="tipo-check-btn" id="checkRecProductoLbl" onclick="toggleTipoRec('producto')"><input id="checkRecProducto"> 📦 Prod. Terminado</button>
+          <button type="button" class="tipo-check-btn" id="checkRecInsumoLbl" onclick="toggleTipoRec('insumo')"><input id="checkRecInsumo"> 🧱 Insumo</button>
+        </div>
+      </div>
 
-    <div class="card" id="cardListaRecuento" style="display:none">
-      <h2>Recuento en curso (<span id="cantidadEnRecuento">0</span> items)</h2>
-      <div style="overflow-x:auto">
-        <table>
+      <div id="resumenRecuento" style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;background:#eef4fb;border:1px solid var(--gris-borde);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:14px"></div>
+
+      <div class="tabla-scroll" style="max-height:70vh">
+        <table class="tabla-recuento">
           <thead>
             <tr>
-              <th onclick="ordenarPorRecuento('descripcion')" style="cursor:pointer">Articulo ⇅</th>
-              <th onclick="ordenarPorRecuento('stockTeorico')" style="text-align:right;cursor:pointer">Teorico ⇅</th>
-              <th onclick="ordenarPorRecuento('stockFisico')" style="text-align:right;cursor:pointer">Fisico ⇅</th>
-              <th onclick="ordenarPorRecuento('diferencia')" style="text-align:right;cursor:pointer">Diferencia ⇅</th>
-              <th></th>
+              <th style="width:34px"></th>
+              <th onclick="ordenarPorRecuentoTabla('descripcion')">Artículo ⇅</th>
+              <th onclick="ordenarPorRecuentoTabla('clasificacionABCXYZ')">Clase ⇅</th>
+              <th onclick="ordenarPorRecuentoTabla('stockReal')" style="text-align:right">Teórico ⇅</th>
+              <th onclick="ordenarPorRecuentoTabla('stockFisico')" style="text-align:center">Físico ⇅</th>
+              <th onclick="ordenarPorRecuentoTabla('ajuste')" style="text-align:right">Ajuste ⇅</th>
+              <th onclick="ordenarPorRecuentoTabla('statusAjuste')">Status Ajuste ⇅</th>
             </tr>
           </thead>
-          <tbody id="cuerpoListaRecuento"></tbody>
+          <tbody id="cuerpoRecuentoPrincipal">
+            <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
+          </tbody>
         </table>
       </div>
+
       <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap">
         <button type="button" class="btn btn-gris" onclick="limpiarRecuento()">Limpiar todo</button>
         <button type="button" class="btn btn-azul" onclick="exportarRecuentoCSV()">Exportar CSV</button>
@@ -785,6 +812,7 @@ let articuloMovSeleccionado = null;
 let tipoMovActual = "entrada";
 let ordenActual = { col: "", asc: true }; // "" = orden por impacto por defecto
 let FILTROS_ACTIVOS = { estado: [], abc: [], xyz: [], proveedor: [], tipo: "todos" };
+let FILTROS_ACTIVOS_REC = { abc: [], estadoRec: [], ancho: [], largo: [], mic: [], tipo: "todos" };
 let usuarioActual = "";
 let articuloMinimoActual = null;
 
@@ -815,16 +843,22 @@ const FC_CONFIG = {
   fcABC:    { key: "abc",    label: "Clase ABC" },
   fcXYZ:    { key: "xyz",    label: "Variabilidad XYZ" },
   fcProv:   { key: "proveedor", label: "Proveedor" },
+  fcRecABC:    { key: "abc",    label: "Clase ABC",           activos: () => FILTROS_ACTIVOS_REC, render: () => renderizarRecuentoPrincipal() },
+  fcRecEstado: { key: "estadoRec", label: "Estado de recuento", activos: () => FILTROS_ACTIVOS_REC, render: () => renderizarRecuentoPrincipal() },
+  fcRecAncho:  { key: "ancho",  label: "Ancho",     activos: () => FILTROS_ACTIVOS_REC, render: () => renderizarRecuentoPrincipal() },
+  fcRecLargo:  { key: "largo",  label: "Largo",     activos: () => FILTROS_ACTIVOS_REC, render: () => renderizarRecuentoPrincipal() },
+  fcRecMic:    { key: "mic",    label: "Mic/Color", activos: () => FILTROS_ACTIVOS_REC, render: () => renderizarRecuentoPrincipal() },
 };
 
 function seleccionarFC(id, valor, label, event) {
   const ctrlKey = event && (event.ctrlKey || event.metaKey);
   const filtroKey = FC_CONFIG[id]?.key || id;
+  const estado = FC_CONFIG[id]?.activos ? FC_CONFIG[id].activos() : FILTROS_ACTIVOS;
   const opts = document.querySelectorAll("#" + id + "Lista .filtro-custom-opcion");
 
   if (!ctrlKey || valor === "") {
     // Sin ctrl: selección única
-    FILTROS_ACTIVOS[filtroKey] = valor ? [valor] : [];
+    estado[filtroKey] = valor ? [valor] : [];
     opts.forEach(op => {
       const v = op.dataset.val;
       const sel = (valor === "" && v === "") || (valor !== "" && v === valor);
@@ -832,10 +866,10 @@ function seleccionarFC(id, valor, label, event) {
     });
   } else {
     // Con ctrl: multiselección — se pinta/despinta el elemento clickeado
-    const activos = FILTROS_ACTIVOS[filtroKey];
+    const activos = estado[filtroKey];
     const idx = activos.indexOf(valor);
     if (idx >= 0) activos.splice(idx, 1); else activos.push(valor);
-    FILTROS_ACTIVOS[filtroKey] = activos;
+    estado[filtroKey] = activos;
     opts.forEach(op => {
       const v = op.dataset.val;
       if (v === "") {
@@ -852,7 +886,7 @@ function seleccionarFC(id, valor, label, event) {
 
   // Actualizar label del trigger
   const trig = document.getElementById(id + "Trig");
-  const activos2 = FILTROS_ACTIVOS[filtroKey];
+  const activos2 = estado[filtroKey];
   const defaultLabel = FC_CONFIG[id]?.label || "Filtro";
   if (trig) {
     if (activos2.length === 0) {
@@ -866,7 +900,8 @@ function seleccionarFC(id, valor, label, event) {
       trig.classList.add("tiene-filtro");
     }
   }
-  renderizarTabla();
+  if (FC_CONFIG[id]?.render) FC_CONFIG[id].render();
+  else renderizarTabla();
 }
 function teclasFC(event, id) {
   const lista = document.getElementById(id + "Lista");
@@ -936,6 +971,37 @@ function poblarFiltroProveedores() {
       "<div class='filtro-custom-opcion' data-val='" + pEsc + "' onclick='seleccionarFC(\"fcProv\",\"" + pEsc + "\",\"" + pEsc + "\",event)'>" + p + "</div>"
     );
   });
+}
+
+// Puebla los filtros de la pestaña Recuento (Ancho / Largo / Mic-Color) con
+// los valores reales que existen en el catálogo — nada hardcodeado.
+function poblarFiltroGenerico(id, campo, labelTodos) {
+  const lista = document.getElementById(id + "Lista");
+  if (!lista) return;
+  const valores = [...new Set(DATOS_INV.map(it => String(it[campo] || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
+  const buscar = document.createElement("input");
+  buscar.className = "filtro-custom-buscar";
+  buscar.type = "text";
+  buscar.placeholder = "Buscar...";
+  buscar.oninput = function() { filtrarOpciones(id, this.value); };
+  buscar.onkeydown = function(e) { teclasFC(e, id); };
+  lista.innerHTML = "";
+  lista.appendChild(buscar);
+  lista.insertAdjacentHTML("beforeend",
+    "<div class='filtro-custom-opcion seleccionada' data-val='' onclick='seleccionarFC(\"" + id + "\",\"\",\"" + labelTodos + "\",event)'>" + labelTodos + "</div>"
+  );
+  valores.forEach(v => {
+    const vEsc = v.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    lista.insertAdjacentHTML("beforeend",
+      "<div class='filtro-custom-opcion' data-val='" + vEsc + "' onclick='seleccionarFC(\"" + id + "\",\"" + vEsc + "\",\"" + vEsc + "\",event)'>" + v + "</div>"
+    );
+  });
+}
+function poblarFiltrosRecuento() {
+  poblarFiltroGenerico("fcRecAncho", "ancho", "Ancho");
+  poblarFiltroGenerico("fcRecLargo", "largo", "Largo");
+  poblarFiltroGenerico("fcRecMic", "micColor", "Mic/Color");
 }
 
 // ================================================================
@@ -1120,10 +1186,11 @@ async function cargarDatosInv() {
     DATOS_INV = data.items || [];
     renderizarDashboard();
     poblarFiltroProveedores();
+    poblarFiltrosRecuento();
     renderizarTabla();
     renderizarAlertas();
     poblarSelectArticulosMov();
-    poblarSelectArticulosRec();
+    if (document.getElementById("panelRecuento")?.classList.contains("activo")) renderizarRecuentoPrincipal();
     ocultarBannerInv();
   } catch(err) {
     mostrarBannerInv("fallo", "No se pudieron cargar los datos. Verifica la conexion.");
@@ -1535,16 +1602,20 @@ async function aplicarMinimoMasivo() {
 
 // --- Recuento cíclico (qué contar hoy, según clase ABC) ---
 let cicloConteoActual = [];
+let cicloConteoCargado = false;
 async function cargarCicloConteo() {
   const cont = document.getElementById("listaCicloConteo");
-  cont.innerHTML = "Cargando...";
+  if (cont) cont.innerHTML = "Cargando...";
   try {
     const resp = await fetchInv(WEB_APP_URL + "?action=cicloConteo");
     const data = await resp.json();
     cicloConteoActual = data.items || [];
-    renderizarCicloConteo();
+    cicloConteoCargado = true;
+    if (cont) renderizarCicloConteo();
+    // Si la pestaña Recuento esta abierta, refrescamos sus badges de estado
+    if (document.getElementById("panelRecuento")?.classList.contains("activo")) renderizarRecuentoPrincipal();
   } catch(e) {
-    cont.innerHTML = "<span style='color:var(--rojo)'>Error al cargar el ciclo de conteo.</span>";
+    if (cont) cont.innerHTML = "<span style='color:var(--rojo)'>Error al cargar el ciclo de conteo.</span>";
   }
 }
 function renderizarCicloConteo() {
@@ -1574,15 +1645,14 @@ function irAContarArticulo(codigoConcatenado) {
   cambiarTab("recuento");
   const idx = DATOS_INV.findIndex(it => it.codigoConcatenado === codigoConcatenado);
   if (idx === -1) return;
-  cambiarModoRecuento("individual");
-  document.getElementById("buscarArticuloRec").value = DATOS_INV[idx].descripcion;
-  filtrarArticulosRec();
+  // Limpiamos otros filtros y buscamos puntualmente este articulo
+  FILTROS_ACTIVOS_REC = { abc: [], estadoRec: [], ancho: [], largo: [], mic: [], tipo: "todos" };
+  document.getElementById("buscarRecuento").value = DATOS_INV[idx].codigoConcatenado;
+  renderizarRecuentoPrincipal();
   setTimeout(() => {
-    const sel = document.getElementById("selectArticuloRec");
-    for (let i = 0; i < sel.options.length; i++) {
-      if (Number(sel.options[i].value) === idx) { sel.selectedIndex = i; seleccionarArticuloRec(); break; }
-    }
-  }, 100);
+    const input = document.getElementById("fisicoRec-" + idx);
+    if (input) { input.focus(); input.select(); }
+  }, 150);
 }
 
 function renderizarAlertas() {
@@ -1769,8 +1839,11 @@ function cambiarTab(tab) {
     if (p) p.classList.toggle("activo", t === tab);
   });
   if (tab === "movimientos" && historialMovActual.length === 0) cargarHistorialMovimientos();
-  if (tab === "alertas" && !cicloConteoActual.length) cargarCicloConteo();
-  if (tab === "recuento" && recuentoActual.length === 0) poblarSelectArticulosRec();
+  if (tab === "alertas" && !cicloConteoCargado) cargarCicloConteo();
+  if (tab === "recuento") {
+    if (!cicloConteoCargado) cargarCicloConteo();
+    renderizarRecuentoPrincipal();
+  }
   if (tab === "compras" && datosComprasActual.length === 0) cargarSugerenciaCompra();
 }
 
@@ -1866,97 +1939,217 @@ async function confirmarMovRapido() {
 
 // --- MODULO RECUENTO ---
 let recuentoActual = []; // [{codigoConcatenado, descripcion, stockTeorico, stockFisico, observacion}]
-let articuloRecSeleccionado = null;
 
-function cambiarModoRecuento(modo) {
-  document.getElementById("modoRecIndividual").className = "pill-tipo" + (modo === "individual" ? " activa-entrada" : "");
-  document.getElementById("modoRecPlanilla").className = "pill-tipo" + (modo === "planilla" ? " activa-entrada" : "");
-  document.getElementById("recuentoIndividual").style.display = modo === "individual" ? "block" : "none";
-  document.getElementById("recuentoPlanilla").style.display = modo === "planilla" ? "block" : "none";
-  if (modo === "planilla") renderizarPlanillaRecuento();
+// Quita acentos, pasa a minusculas y saca espacios/guiones/puntos, para que
+// la busqueda funcione aunque el usuario tipee distinto (con o sin espacios,
+// con o sin acentos, con o sin guiones).
+function normalizarBusqueda(s) {
+  return String(s || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[\s\-_.]/g, "");
 }
 
-function poblarSelectArticulosRec() {
-  filtrarArticulosRec();
+function toggleTipoRec(tipo) {
+  FILTROS_ACTIVOS_REC.tipo = tipo;
+  ["todos", "producto", "insumo"].forEach(t => {
+    const lbl = document.getElementById("checkRec" + t.charAt(0).toUpperCase() + t.slice(1) + "Lbl");
+    const cb = document.getElementById("checkRec" + t.charAt(0).toUpperCase() + t.slice(1));
+    if (lbl) lbl.classList.toggle("activo", t === tipo);
+    if (cb) cb.checked = (t === tipo);
+  });
+  renderizarRecuentoPrincipal();
 }
-function filtrarArticulosRec() {
-  const sel = document.getElementById("selectArticuloRec");
-  if (!sel) return;
-  const q = (document.getElementById("buscarArticuloRec").value || "").trim().toLowerCase();
-  const filtrados = DATOS_INV
-    .map((it, idx) => ({ it, idx }))
-    .filter(({ it }) => !q || (it.descripcion + " " + it.codItem + " " + it.codigoConcatenado).toLowerCase().includes(q));
 
-  sel.innerHTML = "";
-  if (filtrados.length === 0) {
-    const opt = document.createElement("option");
-    opt.textContent = "Sin resultados";
-    opt.disabled = true;
-    sel.appendChild(opt);
+// Estado del recuento ciclico de un articulo: nunca contado / vencido / al dia.
+// Se apoya en cicloConteoActual (que solo trae los VENCIDOS, ver Code.gs) —
+// si un articulo no aparece ahi, esta al dia.
+function estadoRecuentoInfo(codigoConcatenado) {
+  const info = cicloConteoActual.find(c => c.codigoConcatenado === codigoConcatenado);
+  if (!info) return { status: "aldia", texto: "Al día" };
+  if (info.diasSinContar === null) return { status: "nunca", texto: "Nunca contado" };
+  return { status: "vencido", texto: info.diasSinContar + "d sin contar" };
+}
+
+let ordenRecuentoTabla = { col: "", asc: true }; // "" = orden por impacto (nunca/vencido primero, clase A primero)
+function ordenarPorRecuentoTabla(col) {
+  if (ordenRecuentoTabla.col === col) ordenRecuentoTabla.asc = !ordenRecuentoTabla.asc;
+  else { ordenRecuentoTabla.col = col; ordenRecuentoTabla.asc = true; }
+  renderizarRecuentoPrincipal();
+}
+function valorOrdenRecuento(it, col, entrada) {
+  switch (col) {
+    case "descripcion": return String(it.descripcion || "");
+    case "clasificacionABCXYZ": return String(it.clasificacionABCXYZ || "ZZ");
+    case "stockReal": return Number(it.stockReal || 0);
+    case "stockFisico": return entrada && entrada.stockFisico !== "" ? Number(entrada.stockFisico) : -Infinity;
+    case "ajuste": return entrada && entrada.stockFisico !== "" ? Number(entrada.stockFisico) - Number(it.stockReal || 0) : -Infinity;
+    case "statusAjuste": {
+      if (!entrada || entrada.stockFisico === "") return 2; // sin contar, al final
+      return (Number(entrada.stockFisico) - Number(it.stockReal || 0)) === 0 ? 0 : 1; // ajustado antes que ajustar
+    }
+    default: return it[col] ?? 0;
+  }
+}
+
+function renderizarRecuentoPrincipal() {
+  const tbody = document.getElementById("cuerpoRecuentoPrincipal");
+  if (!tbody) return;
+  const qRaw = (document.getElementById("buscarRecuento").value || "").trim();
+  const tokens = qRaw.split(/\s+/).filter(Boolean).map(normalizarBusqueda);
+  const filtrosABC = FILTROS_ACTIVOS_REC.abc;
+  const filtrosEstadoRec = FILTROS_ACTIVOS_REC.estadoRec;
+  const filtrosAncho = FILTROS_ACTIVOS_REC.ancho;
+  const filtrosLargo = FILTROS_ACTIVOS_REC.largo;
+  const filtrosMic = FILTROS_ACTIVOS_REC.mic;
+  const tipoSel = FILTROS_ACTIVOS_REC.tipo;
+
+  let filas = DATOS_INV.filter(it => {
+    const haystack = normalizarBusqueda(it.descripcion + " " + it.codItem + " " + it.codigoConcatenado + " " + it.ancho + " " + it.largo + " " + it.micColor);
+    if (tokens.length > 0 && !tokens.every(t => haystack.includes(t))) return false;
+    if (tipoSel === "producto" && it.tipo !== "Producto Terminado") return false;
+    if (tipoSel === "insumo" && it.tipo !== "Insumo") return false;
+    if (filtrosABC.length > 0 && !filtrosABC.includes(it.clasificacionABC)) return false;
+    if (filtrosAncho.length > 0 && !filtrosAncho.includes(String(it.ancho || ""))) return false;
+    if (filtrosLargo.length > 0 && !filtrosLargo.includes(String(it.largo || ""))) return false;
+    if (filtrosMic.length > 0 && !filtrosMic.includes(String(it.micColor || ""))) return false;
+    if (filtrosEstadoRec.length > 0) {
+      const est = estadoRecuentoInfo(it.codigoConcatenado).status;
+      const contado = recuentoActual.some(r => r.codigoConcatenado === it.codigoConcatenado);
+      const pasa = filtrosEstadoRec.some(fe => fe === "contadoHoy" ? contado : est === fe);
+      if (!pasa) return false;
+    }
+    return true;
+  });
+
+  const col = ordenRecuentoTabla.col;
+  if (!col) {
+    const pesoClase = { A: 0, B: 1, C: 2, D: 3 };
+    const pesoEstado = { nunca: 0, vencido: 1, aldia: 2 };
+    filas.sort((a, b) => {
+      const ea = estadoRecuentoInfo(a.codigoConcatenado).status, eb = estadoRecuentoInfo(b.codigoConcatenado).status;
+      const pa = (pesoEstado[ea] ?? 2) * 10 + (pesoClase[a.clasificacionABC] ?? 2);
+      const pb = (pesoEstado[eb] ?? 2) * 10 + (pesoClase[b.clasificacionABC] ?? 2);
+      return pa - pb;
+    });
+  } else {
+    filas.sort((a, b) => {
+      const ea = recuentoActual.find(r => r.codigoConcatenado === a.codigoConcatenado);
+      const eb = recuentoActual.find(r => r.codigoConcatenado === b.codigoConcatenado);
+      const va = valorOrdenRecuento(a, col, ea), vb = valorOrdenRecuento(b, col, eb);
+      if (typeof va === "string") return ordenRecuentoTabla.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+      return ordenRecuentoTabla.asc ? va - vb : vb - va;
+    });
+  }
+
+  if (!filas.length) {
+    tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;padding:24px;color:var(--gris-texto)'>Sin resultados.</td></tr>";
+    renderizarResumenRecuento(filas);
     return;
   }
-  filtrados.slice(0, 200).forEach(({ it, idx }) => {
-    const opt = document.createElement("option");
-    opt.value = idx;
-    opt.textContent = it.descripcion + " " + it.ancho + "x" + it.largo + " " + it.micColor + " (" + it.codItem + ") - Teorico: " + it.stockReal;
-    sel.appendChild(opt);
-  });
-}
-function seleccionarArticuloRec() {
-  const sel = document.getElementById("selectArticuloRec");
-  const opt = sel.options[sel.selectedIndex];
-  if (!opt || opt.disabled) { articuloRecSeleccionado = null; document.getElementById("recArtInfo").style.display = "none"; return; }
-  articuloRecSeleccionado = DATOS_INV[Number(opt.value)];
-  const div = document.getElementById("recArtInfo");
-  div.style.display = "block";
-  div.innerHTML = "<b>" + articuloRecSeleccionado.descripcion + " " + articuloRecSeleccionado.ancho + "x" + articuloRecSeleccionado.largo + " " + articuloRecSeleccionado.micColor + "</b> - Stock teorico actual: <b>" + articuloRecSeleccionado.stockReal + "</b> u.";
-  document.getElementById("inputFisicoRec").value = "";
-}
-function agregarConteoIndividual() {
-  if (!articuloRecSeleccionado) { mostrarBannerInv("fallo", "Selecciona un articulo."); return; }
-  const fisico = document.getElementById("inputFisicoRec").value;
-  if (fisico === "" || Number(fisico) < 0) { mostrarBannerInv("fallo", "Ingresa el stock fisico contado."); return; }
-  const obs = document.getElementById("obsFisicoRec").value;
-  agregarAlRecuento(articuloRecSeleccionado, Number(fisico), obs);
-  document.getElementById("inputFisicoRec").value = "";
-  document.getElementById("obsFisicoRec").value = "";
-  mostrarBannerInv("exito", "Agregado al recuento: " + articuloRecSeleccionado.descripcion);
+
+  tbody.innerHTML = filas.map(it => {
+    const idxReal = DATOS_INV.indexOf(it);
+    const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
+    const fisicoVal = entrada ? entrada.stockFisico : "";
+    const teorico = Number(it.stockReal || 0);
+    const colorABC = it.clasificacionABC === "A" ? "var(--rojo)" : it.clasificacionABC === "B" ? "var(--naranja)" : it.clasificacionABC === "D" ? "#bbb" : "var(--gris-texto)";
+    const claseBadge = it.clasificacionABCXYZ
+      ? "<span style='background:" + colorABC + ";color:#fff;font-size:12px;font-weight:700;padding:3px 8px;border-radius:9px'>" + it.clasificacionABCXYZ + "</span>"
+      : "<span style='color:#ccc;font-size:12px'>-</span>";
+    const estRec = estadoRecuentoInfo(it.codigoConcatenado);
+    const estRecBadge = estRec.status === "nunca" ? "<span class='badge-nuncacontado'>Nunca contado</span>"
+      : estRec.status === "vencido" ? "<span class='badge-vencido'>" + estRec.texto + "</span>"
+      : "<span class='badge-aldia'>Al día</span>";
+    const { ajusteHtml, statusHtml } = calcularAjusteYStatus(fisicoVal, teorico);
+    const filId = "lotesRec-" + idxReal;
+    return "<tr>"
+      + "<td><button type='button' class='lote-toggle-rec' title='Ver / contar lotes' onclick='toggleLotesRecuento(\"" + filId + "\"," + idxReal + ",this)'>+</button></td>"
+      + "<td style='min-width:170px'><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " · " + it.ancho + "x" + it.largo + " " + it.micColor + "</small><br>" + estRecBadge + "</td>"
+      + "<td>" + claseBadge + "</td>"
+      + "<td style='text-align:right;font-weight:700'>" + teorico.toLocaleString("es-AR") + "</td>"
+      + "<td style='text-align:center'><div style='display:flex;align-items:center;justify-content:center;gap:6px'>"
+        + "<button type='button' class='btn-fisico' onclick='ajustarFisicoRec(" + idxReal + ",-1)'>−</button>"
+        + "<input type='number' min='0' class='input-fisico-rec" + (fisicoVal !== "" ? " tiene-valor" : "") + "' id='fisicoRec-" + idxReal + "' value='" + fisicoVal + "'"
+        + " oninput='actualizarFisicoRecInline(" + idxReal + ",this.value,false)' onchange='actualizarFisicoRecInline(" + idxReal + ",this.value,true)'>"
+        + "<button type='button' class='btn-fisico' onclick='ajustarFisicoRec(" + idxReal + ",1)'>+</button>"
+      + "</div></td>"
+      + "<td id='ajusteRec-" + idxReal + "' style='text-align:right'>" + ajusteHtml + "</td>"
+      + "<td id='statusRec-" + idxReal + "'>" + statusHtml + "</td></tr>"
+      + "<tr class='fila-lotes-rec' id='" + filId + "'><td colspan='7' style='padding:0'><div style='padding:10px 16px;background:#fafbfc'>Cargando lotes...</div></td></tr>";
+  }).join("");
+
+  renderizarResumenRecuento(filas);
 }
 
-let ordenPlanilla = { col: "descripcion", asc: true };
-function ordenarPorPlanilla(col) {
-  if (ordenPlanilla.col === col) ordenPlanilla.asc = !ordenPlanilla.asc;
-  else { ordenPlanilla.col = col; ordenPlanilla.asc = false; }
-  renderizarPlanillaRecuento();
+function calcularAjusteYStatus(fisicoVal, teorico) {
+  if (fisicoVal === "" || fisicoVal === null || fisicoVal === undefined) {
+    return { ajusteHtml: "<span style='color:#bbb'>-</span>", statusHtml: "<span class='badge-sincontar'>Sin contar</span>" };
+  }
+  const dif = Number(fisicoVal) - teorico;
+  const signo = dif > 0 ? "+" : "";
+  const colorDif = dif === 0 ? "var(--verde)" : dif > 0 ? "var(--azul)" : "var(--rojo)";
+  return {
+    ajusteHtml: "<b style='color:" + colorDif + "'>" + signo + dif + "</b>",
+    statusHtml: dif === 0 ? "<span class='badge-ajustado'>Ajustado</span>" : "<span class='badge-ajustar'>Ajustar</span>",
+  };
 }
-function renderizarPlanillaRecuento() {
-  const q = (document.getElementById("buscarPlanillaRec").value || "").trim().toLowerCase();
-  const tbody = document.getElementById("cuerpoPlanillaRec");
-  let filas = DATOS_INV.filter(it => !q || (it.descripcion + " " + it.codItem).toLowerCase().includes(q));
-  const col = ordenPlanilla.col;
-  filas.sort((a, b) => {
-    const va = a[col], vb = b[col];
-    if (typeof va === "string") return ordenPlanilla.asc ? va.localeCompare(vb) : vb.localeCompare(va);
-    return ordenPlanilla.asc ? va - vb : vb - va;
+
+function renderizarResumenRecuento(filas) {
+  const cont = document.getElementById("resumenRecuento");
+  if (!cont) return;
+  const contadosVisibles = filas.filter(it => recuentoActual.some(r => r.codigoConcatenado === it.codigoConcatenado));
+  const conDiferencia = contadosVisibles.filter(it => {
+    const r = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
+    return Number(r.stockFisico) - Number(it.stockReal || 0) !== 0;
   });
-  tbody.innerHTML = filas.map((it, i) => {
-    const idxReal = DATOS_INV.indexOf(it);
-    const existente = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
-    const valorPrevio = existente ? existente.stockFisico : "";
-    return "<tr><td>" + it.descripcion + "<br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small></td>"
-      + "<td style='text-align:right'>" + it.stockReal + "</td>"
-      + "<td style='text-align:center'><input type='number' min='0' style='width:90px;text-align:center' value='" + valorPrevio + "' onchange='actualizarPlanillaFila(" + idxReal + ", this.value)'></td></tr>";
-  }).join("");
+  cont.innerHTML =
+    "<span><b>" + filas.length.toLocaleString("es-AR") + "</b> artículo(s) visibles</span>"
+    + "<span style='color:var(--gris-borde)'>|</span>"
+    + "<span>Contados (en esta vista): <b style='color:var(--azul)'>" + contadosVisibles.length + "</b></span>"
+    + "<span style='color:var(--gris-borde)'>|</span>"
+    + "<span>Con diferencia: <b style='color:" + (conDiferencia.length > 0 ? "var(--rojo)" : "var(--verde)") + "'>" + conDiferencia.length + "</b></span>"
+    + "<span style='color:var(--gris-borde)'>|</span>"
+    + "<span style='color:var(--gris-texto)'>Total pendiente de guardar: <b>" + recuentoActual.length + "</b></span>";
 }
-function actualizarPlanillaFila(idx, valor) {
+
+// Botones +/- : suman o restan 1 al Fisico y confirman el cambio de una.
+function ajustarFisicoRec(idx, delta) {
   const it = DATOS_INV[idx];
   if (!it) return;
+  const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
+  const actual = entrada && entrada.stockFisico !== "" ? Number(entrada.stockFisico) : 0;
+  const nuevo = Math.max(0, actual + delta);
+  agregarAlRecuento(it, nuevo, entrada ? entrada.observacion : "");
+  renderizarRecuentoPrincipal();
+}
+
+// Escribir directo en el campo Fisico: mientras se tipea (oninput) solo
+// actualiza esa fila puntual (sin re-renderizar toda la tabla, para no
+// perder el cursor); al salir del campo (onchange) confirma el valor.
+function actualizarFisicoRecInline(idx, valor, commit) {
+  const it = DATOS_INV[idx];
+  if (!it) return;
+  const teorico = Number(it.stockReal || 0);
+  const { ajusteHtml, statusHtml } = calcularAjusteYStatus(valor, teorico);
+  const ajusteCell = document.getElementById("ajusteRec-" + idx);
+  const statusCell = document.getElementById("statusRec-" + idx);
+  const inputEl = document.getElementById("fisicoRec-" + idx);
+  if (ajusteCell) ajusteCell.innerHTML = ajusteHtml;
+  if (statusCell) statusCell.innerHTML = statusHtml;
+  if (inputEl) inputEl.classList.toggle("tiene-valor", valor !== "");
+
+  if (!commit) return;
   if (valor === "") {
     recuentoActual = recuentoActual.filter(r => r.codigoConcatenado !== it.codigoConcatenado);
-    renderizarListaRecuento();
-  } else {
-    agregarAlRecuento(it, Number(valor), "");
+  } else if (Number(valor) >= 0) {
+    const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
+    agregarAlRecuento(it, Number(valor), entrada ? entrada.observacion : "");
   }
+  // Solo refrescamos el resumen (liviano) para no perder el foco de otros campos abiertos.
+  const idxVisibles = Array.from(document.querySelectorAll("#cuerpoRecuentoPrincipal input.input-fisico-rec"))
+    .map(i => Number(i.id.replace("fisicoRec-", "")));
+  renderizarResumenRecuento(idxVisibles.map(i => DATOS_INV[i]).filter(Boolean));
 }
 
 function agregarAlRecuento(it, fisico, obs) {
@@ -1971,52 +2164,86 @@ function agregarAlRecuento(it, fisico, obs) {
   };
   if (idx >= 0) recuentoActual[idx] = item;
   else recuentoActual.push(item);
-  renderizarListaRecuento();
 }
 
-let ordenRecuento = { col: "descripcion", asc: true };
-function ordenarPorRecuento(col) {
-  if (ordenRecuento.col === col) ordenRecuento.asc = !ordenRecuento.asc;
-  else { ordenRecuento.col = col; ordenRecuento.asc = false; }
-  renderizarListaRecuento();
+// --- Lotes expandibles dentro de Recuento (+/- por artículo) ---
+async function toggleLotesRecuento(filId, idxReal, btn) {
+  const fila = document.getElementById(filId);
+  if (!fila) return;
+  const abierta = fila.classList.contains("abierta");
+  if (abierta) { fila.classList.remove("abierta"); btn.textContent = "+"; return; }
+  fila.classList.add("abierta");
+  btn.textContent = "−";
+  const it = DATOS_INV[idxReal];
+  if (!it) return;
+  const celda = fila.querySelector("td > div");
+  if (!celda) return;
+  if (celda.dataset.cargado === "ok") return;
+  celda.innerHTML = "<span style='color:var(--gris-texto);font-size:13px'>⏳ Cargando lotes...</span>";
+  try {
+    const cc = it.codigoConcatenado;
+    if (!cc) throw new Error("Artículo sin código concatenado");
+    const resp = await fetchInv(WEB_APP_URL + "?action=partidasArticulo&codigoConcatenado=" + encodeURIComponent(cc));
+    const data = await resp.json();
+    const items = (data.items || []).filter(p => p.unidadesRemanentes > 0);
+    celda.dataset.cargado = "ok";
+    if (items.length === 0) {
+      celda.innerHTML = "<span style='color:var(--gris-texto);font-size:13px'>Sin lotes con stock registrados para este artículo.</span>";
+      return;
+    }
+    const itemsDesc = [...items].reverse(); // mas reciente arriba
+    let tabla = "<table style='width:100%;font-size:14px;border-collapse:collapse'><thead><tr>"
+      + "<th style='text-align:left;padding:6px'>Lote</th><th style='text-align:right;padding:6px'>Teórico lote</th>"
+      + "<th style='text-align:left;padding:6px'>Antigüedad</th><th style='text-align:center;padding:6px'>Físico contado</th></tr></thead><tbody>";
+    itemsDesc.forEach(p => {
+      const pEsc = String(p.partida).replace(/"/g, "&quot;");
+      tabla += "<tr><td style='padding:6px'>" + p.partida + "</td>"
+        + "<td style='text-align:right;padding:6px'>" + Number(p.unidadesRemanentes).toLocaleString("es-AR") + "</td>"
+        + "<td style='padding:6px;color:var(--gris-texto)'>" + (p.diasAntiguedad > 0 ? p.diasAntiguedad + " días" : "-") + "</td>"
+        + "<td style='text-align:center;padding:6px'><input type='number' min='0' data-lote=\"" + pEsc + "\" class='input-fisico-lote'"
+        + " style='width:70px;text-align:center;padding:5px;font-size:14px;border:1px solid var(--gris-borde);border-radius:6px' oninput='recalcularSumaLotes(" + idxReal + ")'></td></tr>";
+    });
+    tabla += "</tbody></table>"
+      + "<div style='margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap'>"
+      + "<span style='font-size:13px;color:var(--gris-texto)'>Suma de lotes contados: <b id='sumaLotesRec-" + idxReal + "'>0</b></span>"
+      + "<button type='button' class='btn btn-azul' style='font-size:12px;padding:6px 12px' onclick='usarSumaLotesEnFisico(" + idxReal + ")'>⬆ Usar esta suma como Físico total</button>"
+      + "</div>";
+    celda.innerHTML = tabla;
+  } catch (e) {
+    celda.innerHTML = "<span style='color:var(--rojo);font-size:13px'>Error al cargar los lotes.</span>";
+  }
 }
-function renderizarListaRecuento() {
-  const card = document.getElementById("cardListaRecuento");
-  const tbody = document.getElementById("cuerpoListaRecuento");
-  document.getElementById("cantidadEnRecuento").textContent = recuentoActual.length;
-  if (recuentoActual.length === 0) { card.style.display = "none"; return; }
-  card.style.display = "block";
+function recalcularSumaLotes(idxReal) {
+  const fila = document.getElementById("lotesRec-" + idxReal);
+  if (!fila) return;
+  let suma = 0;
+  fila.querySelectorAll(".input-fisico-lote").forEach(i => { if (i.value !== "") suma += Number(i.value) || 0; });
+  const span = document.getElementById("sumaLotesRec-" + idxReal);
+  if (span) span.textContent = suma;
+}
+function usarSumaLotesEnFisico(idxReal) {
+  const it = DATOS_INV[idxReal];
+  if (!it) return;
+  const span = document.getElementById("sumaLotesRec-" + idxReal);
+  const suma = span ? Number(span.textContent) || 0 : 0;
+  const input = document.getElementById("fisicoRec-" + idxReal);
+  if (input) { input.value = suma; }
+  actualizarFisicoRecInline(idxReal, String(suma), true);
+  // Guarda el detalle por lote en la observacion, para trazabilidad al guardar en Sheets.
+  const fila = document.getElementById("lotesRec-" + idxReal);
+  if (fila) {
+    const detalles = [];
+    fila.querySelectorAll(".input-fisico-lote").forEach(i => { if (i.value !== "") detalles.push(i.dataset.lote + "=" + i.value); });
+    const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
+    if (entrada && detalles.length) entrada.observacion = "Lotes: " + detalles.join(", ");
+  }
+  mostrarBannerInv("exito", "Físico total actualizado con la suma de lotes.");
+}
 
-  // Guardamos el indice original en cada item para poder "Quitar" correctamente tras ordenar
-  const conIndice = recuentoActual.map((r, i) => ({ ...r, _i: i, diferencia: r.stockFisico - r.stockTeorico }));
-  const col = ordenRecuento.col;
-  conIndice.sort((a, b) => {
-    const va = a[col], vb = b[col];
-    if (typeof va === "string") return ordenRecuento.asc ? va.localeCompare(vb) : vb.localeCompare(va);
-    return ordenRecuento.asc ? va - vb : vb - va;
-  });
-
-  tbody.innerHTML = conIndice.map(r => {
-    const dif = r.diferencia;
-    const color = dif === 0 ? "var(--verde)" : dif > 0 ? "var(--azul)" : "var(--rojo)";
-    const signo = dif > 0 ? "+" : "";
-    return "<tr><td>" + r.descripcion + "</td>"
-      + "<td style='text-align:right'>" + r.stockTeorico + "</td>"
-      + "<td style='text-align:right'>" + r.stockFisico + "</td>"
-      + "<td style='text-align:right;font-weight:700;color:" + color + "'>" + signo + dif + "</td>"
-      + "<td><button type='button' class='btn btn-gris' style='font-size:11px;padding:2px 8px' onclick='quitarDelRecuento(" + r._i + ")'>Quitar</button></td></tr>";
-  }).join("");
-}
-function quitarDelRecuento(i) {
-  recuentoActual.splice(i, 1);
-  renderizarListaRecuento();
-  renderizarPlanillaRecuento();
-}
 function limpiarRecuento() {
-  if (!confirm("¿Borrar todo el recuento en curso?")) return;
+  if (!confirm("¿Borrar todo el recuento en curso? (Los artículos ya guardados en Google Sheets no se ven afectados)")) return;
   recuentoActual = [];
-  renderizarListaRecuento();
-  renderizarPlanillaRecuento();
+  renderizarRecuentoPrincipal();
 }
 
 function exportarRecuentoCSV() {
@@ -2050,9 +2277,9 @@ async function guardarRecuentoEnSheet() {
     if (data.ok) {
       mostrarBannerInv("exito", data.registrados + " item(s) guardados en Google Sheets (hoja Recuentos).");
       recuentoActual = [];
-      renderizarListaRecuento();
-      renderizarPlanillaRecuento();
+      renderizarRecuentoPrincipal();
       cargarHistorialRecuento();
+      cargarCicloConteo(); // refresca "Nunca contado" / "Vencido" ya que se acaba de contar
     } else {
       mostrarBannerInv("fallo", "Error al guardar: " + (data.error || "desconocido"));
     }
