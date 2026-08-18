@@ -3704,9 +3704,34 @@ function mostrarResumenConfirmacion() {
 
   const totalUnidades = carrito.reduce((acc, it) => acc + Number(it.cantidad), 0);
   const fact = obtenerFacturacionActual();
-  const factTexto = fact.pctV2 > 0
-    ? `Bejerman ${formatoPorcentaje(fact.pctBejerman)} / V2 ${formatoPorcentaje(fact.pctV2)}`
-    : 'Bejerman 100,00%';
+
+  // Calcular el texto de facturación considerando que cada ítem puede tener
+  // su propio override. Si todos tienen la misma configuración, mostrar una
+  // sola línea. Si hay mezcla, mostrar "Mixta" con el detalle.
+  const facturacionPorItem = carrito.map(it => it.facturacionOverride || fact);
+  const todasIguales = facturacionPorItem.every(
+    f => f.pctBejerman === facturacionPorItem[0].pctBejerman && f.pctV2 === facturacionPorItem[0].pctV2
+  );
+  let factTexto;
+  if (todasIguales) {
+    factTexto = facturacionPorItem[0].pctV2 > 0
+      ? `Bejerman ${formatoPorcentaje(facturacionPorItem[0].pctBejerman)} / V2 ${formatoPorcentaje(facturacionPorItem[0].pctV2)}`
+      : 'Bejerman 100,00%';
+  } else {
+    // Hay mezcla: calcular promedio ponderado por unidades para mostrar el mix real
+    const totalUnidadesFact = carrito.reduce((acc, it) => acc + Number(it.cantidad), 0);
+    let sumBej = 0, sumV2 = 0;
+    carrito.forEach(it => {
+      const f = it.facturacionOverride || fact;
+      sumBej += (f.pctBejerman / 100) * Number(it.cantidad);
+      sumV2 += (f.pctV2 / 100) * Number(it.cantidad);
+    });
+    const pctBejProm = totalUnidadesFact > 0 ? (sumBej / totalUnidadesFact * 100) : 100;
+    const pctV2Prom = totalUnidadesFact > 0 ? (sumV2 / totalUnidadesFact * 100) : 0;
+    factTexto = pctV2Prom > 0
+      ? `Mixta (≈ Bejerman ${formatoPorcentaje(pctBejProm)} / V2 ${formatoPorcentaje(pctV2Prom)} ponderado por unidades)`
+      : 'Mixta — ver detalle por ítem';
+  }
 
   const entregaTexto = requiereDireccionEntrega()
     ? `${modalidadVal} — ${document.getElementById('lugarEntrega').value || '(sin dirección)'}`
