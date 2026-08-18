@@ -3011,12 +3011,25 @@ document.getElementById("btnTema")?.addEventListener("click", () => {
 
 // Si el usuario rota la pantalla o cambia el tamaño de la ventana, y esta
 // en la pestaña Recuento, re-renderizamos para que alterne tabla/tarjetas.
+// OJO: en el celular, abrir el teclado numérico también dispara "resize"
+// (cambia el alto visible) -- por eso solo re-renderizamos si el modo
+// compacto/tabla realmente cambió, y nunca si hay un campo enfocado
+// (para no cortar al usuario mientras está escribiendo).
 let resizeRecTimeout = null;
+let modoRecuentoCompactoPrevio = null;
 window.addEventListener("resize", () => {
   clearTimeout(resizeRecTimeout);
   resizeRecTimeout = setTimeout(() => {
-    if (document.getElementById("panelRecuento")?.classList.contains("activo")) renderizarRecuentoPrincipal();
-  }, 200);
+    if (!document.getElementById("panelRecuento")?.classList.contains("activo")) return;
+    const activo = document.activeElement;
+    const escribiendo = activo && (activo.id?.startsWith("fisicoRec-") || activo.classList?.contains("input-fisico-lote"));
+    if (escribiendo) return;
+    const modoActual = modoRecuentoCompacto();
+    if (modoActual !== modoRecuentoCompactoPrevio) {
+      modoRecuentoCompactoPrevio = modoActual;
+      renderizarRecuentoPrincipal();
+    }
+  }, 300);
 });
 </script>
 </body>
