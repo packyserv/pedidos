@@ -152,7 +152,16 @@
   .info-popover{position:fixed;z-index:200;max-width:300px;background:#1a2f4a;color:#fff;font-size:12.5px;font-weight:400;line-height:1.5;padding:12px 14px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.3);display:none;white-space:pre-line;}
   .info-popover.abierto{display:block;}
   .info-popover::after{content:"";position:absolute;top:-6px;right:16px;border-width:0 6px 6px 6px;border-style:solid;border-color:transparent transparent #1a2f4a transparent;}
-  @media(max-width:600px){.filtros{flex-direction:column;}.resumen-alertas{flex-direction:column;}th,td{padding:6px 8px;font-size:12px;}}
+  @media(max-width:600px){.filtros{flex-direction:column;}.resumen-alertas{flex-direction:column;}th,td{padding:6px 8px;font-size:12px;}
+    /* Filtros de Recuento: en vez de apilar todo en una columna, agrupamos
+       en filas para aprovechar el ancho (buscador entero, ABC+Estado en
+       pares, y Categoria/Ancho/Largo/Mic-Color chicos juntos). */
+    #filtrosRecuento{flex-direction:row;flex-wrap:wrap;}
+    #filtrosRecuento #buscarRecuento{flex:1 1 100%;min-width:0;}
+    #filtrosRecuento #fcRecABC,#filtrosRecuento #fcRecEstado{flex:1 1 calc(50% - 4px);min-width:0;}
+    #filtrosRecuento #fcRecCategoria{flex:1 1 calc(34% - 4px);min-width:0;}
+    #filtrosRecuento #fcRecAncho,#filtrosRecuento #fcRecLargo,#filtrosRecuento #fcRecMic{flex:1 1 calc(22% - 4px);min-width:64px;}
+  }
 </style>
 </head>
 <body>
@@ -463,7 +472,7 @@
         Contá el stock físico y compará contra el teórico del sistema. Al finalizar, guardá en Google Sheets o exportá a CSV para cargar en Bejerman.
       </p>
 
-      <div class="filtros" style="margin-bottom:6px">
+      <div class="filtros" id="filtrosRecuento" style="margin-bottom:6px">
         <input type="text" id="buscarRecuento" placeholder="Buscar por código, descripción, medida..." oninput="buscarRecuentoInput()" style="flex:2;min-width:180px;padding:8px 10px;font-size:14px">
         <div class="filtro-custom" id="fcRecABC">
           <button class="filtro-custom-trigger" type="button" id="fcRecABCTrig" onclick="toggleFiltroCustom('fcRecABC')" onkeydown="teclasFC(event,'fcRecABC')">Clase ABC</button>
@@ -2148,10 +2157,14 @@ function valorOrdenRecuento(it, col, entrada) {
 }
 
 // Detecta si hay que usar el layout compacto de tarjetas (sin scroll
-// lateral) segun la vista elegida con los botones PC/Tablet/Celular.
+// lateral): por vista elegida con los botones PC/Tablet/Celular, O por el
+// ancho real de la pantalla (para que funcione solo en un celular real
+// aunque el usuario no haya tocado el boton "Vista Celular").
 function modoRecuentoCompacto() {
   const main = document.getElementById("appMain");
-  return !!(main && (main.classList.contains("vista-tablet") || main.classList.contains("vista-celular")));
+  const porVista = !!(main && (main.classList.contains("vista-tablet") || main.classList.contains("vista-celular")));
+  const porAncho = window.innerWidth <= 820;
+  return porVista || porAncho;
 }
 // Boton/estado de Confirmar, compartido entre la tabla y las tarjetas.
 function htmlBotonConfirmar(idx, guardado, tieneValor, modoCard) {
@@ -2989,6 +3002,16 @@ document.getElementById("btnTema")?.addEventListener("click", () => {
     aplicarVista("pc");
   }
 })();
+
+// Si el usuario rota la pantalla o cambia el tamaño de la ventana, y esta
+// en la pestaña Recuento, re-renderizamos para que alterne tabla/tarjetas.
+let resizeRecTimeout = null;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeRecTimeout);
+  resizeRecTimeout = setTimeout(() => {
+    if (document.getElementById("panelRecuento")?.classList.contains("activo")) renderizarRecuentoPrincipal();
+  }, 200);
+});
 </script>
 </body>
 </html>
