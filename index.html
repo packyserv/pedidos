@@ -2973,6 +2973,34 @@ function obtenerFacturacionActual() {
   return leerFacturacionDesde('');
 }
 
+/* ---------- IVA: solo aplica sobre la porción Bejerman ----------
+   El IVA (21%) se calcula únicamente sobre los importes que van a Bejerman.
+   La porción V2 no lleva IVA.
+
+   Recibe el carrito (o subset de él) y el descuento global aplicado,
+   y devuelve { baseImponible, baseV2, iva, totalConIva }.
+
+   Cada ítem usa su facturacionOverride si lo tiene; si no, la general. */
+const IVA_PCT = 21;
+function calcularIVA(items, descuentoGlobalPct, facturacionGeneral) {
+  const fact = facturacionGeneral || obtenerFacturacionActual();
+  let subtotalBej = 0, subtotalV2 = 0;
+  items.forEach(it => {
+    const f = it.facturacionOverride || fact;
+    const importeItem = (it.precioUnitarioARS || it.precioUnitario || 0)
+      * (1 - (it.descuentoItemPct || 0) / 100)
+      * it.cantidad;
+    subtotalBej += importeItem * f.pctBejerman / 100;
+    subtotalV2  += importeItem * f.pctV2 / 100;
+  });
+  const dg = (descuentoGlobalPct || 0) / 100;
+  const baseImponible = subtotalBej * (1 - dg); // solo Bejerman paga IVA
+  const baseV2 = subtotalV2 * (1 - dg);
+  const iva = baseImponible * (IVA_PCT / 100);
+  const totalConIva = baseImponible + baseV2 + iva;
+  return { baseImponible, baseV2, iva, totalConIva };
+}
+
 /* ---------- Modal: facturacion especifica por item ---------- */
 let indiceItemFacturacionModal = null;
 
@@ -3389,11 +3417,13 @@ function renderizarCarrito() {
   }
   document.getElementById('totalPedidoValor').textContent = formatoEnMoneda(total, moneda);
 
-  const IVA_PCT = 21;
-  const iva = total * (IVA_PCT / 100);
-  const totalConIva = total + iva;
-  document.getElementById('ivaValor').textContent = formatoEnMoneda(iva, moneda);
-  document.getElementById('totalConIvaValor').textContent = formatoEnMoneda(totalConIva, moneda);
+  // IVA solo sobre la porción Bejerman — calcularIVA devuelve valores en ARS
+  const ivaCalc = calcularIVA(carrito, descuentoGlobalPct, obtenerFacturacionActual());
+  const ivaDisplay = sinTC ? ivaCalc.iva : precioEnMoneda(ivaCalc.iva, moneda, tipoCambioActual);
+  const totalConIva = sinTC ? ivaCalc.totalConIva : precioEnMoneda(ivaCalc.totalConIva, moneda, tipoCambioActual);
+  const totalConIvaARS = ivaCalc.totalConIva; // para referencias cruzadas en ARS
+  document.getElementById('ivaValor').textContent = formatoEnMoneda(ivaDisplay ?? ivaCalc.iva, moneda);
+  document.getElementById('totalConIvaValor').textContent = formatoEnMoneda(totalConIva ?? ivaCalc.totalConIva, moneda);
 
   // Referencia en la otra moneda — siempre calculada desde ARS base
   const lineaRef = document.getElementById('lineaReferenciaOtraMoneda');
@@ -3404,13 +3434,11 @@ function renderizarCarrito() {
   if (tipoCambioParaReferencia > 0) {
     lineaRef.style.display = 'flex';
     if (moneda === 'USD') {
-      // Estamos en USD — referencia en ARS: multiplicar el total USD por el tipo de cambio
       document.getElementById('labelReferenciaOtraMoneda').textContent = 'Referencia en ARS';
-      document.getElementById('totalReferenciaOtraMoneda').textContent = formatoMoneda(totalConIva * tipoCambioParaReferencia);
+      document.getElementById('totalReferenciaOtraMoneda').textContent = formatoMoneda(totalConIvaARS);
     } else {
-      // Estamos en ARS — referencia en USD: dividir el total ARS por el tipo de cambio
       document.getElementById('labelReferenciaOtraMoneda').textContent = 'Referencia en USD';
-      document.getElementById('totalReferenciaOtraMoneda').textContent = formatoUSD(totalConIva / tipoCambioParaReferencia);
+      document.getElementById('totalReferenciaOtraMoneda').textContent = formatoUSD(totalConIvaARS / tipoCambioParaReferencia);
     }
   } else {
     lineaRef.style.display = 'none';
@@ -3423,14 +3451,13 @@ function renderizarCarrito() {
     document.getElementById('resumenItemsTexto').textContent =
       `${carrito.length} ítem(s) · ${totalUnidades} unidades`;
     document.getElementById('resumenTotalTexto').textContent =
-      `Total c/IVA: ${formatoEnMoneda(totalConIva, moneda)}`;
-    // Referencia en la otra moneda
+      `Total c/IVA: ${formatoEnMoneda(totalConIva ?? ivaCalc.totalConIva, moneda)}`;
     const refSpan = document.getElementById('resumenRefTexto');
     if (tipoCambioParaReferencia > 0) {
       if (moneda === 'USD') {
-        refSpan.textContent = `Referencia en ARS: ${formatoMoneda(totalConIva * tipoCambioParaReferencia)}`;
+        refSpan.textContent = `Referencia en ARS: ${formatoMoneda(totalConIvaARS)}`;
       } else {
-        refSpan.textContent = `Referencia en USD: ${formatoUSD(totalConIva / tipoCambioParaReferencia)}`;
+        refSpan.textContent = `Referencia en USD: ${formatoUSD(totalConIvaARS / tipoCambioParaReferencia)}`;
       }
     } else {
       refSpan.textContent = '';
@@ -3691,19 +3718,12 @@ function mostrarResumenConfirmacion() {
   const moneda = document.getElementById('monedaCarga').value || 'ARS';
   const modalidadVal = modalidadEntregaSeleccionada();
 
-  let subtotal = 0;
-  carrito.forEach(it => {
-    const precioUnitARS = it.precioUnitarioARS || it.precioUnitario || 0;
-    const precioNetoARS = precioUnitARS * (1 - (it.descuentoItemPct || 0) / 100);
-    subtotal += it.cantidad * precioNetoARS;
-  });
   const descuentoGlobalPct = valorPorcentaje('descuentoGlobal');
-  const totalConIvaARS = (subtotal - subtotal * descuentoGlobalPct / 100) * 1.21;
-  const tipoCambioResumen = Number(document.getElementById('tipoCambio').value || 0);
-  const totalConIva = precioEnMoneda(totalConIvaARS, moneda, tipoCambioResumen);
-
-  const totalUnidades = carrito.reduce((acc, it) => acc + Number(it.cantidad), 0);
   const fact = obtenerFacturacionActual();
+  const ivaCalcResumen = calcularIVA(carrito, descuentoGlobalPct, fact);
+  const tipoCambioResumen = Number(document.getElementById('tipoCambio').value || 0);
+  const totalConIva = precioEnMoneda(ivaCalcResumen.totalConIva, moneda, tipoCambioResumen);
+  const totalUnidades = carrito.reduce((acc, it) => acc + Number(it.cantidad), 0);
 
   // Calcular el texto de facturación considerando que cada ítem puede tener
   // su propio override. Si todos tienen la misma configuración, mostrar una
@@ -4240,8 +4260,8 @@ document.getElementById('btnImprimir').addEventListener('click', () => {
     subtotal += f.importe;
     return f.html;
   }).join('');
-  const total = subtotal - (subtotal * descuentoGlobalPct / 100);
-  const totalConIva = total * 1.21;
+  const ivaCalcImpresion = calcularIVA(carrito, descuentoGlobalPct, facturacionGeneral);
+  const totalConIva = precioEnMoneda(ivaCalcImpresion.totalConIva, moneda, Number(document.getElementById('tipoCambio').value || 0));
   const facturacionTexto = facturacionGeneral.pctV2 > 0
     ? `Bejerman ${formatoPorcentaje(facturacionGeneral.pctBejerman)} / V2 ${formatoPorcentaje(facturacionGeneral.pctV2)}`
     : 'Bejerman 100,00%';
@@ -4280,7 +4300,10 @@ document.getElementById('btnImprimir').addEventListener('click', () => {
       }).join('');
     const descMontoPag = subtotalPag * descuentoGlobalPct / 100;
     const totalPagSinIva = subtotalPag - descMontoPag;
-    const totalConIvaPag = totalPagSinIva * 1.21;
+    const esV2 = nombreSistema.toLowerCase() === 'v2';
+    const ivaPag = esV2 ? 0 : totalPagSinIva * (IVA_PCT / 100);
+    const totalFinalPag = totalPagSinIva + ivaPag;
+    const tc = Number(document.getElementById('tipoCambio').value || 0);
 
     return `
     <div class="pagina-impresion pagina-salto">
@@ -4295,8 +4318,7 @@ document.getElementById('btnImprimir').addEventListener('click', () => {
         <tbody>${filasPag}</tbody>
       </table>
 
-      <div class="fila-datos" style="margin-top:6px;"><span>Total sin IVA (${nombreSistema}):</span><span>${formatoEnMoneda(totalPagSinIva, moneda)}</span></div>
-      <div class="total-final">Total con IVA (${nombreSistema}): ${formatoEnMoneda(totalConIvaPag, moneda)}</div>
+      <div class="fila-datos" style="margin-top:6px;"><span>Total ${nombreSistema}:</span><span>${formatoEnMoneda(precioEnMoneda(totalFinalPag, moneda, tc), moneda)}</span></div>
     </div>`;
   }
 
@@ -4322,8 +4344,7 @@ document.getElementById('btnImprimir').addEventListener('click', () => {
         <tbody>${filasHtmlTotal}</tbody>
       </table>
 
-      <div class="fila-datos" style="margin-top:6px;"><span>Total sin IVA:</span><span>${formatoEnMoneda(total, moneda)}</span></div>
-      <div class="total-final">Total con IVA: ${formatoEnMoneda(totalConIva, moneda)}</div>
+      <div class="total-final">Total: ${formatoEnMoneda(totalConIva, moneda)}</div>
 
       <h2>Observaciones</h2>
       <div class="fila-datos"><span>${document.getElementById('observaciones').value || '-'}</span></div>
