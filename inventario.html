@@ -47,6 +47,9 @@
   .fila-lotes-rec{display:none;}
   .fila-lotes-rec.abierta{display:table-row;}
   .lote-toggle-rec{width:34px;height:34px;font-size:18px;font-weight:700;border-radius:50%;border:1px solid var(--azul);background:#fff;color:var(--azul);cursor:pointer;line-height:1;}
+  .btn-check{width:38px;height:38px;font-size:18px;font-weight:700;border-radius:50%;border:2px solid var(--verde);background:#fff;color:var(--verde);cursor:pointer;line-height:1;}
+  .btn-check:disabled{border-color:#ccc;color:#ccc;cursor:not-allowed;}
+  .btn-check:not(:disabled):active{background:var(--verde);color:#fff;}
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(18,41,63,.55);z-index:50;align-items:center;justify-content:center;padding:16px;}
   .modal-overlay.abierto{display:flex;}
   .modal{background:#fff;border-radius:var(--radio);padding:24px;max-width:480px;width:100%;}
@@ -426,9 +429,9 @@
           <div class="filtro-custom-lista" id="fcRecEstadoLista">
             <input class="filtro-custom-buscar" type="text" placeholder="Buscar..." oninput="filtrarOpciones('fcRecEstado',this.value)" onkeydown="teclasFC(event,'fcRecEstado')">
             <div class="filtro-custom-opcion seleccionada" data-val="" onclick="seleccionarFC('fcRecEstado','','Estado de recuento',event)">Todos</div>
-            <div class="filtro-custom-opcion" data-val="nunca" onclick="seleccionarFC('fcRecEstado','nunca','Nunca contado',event)">🔴 Nunca contado</div>
-            <div class="filtro-custom-opcion" data-val="vencido" onclick="seleccionarFC('fcRecEstado','vencido','Vencido para contar',event)">🟠 Vencido para contar</div>
-            <div class="filtro-custom-opcion" data-val="aldia" onclick="seleccionarFC('fcRecEstado','aldia','Al dia',event)">🟢 Al día</div>
+            <div class="filtro-custom-opcion" data-val="nunca" onclick="seleccionarFC('fcRecEstado','nunca','Nunca Contado',event)">🔴 Nunca Contado</div>
+            <div class="filtro-custom-opcion" data-val="vencido" onclick="seleccionarFC('fcRecEstado','vencido','A Recontar',event)">🟠 A Recontar</div>
+            <div class="filtro-custom-opcion" data-val="aldia" onclick="seleccionarFC('fcRecEstado','aldia','Contado',event)">🟢 Contado</div>
             <div class="filtro-custom-opcion" data-val="contadoHoy" onclick="seleccionarFC('fcRecEstado','contadoHoy','Ya contado en esta sesion',event)">✅ Ya contado en esta sesión</div>
           </div>
         </div>
@@ -471,10 +474,11 @@
               <th onclick="ordenarPorRecuentoTabla('stockFisico')" style="text-align:center">Físico ⇅</th>
               <th onclick="ordenarPorRecuentoTabla('ajuste')" style="text-align:right">Ajuste ⇅</th>
               <th onclick="ordenarPorRecuentoTabla('statusAjuste')">Status Ajuste ⇅</th>
+              <th style="text-align:center">Confirmar</th>
             </tr>
           </thead>
           <tbody id="cuerpoRecuentoPrincipal">
-            <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
+            <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gris-texto)">Cargando datos...</td></tr>
           </tbody>
         </table>
       </div>
@@ -2052,14 +2056,21 @@ function toggleTipoRec(tipo) {
   refrescarRecuentoConCascada();
 }
 
-// Estado del recuento ciclico de un articulo: nunca contado / vencido / al dia.
-// Se apoya en cicloConteoActual (que solo trae los VENCIDOS, ver Code.gs) —
-// si un articulo no aparece ahi, esta al dia.
+// Codigos confirmados individualmente en esta sesion (via el boton check) —
+// el backend recien reflejaria esto en el proximo cicloConteo, asi que lo
+// pisamos localmente para que el status se vea "Contado" al instante.
+let confirmadosSesion = new Set();
+
+// Estado del recuento ciclico de un articulo: Nunca Contado / Contado / A Recontar.
+// Se apoya en cicloConteoActual (que solo trae los VENCIDOS y los nunca
+// contados, ver Code.gs) — si un articulo no aparece ahi, esta Contado
+// (fue contado dentro del plazo que le corresponde por su clase).
 function estadoRecuentoInfo(codigoConcatenado) {
+  if (confirmadosSesion.has(codigoConcatenado)) return { status: "aldia", texto: "Contado" };
   const info = cicloConteoActual.find(c => c.codigoConcatenado === codigoConcatenado);
-  if (!info) return { status: "aldia", texto: "Al día" };
-  if (info.diasSinContar === null) return { status: "nunca", texto: "Nunca contado" };
-  return { status: "vencido", texto: info.diasSinContar + "d sin contar" };
+  if (!info) return { status: "aldia", texto: "Contado" };
+  if (info.diasSinContar === null) return { status: "nunca", texto: "Nunca Contado" };
+  return { status: "vencido", texto: "A Recontar (" + info.diasSinContar + "d)" };
 }
 
 let ordenRecuentoTabla = { col: "", asc: true }; // "" = orden por impacto (nunca/vencido primero, clase A primero)
@@ -2110,7 +2121,7 @@ function renderizarRecuentoPrincipal() {
   }
 
   if (!filas.length) {
-    tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;padding:24px;color:var(--gris-texto)'>Sin resultados.</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='8' style='text-align:center;padding:24px;color:var(--gris-texto)'>Sin resultados.</td></tr>";
     renderizarResumenRecuento(filas);
     return;
   }
@@ -2125,10 +2136,15 @@ function renderizarRecuentoPrincipal() {
       ? "<span style='background:" + colorABC + ";color:#fff;font-size:12px;font-weight:700;padding:3px 8px;border-radius:9px'>" + it.clasificacionABCXYZ + "</span>"
       : "<span style='color:#ccc;font-size:12px'>-</span>";
     const estRec = estadoRecuentoInfo(it.codigoConcatenado);
-    const estRecBadge = estRec.status === "nunca" ? "<span class='badge-nuncacontado'>Nunca contado</span>"
+    const estRecBadge = estRec.status === "nunca" ? "<span class='badge-nuncacontado'>" + estRec.texto + "</span>"
       : estRec.status === "vencido" ? "<span class='badge-vencido'>" + estRec.texto + "</span>"
-      : "<span class='badge-aldia'>Al día</span>";
+      : "<span class='badge-aldia'>" + estRec.texto + "</span>";
     const { ajusteHtml, statusHtml } = calcularAjusteYStatus(fisicoVal, teorico);
+    const guardado = entrada && entrada.guardado === true;
+    const confirmarHtml = guardado
+      ? "<span class='badge-ajustado' title='Ya confirmado y guardado en Sheets'>✓ Confirmado</span>"
+      : (fisicoVal !== "" ? "<button type='button' class='btn-check' title='Confirmar y guardar este item ahora' onclick='confirmarConteoIndividual(" + idxReal + ")'>✓</button>"
+                          : "<button type='button' class='btn-check' disabled title='Cargá el Físico primero'>✓</button>");
     const filId = "lotesRec-" + idxReal;
     return "<tr>"
       + "<td><button type='button' class='lote-toggle-rec' title='Ver / contar lotes' onclick='toggleLotesRecuento(\"" + filId + "\"," + idxReal + ",this)'>+</button></td>"
@@ -2142,8 +2158,9 @@ function renderizarRecuentoPrincipal() {
         + "<button type='button' class='btn-fisico' onclick='abrirModalCantidadFisica(" + idxReal + ",\"sumar\")'>+</button>"
       + "</div></td>"
       + "<td id='ajusteRec-" + idxReal + "' style='text-align:right'>" + ajusteHtml + "</td>"
-      + "<td id='statusRec-" + idxReal + "'>" + statusHtml + "</td></tr>"
-      + "<tr class='fila-lotes-rec' id='" + filId + "'><td colspan='7' style='padding:0'><div style='padding:10px 16px;background:#fafbfc'>Cargando lotes...</div></td></tr>";
+      + "<td id='statusRec-" + idxReal + "'>" + statusHtml + "</td>"
+      + "<td id='confirmarRec-" + idxReal + "' style='text-align:center'>" + confirmarHtml + "</td></tr>"
+      + "<tr class='fila-lotes-rec' id='" + filId + "'><td colspan='8' style='padding:0'><div style='padding:10px 16px;background:#fafbfc'>Cargando lotes...</div></td></tr>";
   }).join("");
 
   renderizarResumenRecuento(filas);
@@ -2177,7 +2194,7 @@ function renderizarResumenRecuento(filas) {
     + "<span style='color:var(--gris-borde)'>|</span>"
     + "<span>Con diferencia: <b style='color:" + (conDiferencia.length > 0 ? "var(--rojo)" : "var(--verde)") + "'>" + conDiferencia.length + "</b></span>"
     + "<span style='color:var(--gris-borde)'>|</span>"
-    + "<span style='color:var(--gris-texto)'>Total pendiente de guardar: <b>" + recuentoActual.length + "</b></span>";
+    + "<span style='color:var(--gris-texto)'>Total pendiente de guardar: <b>" + recuentoActual.filter(r => !r.guardado).length + "</b></span>";
 }
 
 // Botones +/-: abren un modal para tipear la cantidad a sumar o restar
@@ -2231,6 +2248,7 @@ function confirmarCantidadFisica() {
       input.value = nuevo;
       recalcularSumaLotes(cantFisicaContexto.idxReal);
       actualizarStatusLote(cantFisicaContexto.statusId, String(nuevo), cantFisicaContexto.teoricoLote);
+      habilitarConfirmarLote(cantFisicaContexto.inputId.replace("loteFisico-", "loteConfirmar-"), String(nuevo));
     }
   } else {
     ajustarFisicoRec(cantFisicaContexto.idxReal, delta);
@@ -2285,9 +2303,40 @@ function agregarAlRecuento(it, fisico, obs) {
     stockTeorico: it.stockReal,
     stockFisico: fisico,
     observacion: obs || "",
+    guardado: false, // cualquier edicion desconfirma el item (hay que volver a tocar el check)
   };
   if (idx >= 0) recuentoActual[idx] = item;
   else recuentoActual.push(item);
+}
+
+// Boton check ✓ de cada fila: confirma y guarda ESE item puntual en Google
+// Sheets de una, sin esperar a juntar todo el recuento.
+async function confirmarConteoIndividual(idxReal) {
+  const it = DATOS_INV[idxReal];
+  if (!it) return;
+  const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
+  if (!entrada || entrada.stockFisico === "" || entrada.stockFisico === null) {
+    mostrarBannerInv("fallo", "Cargá el Físico antes de confirmar.");
+    return;
+  }
+  try {
+    const resp = await fetchInv(WEB_APP_URL + "?action=registrarRecuento", {
+      method: "POST",
+      body: JSON.stringify({ usuario: usuarioActual, items: [entrada] }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      entrada.guardado = true;
+      confirmadosSesion.add(it.codigoConcatenado);
+      mostrarBannerInv("exito", "Confirmado: " + it.descripcion);
+      renderizarRecuentoPrincipal();
+      cargarHistorialRecuento();
+    } else {
+      mostrarBannerInv("fallo", "Error al confirmar: " + (data.error || "desconocido"));
+    }
+  } catch (e) {
+    mostrarBannerInv("fallo", "Error de conexión al confirmar.");
+  }
 }
 
 // --- Lotes expandibles dentro de Recuento (+/- por artículo) ---
@@ -2319,11 +2368,12 @@ async function toggleLotesRecuento(filId, idxReal, btn) {
     let tabla = "<table style='width:100%;font-size:14px;border-collapse:collapse'><thead><tr>"
       + "<th style='text-align:left;padding:6px'>Lote</th><th style='text-align:left;padding:6px'>Antigüedad</th>"
       + "<th style='text-align:right;padding:6px'>Teórico lote</th><th style='text-align:center;padding:6px'>Físico contado</th>"
-      + "<th style='text-align:left;padding:6px'>Status Ajuste</th></tr></thead><tbody>";
+      + "<th style='text-align:left;padding:6px'>Status Ajuste</th><th style='text-align:center;padding:6px'>Confirmar</th></tr></thead><tbody>";
     itemsDesc.forEach((p, i) => {
       const pEsc = String(p.partida).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
       const inputId = "loteFisico-" + idxReal + "-" + i;
       const statusId = "loteStatus-" + idxReal + "-" + i;
+      const confirmId = "loteConfirmar-" + idxReal + "-" + i;
       const teoricoLote = Number(p.unidadesRemanentes || 0);
       tabla += "<tr><td style='padding:6px'>" + p.partida + "</td>"
         + "<td style='padding:6px;color:var(--gris-texto)'>" + (p.diasAntiguedad > 0 ? p.diasAntiguedad + " días" : "-") + "</td>"
@@ -2332,10 +2382,11 @@ async function toggleLotesRecuento(filId, idxReal, btn) {
           + "<button type='button' class='btn-fisico' style='width:32px;height:32px;font-size:16px' onclick='abrirModalCantidadLote(" + idxReal + ",\"" + inputId + "\",\"" + statusId + "\"," + teoricoLote + ",\"" + pEsc + "\",\"restar\")'>−</button>"
           + "<input type='number' min='0' data-lote=\"" + pEsc + "\" class='input-fisico-lote' id='" + inputId + "'"
           + " style='width:80px;text-align:center;padding:5px;font-size:14px;border:1px solid var(--gris-borde);border-radius:6px'"
-          + " oninput='recalcularSumaLotes(" + idxReal + "); actualizarStatusLote(\"" + statusId + "\", this.value, " + teoricoLote + ")'>"
+          + " oninput='recalcularSumaLotes(" + idxReal + "); actualizarStatusLote(\"" + statusId + "\", this.value, " + teoricoLote + "); habilitarConfirmarLote(\"" + confirmId + "\", this.value)'>"
           + "<button type='button' class='btn-fisico' style='width:32px;height:32px;font-size:16px' onclick='abrirModalCantidadLote(" + idxReal + ",\"" + inputId + "\",\"" + statusId + "\"," + teoricoLote + ",\"" + pEsc + "\",\"sumar\")'>+</button>"
         + "</div></td>"
-        + "<td style='padding:6px' id='" + statusId + "'><span class='badge-sincontar'>Sin contar</span></td></tr>";
+        + "<td style='padding:6px' id='" + statusId + "'><span class='badge-sincontar'>Sin contar</span></td>"
+        + "<td style='text-align:center;padding:6px' id='" + confirmId + "'><button type='button' class='btn-check' style='width:32px;height:32px;font-size:15px' disabled title='Cargá el Físico del lote primero' onclick='confirmarLote(\"" + inputId + "\",\"" + confirmId + "\"," + idxReal + ")'>✓</button></td></tr>";
     });
     tabla += "</tbody></table>"
       + "<div style='margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap'>"
@@ -2365,6 +2416,26 @@ function actualizarStatusLote(statusId, valor, teoricoLote) {
   }
   const dif = Number(valor) - Number(teoricoLote || 0);
   celda.innerHTML = dif === 0 ? "<span class='badge-ajustado'>Ajustado</span>" : "<span class='badge-ajustar'>Ajustar</span>";
+}
+// Habilita/deshabilita el boton check ✓ de un lote segun si tiene Fisico cargado.
+function habilitarConfirmarLote(confirmId, valor) {
+  const celda = document.getElementById(confirmId);
+  if (!celda) return;
+  const btn = celda.querySelector("button");
+  if (btn) btn.disabled = (valor === "" || valor === null || valor === undefined);
+}
+// Boton check ✓ de un lote: lo deja "confirmado" (bloquea el input para
+// evitar cambios accidentales). El guardado real en Sheets se hace a nivel
+// articulo (con "Usar esta suma" + el check de la fila principal, o el
+// guardado masivo) ya que el backend no registra conteos por lote.
+function confirmarLote(inputId, confirmId, idxReal) {
+  const input = document.getElementById(inputId);
+  if (!input || input.value === "") { mostrarBannerInv("fallo", "Cargá el Físico del lote antes de confirmar."); return; }
+  input.readOnly = true;
+  input.style.background = "#f4f7fa";
+  const celda = document.getElementById(confirmId);
+  if (celda) celda.innerHTML = "<span class='badge-ajustado' title='Lote confirmado'>✓</span>";
+  recalcularSumaLotes(idxReal);
 }
 function usarSumaLotesEnFisico(idxReal) {
   const it = DATOS_INV[idxReal];
@@ -2412,19 +2483,26 @@ function exportarRecuentoCSV() {
 }
 
 async function guardarRecuentoEnSheet() {
-  if (recuentoActual.length === 0) { mostrarBannerInv("fallo", "No hay items en el recuento."); return; }
+  const pendientes = recuentoActual.filter(r => !r.guardado);
+  if (pendientes.length === 0) {
+    mostrarBannerInv("fallo", recuentoActual.length > 0
+      ? "Todos los items del recuento ya se confirmaron individualmente con el ✓."
+      : "No hay items en el recuento.");
+    return;
+  }
   try {
     const resp = await fetchInv(WEB_APP_URL + "?action=registrarRecuento", {
       method: "POST",
-      body: JSON.stringify({ usuario: usuarioActual, items: recuentoActual }),
+      body: JSON.stringify({ usuario: usuarioActual, items: pendientes }),
     });
     const data = await resp.json();
     if (data.ok) {
       mostrarBannerInv("exito", data.registrados + " item(s) guardados en Google Sheets (hoja Recuentos).");
+      pendientes.forEach(p => confirmadosSesion.add(p.codigoConcatenado));
       recuentoActual = [];
       renderizarRecuentoPrincipal();
       cargarHistorialRecuento();
-      cargarCicloConteo(); // refresca "Nunca contado" / "Vencido" ya que se acaba de contar
+      cargarCicloConteo(); // refresca "Nunca Contado" / "A Recontar" ya que se acaba de contar
     } else {
       mostrarBannerInv("fallo", "Error al guardar: " + (data.error || "desconocido"));
     }
