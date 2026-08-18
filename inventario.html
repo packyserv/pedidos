@@ -23,6 +23,14 @@
   body.tema-oscuro #loginError, body.tema-oscuro #bannerInv.fallo{background:#3a1f1c;color:#f0a49c;}
   body.tema-oscuro .btn-fisico, body.tema-oscuro .lote-toggle-rec, body.tema-oscuro .btn-check{background:#1b2733;}
   body.tema-oscuro #resumenRecuento{background:#1c2c3d;}
+  /* Filas resaltadas con fondos pastel (urgencia alta, pendientes V2, lotes con
+     stock, etc.) se generan con estilo inline fijo pensado para modo claro.
+     En modo oscuro forzamos texto oscuro ahi para que no queden "lavadas". */
+  body.tema-oscuro tr[style*="fdeaea"] td,
+  body.tema-oscuro tr[style*="fff0e0"] td,
+  body.tema-oscuro tr[style*="f0f8f0"] td,
+  body.tema-oscuro tr[style*="f7f9fb"] td,
+  body.tema-oscuro tr[style*="e8f4ea"] td{color:#1a1a1a;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--fondo);color:#222;font-size:15px;}
   header{background:var(--azul-oscuro);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:40;}
@@ -819,7 +827,7 @@ function renderizarMonetariosInv() {
   renderizarDashboard();
   renderizarTabla();
   renderizarAlertas();
-  if (datosComprasActual.length > 0) renderizarCompras();
+  if (datosComprasActual.length > 0) { renderizarResumenCompras(); renderizarCompras(); }
 }
 
 // --- Ayuda contextual ("i") ---
