@@ -2381,15 +2381,22 @@ function ajustarFisicoRec(idx, delta) {
 function actualizarFisicoRecInline(idx, valor, commit) {
   const it = DATOS_INV[idx];
   if (!it) return;
+  const inputEl = document.getElementById("fisicoRec-" + idx);
+  if (inputEl) inputEl.classList.toggle("tiene-valor", valor !== "");
+
+  // Los badges (Ajuste/Status/Confirmar) solo se refrescan al confirmar
+  // (blur/Tab), no en cada tecla: cambiar su contenido mientras se tipea
+  // reacomoda el layout y en el celular eso hace que el teclado
+  // numérico parpadee o se cierre solo.
+  if (!commit) return;
+
   const teorico = Number(it.stockReal || 0);
   const { ajusteHtml, statusHtml } = calcularAjusteYStatus(valor, teorico);
   const ajusteCell = document.getElementById("ajusteRec-" + idx);
   const statusCell = document.getElementById("statusRec-" + idx);
-  const inputEl = document.getElementById("fisicoRec-" + idx);
   const confirmCell = document.getElementById("confirmarRec-" + idx);
   if (ajusteCell) ajusteCell.innerHTML = ajusteHtml;
   if (statusCell) statusCell.innerHTML = statusHtml;
-  if (inputEl) inputEl.classList.toggle("tiene-valor", valor !== "");
   // El botón Confirmar se habilita apenas hay un valor cargado, y se
   // vuelve a mostrar como "pendiente" (ya no confirmado) porque cualquier
   // edición desconfirma el conteo anterior.
@@ -2397,7 +2404,6 @@ function actualizarFisicoRecInline(idx, valor, commit) {
     confirmCell.innerHTML = htmlBotonConfirmar(idx, false, valor !== "", modoRecuentoCompacto());
   }
 
-  if (!commit) return;
   if (valor === "") {
     recuentoActual = recuentoActual.filter(r => r.codigoConcatenado !== it.codigoConcatenado);
   } else if (Number(valor) >= 0) {
@@ -2508,7 +2514,7 @@ async function toggleLotesRecuento(filId, idxReal, btn) {
           + "<button type='button' class='btn-fisico' style='width:32px;height:32px;font-size:16px' onclick='abrirModalCantidadLote(" + idxReal + ",\"" + inputId + "\",\"" + statusId + "\"," + teoricoLote + ",\"" + pEsc + "\",\"restar\")'>−</button>"
           + "<input type='number' min='0' data-lote=\"" + pEsc + "\" class='input-fisico-lote' id='" + inputId + "'"
           + " style='width:80px;text-align:center;padding:5px;font-size:14px;border:1px solid var(--gris-borde);border-radius:6px'"
-          + " oninput='recalcularSumaLotes(" + idxReal + "); actualizarStatusLote(\"" + statusId + "\", this.value, " + teoricoLote + "); habilitarConfirmarLote(\"" + confirmId + "\", this.value)'>"
+          + " onchange='recalcularSumaLotes(" + idxReal + "); actualizarStatusLote(\"" + statusId + "\", this.value, " + teoricoLote + "); habilitarConfirmarLote(\"" + confirmId + "\", this.value)'>"
           + "<button type='button' class='btn-fisico' style='width:32px;height:32px;font-size:16px' onclick='abrirModalCantidadLote(" + idxReal + ",\"" + inputId + "\",\"" + statusId + "\"," + teoricoLote + ",\"" + pEsc + "\",\"sumar\")'>+</button>"
         + "</div></td>"
         + "<td style='padding:6px' id='" + statusId + "'><span class='badge-sincontar'>Sin contar</span></td>"
