@@ -79,10 +79,21 @@
   .input-fisico-rec.tiene-valor{border-color:var(--azul);}
   .fila-lotes-rec{display:none;}
   .fila-lotes-rec.abierta{display:table-row;}
+  .card-lotes-rec{display:none;margin-top:10px;border-top:1px dashed var(--gris-borde);padding-top:10px;}
+  .card-lotes-rec.abierta{display:block;}
+  .rc-card{border:1px solid var(--gris-borde);border-radius:10px;padding:14px;background:var(--superficie);}
+  .rc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;}
+  .rc-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .rc-fisico-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:12px 0;}
+  .rc-datos{display:flex;justify-content:space-between;align-items:center;font-size:15px;padding:7px 0;border-top:1px dashed var(--gris-borde);}
+  .rc-confirm-row{display:flex;justify-content:center;margin-top:10px;}
   .lote-toggle-rec{width:34px;height:34px;font-size:18px;font-weight:700;border-radius:50%;border:1px solid var(--azul);background:#fff;color:var(--azul);cursor:pointer;line-height:1;}
   .btn-check{width:38px;height:38px;font-size:18px;font-weight:700;border-radius:50%;border:2px solid var(--verde);background:#fff;color:var(--verde);cursor:pointer;line-height:1;}
   .btn-check:disabled{border-color:#ccc;color:#ccc;cursor:not-allowed;}
   .btn-check:not(:disabled):active{background:var(--verde);color:#fff;}
+  .btn-check-full{width:100%;height:46px;border-radius:8px;font-size:15px;font-weight:700;border:2px solid var(--verde);background:#fff;color:var(--verde);cursor:pointer;}
+  .btn-check-full:disabled{border-color:#ccc;color:#ccc;cursor:not-allowed;}
+  .btn-check-full:not(:disabled):active{background:var(--verde);color:#fff;}
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(18,41,63,.55);z-index:50;align-items:center;justify-content:center;padding:16px;}
   .modal-overlay.abierto{display:flex;}
   .modal{background:#fff;border-radius:var(--radio);padding:24px;max-width:480px;width:100%;}
@@ -504,7 +515,7 @@
 
       <div id="resumenRecuento" style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;background:#eef4fb;border:1px solid var(--gris-borde);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:14px"></div>
 
-      <div class="tabla-scroll" style="max-height:70vh">
+      <div id="wrapTablaRecuento" class="tabla-scroll" style="max-height:70vh">
         <table class="tabla-recuento">
           <thead>
             <tr>
@@ -523,6 +534,7 @@
           </tbody>
         </table>
       </div>
+      <div id="wrapCardsRecuento" style="display:none;flex-direction:column;gap:10px;max-height:70vh;overflow-y:auto;padding-right:2px"></div>
 
       <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap">
         <button type="button" class="btn btn-gris" onclick="limpiarRecuento()">Limpiar todo</button>
@@ -2135,9 +2147,31 @@ function valorOrdenRecuento(it, col, entrada) {
   }
 }
 
+// Detecta si hay que usar el layout compacto de tarjetas (sin scroll
+// lateral) segun la vista elegida con los botones PC/Tablet/Celular.
+function modoRecuentoCompacto() {
+  const main = document.getElementById("appMain");
+  return !!(main && (main.classList.contains("vista-tablet") || main.classList.contains("vista-celular")));
+}
+// Boton/estado de Confirmar, compartido entre la tabla y las tarjetas.
+function htmlBotonConfirmar(idx, guardado, tieneValor, modoCard) {
+  if (guardado) {
+    return modoCard
+      ? "<span class='badge-ajustado' style='display:block;text-align:center;padding:11px'>✓ Confirmado</span>"
+      : "<span class='badge-ajustado' title='Ya confirmado y guardado en Sheets'>✓ Confirmado</span>";
+  }
+  const clase = modoCard ? "btn-check-full" : "btn-check";
+  const texto = modoCard ? "✓ Confirmar" : "✓";
+  return tieneValor
+    ? "<button type='button' class='" + clase + "' title='Confirmar y guardar este item ahora' onclick='confirmarConteoIndividual(" + idx + ")'>" + texto + "</button>"
+    : "<button type='button' class='" + clase + "' disabled title='Cargá el Físico primero'>" + texto + "</button>";
+}
+
 function renderizarRecuentoPrincipal() {
   const tbody = document.getElementById("cuerpoRecuentoPrincipal");
-  if (!tbody) return;
+  const wrapTabla = document.getElementById("wrapTablaRecuento");
+  const wrapCards = document.getElementById("wrapCardsRecuento");
+  if (!tbody || !wrapCards) return;
 
   let filas = aplicarFiltrosRecuento(null);
 
@@ -2161,13 +2195,18 @@ function renderizarRecuentoPrincipal() {
     });
   }
 
+  const modoCard = modoRecuentoCompacto();
+  wrapTabla.style.display = modoCard ? "none" : "block";
+  wrapCards.style.display = modoCard ? "flex" : "none";
+
   if (!filas.length) {
-    tbody.innerHTML = "<tr><td colspan='8' style='text-align:center;padding:24px;color:var(--gris-texto)'>Sin resultados.</td></tr>";
+    tbody.innerHTML = modoCard ? "" : "<tr><td colspan='8' style='text-align:center;padding:24px;color:var(--gris-texto)'>Sin resultados.</td></tr>";
+    wrapCards.innerHTML = modoCard ? "<div style='text-align:center;padding:24px;color:var(--gris-texto)'>Sin resultados.</div>" : "";
     renderizarResumenRecuento(filas);
     return;
   }
 
-  tbody.innerHTML = filas.map(it => {
+  const piezas = filas.map(it => {
     const idxReal = DATOS_INV.indexOf(it);
     const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
     const fisicoVal = entrada ? entrada.stockFisico : "";
@@ -2182,27 +2221,43 @@ function renderizarRecuentoPrincipal() {
       : "<span class='badge-aldia'>" + estRec.texto + "</span>";
     const { ajusteHtml, statusHtml } = calcularAjusteYStatus(fisicoVal, teorico);
     const guardado = entrada && entrada.guardado === true;
-    const confirmarHtml = guardado
-      ? "<span class='badge-ajustado' title='Ya confirmado y guardado en Sheets'>✓ Confirmado</span>"
-      : (fisicoVal !== "" ? "<button type='button' class='btn-check' title='Confirmar y guardar este item ahora' onclick='confirmarConteoIndividual(" + idxReal + ")'>✓</button>"
-                          : "<button type='button' class='btn-check' disabled title='Cargá el Físico primero'>✓</button>");
     const filId = "lotesRec-" + idxReal;
+    const fisicoBtns =
+      "<button type='button' class='btn-fisico' onclick='abrirModalCantidadFisica(" + idxReal + ",\"restar\")'>−</button>"
+      + "<input type='number' min='0' class='input-fisico-rec" + (fisicoVal !== "" ? " tiene-valor" : "") + "' id='fisicoRec-" + idxReal + "' value='" + fisicoVal + "'"
+      + " oninput='actualizarFisicoRecInline(" + idxReal + ",this.value,false)' onchange='actualizarFisicoRecInline(" + idxReal + ",this.value,true)'>"
+      + "<button type='button' class='btn-fisico' onclick='abrirModalCantidadFisica(" + idxReal + ",\"sumar\")'>+</button>";
+
+    if (modoCard) {
+      return "<div class='rc-card'>"
+        + "<div class='rc-top'>"
+          + "<div><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " · " + it.ancho + "x" + it.largo + " " + it.micColor + "</small>"
+          + "<div class='rc-badges'>" + claseBadge + " " + estRecBadge + "</div></div>"
+          + "<button type='button' class='lote-toggle-rec' title='Ver / contar lotes' onclick='toggleLotesRecuento(\"" + filId + "\"," + idxReal + ",this)'>+</button>"
+        + "</div>"
+        + "<div class='rc-datos'><span>Teórico</span><b>" + formatoNumRec(teorico) + "</b></div>"
+        + "<div class='rc-fisico-row'>" + fisicoBtns + "</div>"
+        + "<div class='rc-datos'><span>Ajuste</span><span id='ajusteRec-" + idxReal + "'>" + ajusteHtml + "</span></div>"
+        + "<div class='rc-datos'><span>Status Ajuste</span><span id='statusRec-" + idxReal + "'>" + statusHtml + "</span></div>"
+        + "<div class='rc-confirm-row' id='confirmarRec-" + idxReal + "' style='width:100%'>" + htmlBotonConfirmar(idxReal, guardado, fisicoVal !== "", true) + "</div>"
+        + "<div class='card-lotes-rec' id='" + filId + "'><div class='lotes-contenido'>Cargando lotes...</div></div>"
+        + "</div>";
+    }
+
     return "<tr>"
       + "<td><button type='button' class='lote-toggle-rec' title='Ver / contar lotes' onclick='toggleLotesRecuento(\"" + filId + "\"," + idxReal + ",this)'>+</button></td>"
       + "<td style='min-width:170px'><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " · " + it.ancho + "x" + it.largo + " " + it.micColor + "</small><br>" + estRecBadge + "</td>"
       + "<td>" + claseBadge + "</td>"
       + "<td style='text-align:right;font-weight:700'>" + formatoNumRec(teorico) + "</td>"
-      + "<td style='text-align:center'><div style='display:flex;align-items:center;justify-content:center;gap:6px'>"
-        + "<button type='button' class='btn-fisico' onclick='abrirModalCantidadFisica(" + idxReal + ",\"restar\")'>−</button>"
-        + "<input type='number' min='0' class='input-fisico-rec" + (fisicoVal !== "" ? " tiene-valor" : "") + "' id='fisicoRec-" + idxReal + "' value='" + fisicoVal + "'"
-        + " oninput='actualizarFisicoRecInline(" + idxReal + ",this.value,false)' onchange='actualizarFisicoRecInline(" + idxReal + ",this.value,true)'>"
-        + "<button type='button' class='btn-fisico' onclick='abrirModalCantidadFisica(" + idxReal + ",\"sumar\")'>+</button>"
-      + "</div></td>"
+      + "<td style='text-align:center'><div style='display:flex;align-items:center;justify-content:center;gap:6px'>" + fisicoBtns + "</div></td>"
       + "<td id='ajusteRec-" + idxReal + "' style='text-align:right'>" + ajusteHtml + "</td>"
       + "<td id='statusRec-" + idxReal + "'>" + statusHtml + "</td>"
-      + "<td id='confirmarRec-" + idxReal + "' style='text-align:center'>" + confirmarHtml + "</td></tr>"
-      + "<tr class='fila-lotes-rec' id='" + filId + "'><td colspan='8' style='padding:0'><div style='padding:10px 16px;background:#fafbfc'>Cargando lotes...</div></td></tr>";
-  }).join("");
+      + "<td id='confirmarRec-" + idxReal + "' style='text-align:center'>" + htmlBotonConfirmar(idxReal, guardado, fisicoVal !== "", false) + "</td></tr>"
+      + "<tr class='fila-lotes-rec' id='" + filId + "'><td colspan='8' style='padding:0'><div class='lotes-contenido' style='padding:10px 16px;background:#fafbfc'>Cargando lotes...</div></td></tr>";
+  });
+
+  if (modoCard) { wrapCards.innerHTML = piezas.join(""); tbody.innerHTML = ""; }
+  else { tbody.innerHTML = piezas.join(""); wrapCards.innerHTML = ""; }
 
   renderizarResumenRecuento(filas);
 }
@@ -2326,9 +2381,7 @@ function actualizarFisicoRecInline(idx, valor, commit) {
   // vuelve a mostrar como "pendiente" (ya no confirmado) porque cualquier
   // edición desconfirma el conteo anterior.
   if (confirmCell) {
-    confirmCell.innerHTML = valor !== ""
-      ? "<button type='button' class='btn-check' title='Confirmar y guardar este item ahora' onclick='confirmarConteoIndividual(" + idx + ")'>✓</button>"
-      : "<button type='button' class='btn-check' disabled title='Cargá el Físico primero'>✓</button>";
+    confirmCell.innerHTML = htmlBotonConfirmar(idx, false, valor !== "", modoRecuentoCompacto());
   }
 
   if (!commit) return;
@@ -2339,7 +2392,7 @@ function actualizarFisicoRecInline(idx, valor, commit) {
     agregarAlRecuento(it, Number(valor), entrada ? entrada.observacion : "");
   }
   // Solo refrescamos el resumen (liviano) para no perder el foco de otros campos abiertos.
-  const idxVisibles = Array.from(document.querySelectorAll("#cuerpoRecuentoPrincipal input.input-fisico-rec"))
+  const idxVisibles = Array.from(document.querySelectorAll("#cuerpoRecuentoPrincipal input.input-fisico-rec, #wrapCardsRecuento input.input-fisico-rec"))
     .map(i => Number(i.id.replace("fisicoRec-", "")));
   renderizarResumenRecuento(idxVisibles.map(i => DATOS_INV[i]).filter(Boolean));
 }
@@ -2409,7 +2462,7 @@ async function toggleLotesRecuento(filId, idxReal, btn) {
   btn.textContent = "−";
   const it = DATOS_INV[idxReal];
   if (!it) return;
-  const celda = fila.querySelector("td > div");
+  const celda = fila.querySelector(".lotes-contenido");
   if (!celda) return;
   if (celda.dataset.cargado === "ok") return;
   celda.innerHTML = "<span style='color:var(--gris-texto);font-size:13px'>⏳ Cargando lotes...</span>";
@@ -2907,6 +2960,10 @@ function aplicarVista(vista) {
   document.getElementById(mapaBtn[vista])?.classList.add("activo");
 
   localStorage.setItem("vistaInventario", vista);
+
+  // Si la pestaña Recuento esta abierta, la re-renderizamos para que
+  // cambie entre tabla (PC) y tarjetas (Tablet/Celular) al instante.
+  if (document.getElementById("panelRecuento")?.classList.contains("activo")) renderizarRecuentoPrincipal();
 }
 document.getElementById("btnVistaPc")?.addEventListener("click", () => aplicarVista("pc"));
 document.getElementById("btnVistaTablet")?.addEventListener("click", () => aplicarVista("tablet"));
