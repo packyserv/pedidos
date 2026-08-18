@@ -1342,8 +1342,40 @@ async function cargarDatosInv() {
     poblarSelectArticulosMov();
     if (document.getElementById("panelRecuento")?.classList.contains("activo")) renderizarRecuentoPrincipal();
     ocultarBannerInv();
+    // Cargar en paralelo los recuentos confirmados hoy (para sincronizar entre dispositivos)
+    cargarRecuentosHoy();
   } catch(err) {
     mostrarBannerInv("fallo", "No se pudieron cargar los datos. Verifica la conexion.");
+  }
+}
+
+// Trae los recuentos confirmados HOY desde Google Sheets y los fusiona con
+// el estado local — así si otro dispositivo confirmó algo, aparece acá.
+async function cargarRecuentosHoy() {
+  try {
+    const resp = await fetchInv(WEB_APP_URL + "?action=recuentosHoy");
+    const data = await resp.json();
+    const itemsHoy = data.items || [];
+    if (itemsHoy.length === 0) return;
+    let huboNuevos = false;
+    itemsHoy.forEach(it => {
+      confirmadosSesion.add(it.codigoConcatenado);
+      const yaEsta = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
+      if (!yaEsta) {
+        recuentoActual.push({ ...it });
+        huboNuevos = true;
+      } else if (!yaEsta.guardado) {
+        // El item estaba en borrador local — el de Sheets es más reciente, lo pisa
+        yaEsta.stockFisico = it.stockFisico;
+        yaEsta.guardado = true;
+        huboNuevos = true;
+      }
+    });
+    if (huboNuevos && document.getElementById("panelRecuento")?.classList.contains("activo")) {
+      renderizarRecuentoPrincipal();
+    }
+  } catch(e) {
+    // Falla silenciosa — no interrumpe la carga principal
   }
 }
 async function recargarDatos() { DATOS_INV = []; cargarDatosInv(); }
@@ -3061,6 +3093,8 @@ async function refrescarDatosSilencioso() {
     else if (tabActiva === "panelAlertas") renderizarAlertas();
     // Dashboard siempre
     renderizarDashboard();
+    // Sincronizar recuentos confirmados desde otros dispositivos
+    await cargarRecuentosHoy();
     ocultarBannerInv();
   } catch (e) {
     ocultarBannerInv(); // falla silenciosamente, no molesta al usuario
