@@ -2277,9 +2277,18 @@ function actualizarFisicoRecInline(idx, valor, commit) {
   const ajusteCell = document.getElementById("ajusteRec-" + idx);
   const statusCell = document.getElementById("statusRec-" + idx);
   const inputEl = document.getElementById("fisicoRec-" + idx);
+  const confirmCell = document.getElementById("confirmarRec-" + idx);
   if (ajusteCell) ajusteCell.innerHTML = ajusteHtml;
   if (statusCell) statusCell.innerHTML = statusHtml;
   if (inputEl) inputEl.classList.toggle("tiene-valor", valor !== "");
+  // El botón Confirmar se habilita apenas hay un valor cargado, y se
+  // vuelve a mostrar como "pendiente" (ya no confirmado) porque cualquier
+  // edición desconfirma el conteo anterior.
+  if (confirmCell) {
+    confirmCell.innerHTML = valor !== ""
+      ? "<button type='button' class='btn-check' title='Confirmar y guardar este item ahora' onclick='confirmarConteoIndividual(" + idx + ")'>✓</button>"
+      : "<button type='button' class='btn-check' disabled title='Cargá el Físico primero'>✓</button>";
+  }
 
   if (!commit) return;
   if (valor === "") {
@@ -2314,6 +2323,16 @@ function agregarAlRecuento(it, fisico, obs) {
 async function confirmarConteoIndividual(idxReal) {
   const it = DATOS_INV[idxReal];
   if (!it) return;
+  // Sincronizamos con lo que hay tipeado en el campo, por si el usuario
+  // todavia no hizo click afuera (blur) — sin esto, recuentoActual podia
+  // no tener el valor mas reciente todavia.
+  const inputEl = document.getElementById("fisicoRec-" + idxReal);
+  if (inputEl && inputEl.value !== "") {
+    const entradaPrevia = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
+    if (!entradaPrevia || String(entradaPrevia.stockFisico) !== String(inputEl.value)) {
+      agregarAlRecuento(it, Number(inputEl.value), entradaPrevia ? entradaPrevia.observacion : "");
+    }
+  }
   const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
   if (!entrada || entrada.stockFisico === "" || entrada.stockFisico === null) {
     mostrarBannerInv("fallo", "Cargá el Físico antes de confirmar.");
