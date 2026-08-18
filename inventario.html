@@ -764,7 +764,7 @@
 </div>
 
 <script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwAYzXCqFw6pHko8RAJyykFGCurG9qUhfiH0Gl0zho1rsmbW-lEqpdh9mkq5hN3NGiHnA/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwjDU1jXdqW7WQxaR8SBHfKPRBdXKkqKDtvGkP7Y4_tUfYroF6UHOL67GFhAtpOs6cCug/exec";
 const URL_INV = WEB_APP_URL + "?action=inventario";
 const CLAVE_DEFAULT_INV = "1234";
 const CLAVE_MAESTRA_INV = "3232";
@@ -1342,42 +1342,8 @@ async function cargarDatosInv() {
     poblarSelectArticulosMov();
     if (document.getElementById("panelRecuento")?.classList.contains("activo")) renderizarRecuentoPrincipal();
     ocultarBannerInv();
-    // Cargar en paralelo los recuentos confirmados hoy (para sincronizar entre dispositivos)
-    cargarRecuentosHoy();
   } catch(err) {
     mostrarBannerInv("fallo", "No se pudieron cargar los datos. Verifica la conexion.");
-  }
-}
-
-// Trae los recuentos confirmados HOY desde Google Sheets y los fusiona con
-// el estado local — así si otro dispositivo confirmó algo, aparece acá.
-async function cargarRecuentosHoy() {
-  try {
-    const resp = await fetchInv(WEB_APP_URL + "?action=recuentosHoy");
-    const data = await resp.json();
-    const itemsHoy = data.items || [];
-    if (itemsHoy.length === 0) return;
-    let huboNuevos = false;
-    itemsHoy.forEach(it => {
-      confirmadosSesion.add(it.codigoConcatenado);
-      const idx = recuentoActual.findIndex(r => r.codigoConcatenado === it.codigoConcatenado);
-      if (idx === -1) {
-        // Artículo nuevo — lo agregamos como confirmado
-        recuentoActual.push({ ...it });
-        huboNuevos = true;
-      } else if (!recuentoActual[idx].guardado ||
-                 recuentoActual[idx].stockFisico !== it.stockFisico) {
-        // Ya existía pero tiene un valor distinto al de Sheets —
-        // el confirmado en Sheets siempre gana (es el más reciente real)
-        recuentoActual[idx] = { ...it };
-        huboNuevos = true;
-      }
-    });
-    if (huboNuevos && document.getElementById("panelRecuento")?.classList.contains("activo")) {
-      renderizarRecuentoPrincipal();
-    }
-  } catch(e) {
-    // Falla silenciosa — no interrumpe la carga principal
   }
 }
 async function recargarDatos() { DATOS_INV = []; cargarDatosInv(); }
@@ -3064,74 +3030,6 @@ window.addEventListener("resize", () => {
       renderizarRecuentoPrincipal();
     }
   }, 300);
-});
-
-/* =========================================================================
-   AUTO-REFRESCO: cada 60 seg + al volver a la pestaña/app
-   Mantiene los datos sincronizados entre dispositivos sin recargar la página.
-   Solo recarga datos del servidor — no toca lo que el usuario está escribiendo.
-   ========================================================================= */
-const INTERVALO_REFRESCO_MS = 60 * 1000; // 60 segundos
-let autoRefrescoActivo = false;
-let autoRefrescoTimer = null;
-
-async function refrescarDatosSilencioso() {
-  // No interrumpir si el usuario está escribiendo en algún campo
-  const activo = document.activeElement;
-  const escribiendo = activo && (
-    activo.tagName === "INPUT" || activo.tagName === "TEXTAREA" || activo.tagName === "SELECT"
-  );
-  if (escribiendo) return;
-
-  try {
-    mostrarBannerInv("cargando", "Actualizando datos...");
-    const resp = await fetchInv(URL_INV);
-    const data = await resp.json();
-    DATOS_INV = data.items || [];
-    // Refrescar solo la pestaña activa para no hacer trabajo innecesario
-    const tabActiva = document.querySelector(".panel.activo")?.id;
-    if (tabActiva === "panelStock") renderizarTabla();
-    else if (tabActiva === "panelRecuento") { poblarFiltrosRecuento(); renderizarRecuentoPrincipal(); }
-    else if (tabActiva === "panelAlertas") renderizarAlertas();
-    // Dashboard siempre
-    renderizarDashboard();
-    // Sincronizar recuentos confirmados desde otros dispositivos
-    await cargarRecuentosHoy();
-    ocultarBannerInv();
-  } catch (e) {
-    ocultarBannerInv(); // falla silenciosamente, no molesta al usuario
-  }
-}
-
-function iniciarAutoRefresco() {
-  if (autoRefrescoActivo) return;
-  autoRefrescoActivo = true;
-  autoRefrescoTimer = setInterval(refrescarDatosSilencioso, INTERVALO_REFRESCO_MS);
-}
-function detenerAutoRefresco() {
-  clearInterval(autoRefrescoTimer);
-  autoRefrescoActivo = false;
-}
-
-// Refresco al volver a la pestaña o desbloquear el celular
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") refrescarDatosSilencioso();
-});
-
-// Arrancar el auto-refresco cuando el usuario se loguea
-// (se llama desde la función de login existente)
-const _loginOriginal = window.iniciarApp || null;
-document.addEventListener("DOMContentLoaded", () => {
-  // Esperamos a que el usuario se loguee: cuando el main aparece, arrancamos
-  const observer = new MutationObserver(() => {
-    const main = document.getElementById("appMain");
-    if (main && main.style.display !== "none") {
-      iniciarAutoRefresco();
-      observer.disconnect();
-    }
-  });
-  const main = document.getElementById("appMain");
-  if (main) observer.observe(main, { attributes: true, attributeFilter: ["style"] });
 });
 </script>
 </body>
