@@ -679,7 +679,7 @@
     <div id="infoModalCantFisica" style="font-size:13px;color:var(--gris-texto);margin-bottom:14px"></div>
     <div class="campo">
       <label id="labelModalCantFisica">Cantidad a sumar</label>
-      <input type="number" id="inputModalCantFisica" min="0" step="any" placeholder="0" style="font-size:20px;text-align:center;padding:10px" onkeydown="if(event.key==='Enter') confirmarCantidadFisica()">
+      <input type="text" inputmode="decimal" pattern="[0-9]*" id="inputModalCantFisica" min="0" placeholder="0" style="font-size:20px;text-align:center;padding:10px" onkeydown="if(event.key==='Enter') confirmarCantidadFisica()">
     </div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button type="button" class="btn btn-gris" style="flex:1" onclick="cerrarModalCantidadFisica()">Cancelar</button>
@@ -2237,7 +2237,7 @@ function renderizarRecuentoPrincipal() {
     const filId = "lotesRec-" + idxReal;
     const fisicoBtns =
       "<button type='button' class='btn-fisico' onclick='abrirModalCantidadFisica(" + idxReal + ",\"restar\")'>−</button>"
-      + "<input type='number' min='0' class='input-fisico-rec" + (fisicoVal !== "" ? " tiene-valor" : "") + "' id='fisicoRec-" + idxReal + "' value='" + fisicoVal + "'"
+      + "<input type='text' inputmode='decimal' pattern='[0-9]*' min='0' class='input-fisico-rec" + (fisicoVal !== "" ? " tiene-valor" : "") + "' id='fisicoRec-" + idxReal + "' value='" + fisicoVal + "'"
       + " oninput='actualizarFisicoRecInline(" + idxReal + ",this.value,false)' onchange='actualizarFisicoRecInline(" + idxReal + ",this.value,true)'>"
       + "<button type='button' class='btn-fisico' onclick='abrirModalCantidadFisica(" + idxReal + ",\"sumar\")'>+</button>";
 
@@ -2512,7 +2512,7 @@ async function toggleLotesRecuento(filId, idxReal, btn) {
         + "<td style='text-align:right;padding:6px'>" + formatoNumRec(teoricoLote) + "</td>"
         + "<td style='text-align:center;padding:6px'><div style='display:flex;align-items:center;justify-content:center;gap:5px'>"
           + "<button type='button' class='btn-fisico' style='width:32px;height:32px;font-size:16px' onclick='abrirModalCantidadLote(" + idxReal + ",\"" + inputId + "\",\"" + statusId + "\"," + teoricoLote + ",\"" + pEsc + "\",\"restar\")'>−</button>"
-          + "<input type='number' min='0' data-lote=\"" + pEsc + "\" class='input-fisico-lote' id='" + inputId + "'"
+          + "<input type='text' inputmode='decimal' pattern='[0-9]*' min='0' data-lote=\"" + pEsc + "\" class='input-fisico-lote' id='" + inputId + "'"
           + " style='width:80px;text-align:center;padding:5px;font-size:14px;border:1px solid var(--gris-borde);border-radius:6px'"
           + " onchange='recalcularSumaLotes(" + idxReal + "); actualizarStatusLote(\"" + statusId + "\", this.value, " + teoricoLote + "); habilitarConfirmarLote(\"" + confirmId + "\", this.value)'>"
           + "<button type='button' class='btn-fisico' style='width:32px;height:32px;font-size:16px' onclick='abrirModalCantidadLote(" + idxReal + ",\"" + inputId + "\",\"" + statusId + "\"," + teoricoLote + ",\"" + pEsc + "\",\"sumar\")'>+</button>"
