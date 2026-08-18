@@ -3031,6 +3031,72 @@ window.addEventListener("resize", () => {
     }
   }, 300);
 });
+
+/* =========================================================================
+   AUTO-REFRESCO: cada 60 seg + al volver a la pestaña/app
+   Mantiene los datos sincronizados entre dispositivos sin recargar la página.
+   Solo recarga datos del servidor — no toca lo que el usuario está escribiendo.
+   ========================================================================= */
+const INTERVALO_REFRESCO_MS = 60 * 1000; // 60 segundos
+let autoRefrescoActivo = false;
+let autoRefrescoTimer = null;
+
+async function refrescarDatosSilencioso() {
+  // No interrumpir si el usuario está escribiendo en algún campo
+  const activo = document.activeElement;
+  const escribiendo = activo && (
+    activo.tagName === "INPUT" || activo.tagName === "TEXTAREA" || activo.tagName === "SELECT"
+  );
+  if (escribiendo) return;
+
+  try {
+    mostrarBannerInv("cargando", "Actualizando datos...");
+    const resp = await fetchInv(URL_INV);
+    const data = await resp.json();
+    DATOS_INV = data.items || [];
+    // Refrescar solo la pestaña activa para no hacer trabajo innecesario
+    const tabActiva = document.querySelector(".panel.activo")?.id;
+    if (tabActiva === "panelStock") renderizarTabla();
+    else if (tabActiva === "panelRecuento") { poblarFiltrosRecuento(); renderizarRecuentoPrincipal(); }
+    else if (tabActiva === "panelAlertas") renderizarAlertas();
+    // Dashboard siempre
+    renderizarDashboard();
+    ocultarBannerInv();
+  } catch (e) {
+    ocultarBannerInv(); // falla silenciosamente, no molesta al usuario
+  }
+}
+
+function iniciarAutoRefresco() {
+  if (autoRefrescoActivo) return;
+  autoRefrescoActivo = true;
+  autoRefrescoTimer = setInterval(refrescarDatosSilencioso, INTERVALO_REFRESCO_MS);
+}
+function detenerAutoRefresco() {
+  clearInterval(autoRefrescoTimer);
+  autoRefrescoActivo = false;
+}
+
+// Refresco al volver a la pestaña o desbloquear el celular
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") refrescarDatosSilencioso();
+});
+
+// Arrancar el auto-refresco cuando el usuario se loguea
+// (se llama desde la función de login existente)
+const _loginOriginal = window.iniciarApp || null;
+document.addEventListener("DOMContentLoaded", () => {
+  // Esperamos a que el usuario se loguee: cuando el main aparece, arrancamos
+  const observer = new MutationObserver(() => {
+    const main = document.getElementById("appMain");
+    if (main && main.style.display !== "none") {
+      iniciarAutoRefresco();
+      observer.disconnect();
+    }
+  });
+  const main = document.getElementById("appMain");
+  if (main) observer.observe(main, { attributes: true, attributeFilter: ["style"] });
+});
 </script>
 </body>
 </html>
