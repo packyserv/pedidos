@@ -1360,14 +1360,16 @@ async function cargarRecuentosHoy() {
     let huboNuevos = false;
     itemsHoy.forEach(it => {
       confirmadosSesion.add(it.codigoConcatenado);
-      const yaEsta = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
-      if (!yaEsta) {
+      const idx = recuentoActual.findIndex(r => r.codigoConcatenado === it.codigoConcatenado);
+      if (idx === -1) {
+        // Artículo nuevo — lo agregamos como confirmado
         recuentoActual.push({ ...it });
         huboNuevos = true;
-      } else if (!yaEsta.guardado) {
-        // El item estaba en borrador local — el de Sheets es más reciente, lo pisa
-        yaEsta.stockFisico = it.stockFisico;
-        yaEsta.guardado = true;
+      } else if (!recuentoActual[idx].guardado ||
+                 recuentoActual[idx].stockFisico !== it.stockFisico) {
+        // Ya existía pero tiene un valor distinto al de Sheets —
+        // el confirmado en Sheets siempre gana (es el más reciente real)
+        recuentoActual[idx] = { ...it };
         huboNuevos = true;
       }
     });
