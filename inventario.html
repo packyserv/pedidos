@@ -6,10 +6,35 @@
 <title>Inventario — Packaging y Servicios</title>
 <style>
   :root{--azul-oscuro:#12293f;--azul:#1a6fa8;--azul-claro:#e8f4fd;--verde:#2e7d4f;--amarillo:#f1c40f;--rojo:#c0392b;--naranja:#e67e22;--gris-texto:#555;--gris-borde:#dde3ea;--superficie:#fff;--fondo:#f0f4f8;--sombra:rgba(0,0,0,.08);--radio:10px;}
+  /* ---------- Modo oscuro: pisa las variables base + algunos fondos fijos ---------- */
+  body.tema-oscuro{
+    --superficie:#1b2733; --fondo:#0e1620; --gris-borde:#2c3c4c; --gris-texto:#a9bccd;
+    --azul-claro:#1c3348; color:#dbe6ef;
+  }
+  body.tema-oscuro table{color:#dbe6ef;}
+  body.tema-oscuro tr:hover td{background:#22303e;}
+  body.tema-oscuro .tabla-recuento th{background:#22303e;color:#dbe6ef;}
+  body.tema-oscuro .fila-lotes{background:#1b2733;}
+  body.tema-oscuro .fila-lotes-rec > td > div{background:#1b2733 !important;}
+  body.tema-oscuro .modal{background:#1b2733;color:#dbe6ef;}
+  body.tema-oscuro .filtro-custom-lista{background:#1b2733;}
+  body.tema-oscuro input, body.tema-oscuro select{color:#dbe6ef;}
+  body.tema-oscuro .badge-sincontar{background:#3a4756;color:#c8d4de;}
+  body.tema-oscuro #loginError, body.tema-oscuro #bannerInv.fallo{background:#3a1f1c;color:#f0a49c;}
+  body.tema-oscuro .btn-fisico, body.tema-oscuro .lote-toggle-rec, body.tema-oscuro .btn-check{background:#1b2733;}
+  body.tema-oscuro #resumenRecuento{background:#1c2c3d;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--fondo);color:#222;font-size:15px;}
   header{background:var(--azul-oscuro);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:40;}
-  main{max-width:1100px;margin:0 auto;padding:20px 16px;}
+  main{max-width:1100px;margin:0 auto;padding:20px 16px;transition:max-width .2s;}
+  main.vista-tablet{max-width:680px;}
+  main.vista-celular{max-width:420px;}
+  /* ---------- Barra de vista (PC/Tablet/Celular) + modo oscuro ---------- */
+  .barra-vista{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .grupo-vista{display:flex;background:rgba(255,255,255,.12);border-radius:8px;padding:2px;gap:2px;}
+  .btn-vista{background:none;border:none;color:#cfe0ec;cursor:pointer;padding:6px 9px;border-radius:6px;font-size:14px;line-height:1;transition:background .15s,color .15s;}
+  .btn-vista.activo{background:var(--naranja);color:#fff;}
+  .btn-tema{background:rgba(255,255,255,.12);border:none;color:#fff;cursor:pointer;padding:6px 10px;border-radius:6px;font-size:14px;line-height:1;}
   .card{background:var(--superficie);border-radius:var(--radio);border:1px solid var(--gris-borde);padding:18px;margin-bottom:16px;}
   .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--azul);margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--azul-claro);}
   input,select{width:100%;padding:9px 12px;border:1px solid var(--gris-borde);border-radius:6px;font-size:14px;background:var(--superficie);}
@@ -159,6 +184,14 @@
           style="width:70px;font-size:12px;padding:3px 5px;border-radius:5px;border:none">
       </span>
       <span id="notaTcInv" style="font-size:10px;color:rgba(255,255,255,.7)"></span>
+    </div>
+    <div class="barra-vista">
+      <div class="grupo-vista" title="Ancho de la pantalla">
+        <button type="button" class="btn-vista" id="btnVistaPc" title="Vista PC">🖥️</button>
+        <button type="button" class="btn-vista" id="btnVistaTablet" title="Vista Tablet">📱</button>
+        <button type="button" class="btn-vista" id="btnVistaCelular" title="Vista Celular">📲</button>
+      </div>
+      <button type="button" class="btn-tema" id="btnTema" title="Modo oscuro">🌙</button>
     </div>
     <button type="button" class="btn btn-gris" style="font-size:12px;padding:6px 12px" onclick="location.reload()">Salir</button>
   </div>
@@ -2849,6 +2882,48 @@ function ocultarBannerInv() {
   const b = document.getElementById("bannerInv");
   if (b) b.className = "";
 }
+
+/* =========================================================================
+   VISTA (PC / Tablet / Celular) Y MODO OSCURO -- se guardan en localStorage
+   (mismo patron que el modulo de Pedidos)
+   ========================================================================= */
+function aplicarVista(vista) {
+  const main = document.getElementById("appMain");
+  if (!main) return;
+  main.classList.remove("vista-tablet", "vista-celular");
+  if (vista === "tablet") main.classList.add("vista-tablet");
+  if (vista === "celular") main.classList.add("vista-celular");
+
+  ["btnVistaPc", "btnVistaTablet", "btnVistaCelular"].forEach(id => document.getElementById(id)?.classList.remove("activo"));
+  const mapaBtn = { pc: "btnVistaPc", tablet: "btnVistaTablet", celular: "btnVistaCelular" };
+  document.getElementById(mapaBtn[vista])?.classList.add("activo");
+
+  localStorage.setItem("vistaInventario", vista);
+}
+document.getElementById("btnVistaPc")?.addEventListener("click", () => aplicarVista("pc"));
+document.getElementById("btnVistaTablet")?.addEventListener("click", () => aplicarVista("tablet"));
+document.getElementById("btnVistaCelular")?.addEventListener("click", () => aplicarVista("celular"));
+
+function aplicarTema(oscuro) {
+  document.body.classList.toggle("tema-oscuro", oscuro);
+  const btn = document.getElementById("btnTema");
+  if (btn) btn.textContent = oscuro ? "☀️" : "🌙";
+  localStorage.setItem("temaOscuroInventario", oscuro ? "1" : "0");
+}
+document.getElementById("btnTema")?.addEventListener("click", () => {
+  aplicarTema(!document.body.classList.contains("tema-oscuro"));
+});
+
+(function inicializarPreferenciasInv() {
+  try {
+    aplicarVista(localStorage.getItem("vistaInventario") || "pc");
+    aplicarTema(localStorage.getItem("temaOscuroInventario") === "1");
+  } catch (err) {
+    // Si el navegador bloquea localStorage (modo privado extremo, etc.),
+    // arranca con los valores por defecto sin romper nada.
+    aplicarVista("pc");
+  }
+})();
 </script>
 </body>
 </html>
