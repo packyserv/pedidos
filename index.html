@@ -4241,16 +4241,22 @@ document.getElementById('btnImprimir').addEventListener('click', () => {
     ? `${document.getElementById('provinciaEntrega').options[document.getElementById('provinciaEntrega').selectedIndex]?.textContent || ''} - ${localidadSeleccionada ? localidadSeleccionada.nombre : ''} - ${document.getElementById('lugarEntrega').value}`
     : 'Retira el cliente en fábrica';
 
+  const tcImpresion = Number(document.getElementById('tipoCambio').value || 0);
   function filaArticulo(it, cantidadMostrada, notaExtra) {
-    const importe = cantidadMostrada * it.precioNeto;
+    // precioNetoARS es la fuente confiable (siempre en ARS). Convertimos a la
+    // moneda de impresion para que el simbolo y el monto sean coherentes.
+    const precioNetoARS = it.precioNetoARS !== undefined ? it.precioNetoARS : it.precioNeto;
+    const precioMostrado = precioEnMoneda(precioNetoARS, moneda, tcImpresion);
+    const importeARS = cantidadMostrada * precioNetoARS;
+    const importeMostrado = precioEnMoneda(importeARS, moneda, tcImpresion);
     const obsHtml = it.observacionItem ? `<br><small>📝 ${it.observacionItem}</small>` : '';
     return { html: `<tr>
       <td>${it.codItem}</td>
       <td>${it.descripcion} (${it.ancho}/${it.largo}/${it.micColor})${obsHtml}${notaExtra || ''}</td>
       <td>${cantidadMostrada}</td>
-      <td>${formatoEnMoneda(it.precioNeto, moneda)}</td>
-      <td>${formatoEnMoneda(importe, moneda)}</td>
-    </tr>`, importe };
+      <td>${formatoEnMoneda(precioMostrado ?? precioNetoARS, moneda)}</td>
+      <td>${formatoEnMoneda(importeMostrado ?? importeARS, moneda)}</td>
+    </tr>`, importe: importeARS };
   }
 
   /* ---------- Pagina 1: total del pedido (como siempre) ---------- */
@@ -4262,9 +4268,28 @@ document.getElementById('btnImprimir').addEventListener('click', () => {
   }).join('');
   const ivaCalcImpresion = calcularIVA(carrito, descuentoGlobalPct, facturacionGeneral);
   const totalConIva = precioEnMoneda(ivaCalcImpresion.totalConIva, moneda, Number(document.getElementById('tipoCambio').value || 0));
-  const facturacionTexto = facturacionGeneral.pctV2 > 0
-    ? `Bejerman ${formatoPorcentaje(facturacionGeneral.pctBejerman)} / V2 ${formatoPorcentaje(facturacionGeneral.pctV2)}`
-    : 'Bejerman 100,00%';
+  // El texto debe reflejar los overrides por ítem, no solo la facturación general
+  const facturacionPorItemImp = carrito.map(it => it.facturacionOverride || facturacionGeneral);
+  const todasIgualesImp = facturacionPorItemImp.every(
+    f => f.pctBejerman === facturacionPorItemImp[0].pctBejerman && f.pctV2 === facturacionPorItemImp[0].pctV2
+  );
+  let facturacionTexto;
+  if (todasIgualesImp) {
+    facturacionTexto = facturacionPorItemImp[0].pctV2 > 0
+      ? `Bejerman ${formatoPorcentaje(facturacionPorItemImp[0].pctBejerman)} / V2 ${formatoPorcentaje(facturacionPorItemImp[0].pctV2)}`
+      : 'Bejerman 100,00%';
+  } else {
+    const totalUnidadesImp = carrito.reduce((acc, it) => acc + Number(it.cantidad), 0);
+    let sumBejImp = 0, sumV2Imp = 0;
+    carrito.forEach(it => {
+      const f = it.facturacionOverride || facturacionGeneral;
+      sumBejImp += (f.pctBejerman / 100) * Number(it.cantidad);
+      sumV2Imp  += (f.pctV2 / 100) * Number(it.cantidad);
+    });
+    const pctBejPromImp = totalUnidadesImp > 0 ? (sumBejImp / totalUnidadesImp * 100) : 100;
+    const pctV2PromImp  = totalUnidadesImp > 0 ? (sumV2Imp  / totalUnidadesImp * 100) : 0;
+    facturacionTexto = `Mixta — Bejerman ${formatoPorcentaje(pctBejPromImp)} / V2 ${formatoPorcentaje(pctV2PromImp)}`;
+  }
 
   /* ---------- Reparto de unidades por sistema de facturacion, item a item ----------
      Regla: Bejerman = floor(cantidad * %Bejerman/100); V2 = cantidad - Bejerman.
