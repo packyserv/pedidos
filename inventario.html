@@ -3076,10 +3076,12 @@ let autoRefrescoActivo = false;
 let autoRefrescoTimer = null;
 
 async function refrescarDatosSilencioso() {
-  // No interrumpir si el usuario está escribiendo en algún campo
+  // No interrumpir SOLO si el usuario está tipeando en un campo de Físico
+  // (el que realmente puede perderse si se re-renderiza a mitad de carga).
+  // Otros campos con foco (buscador, filtros) no bloquean el refresco.
   const activo = document.activeElement;
   const escribiendo = activo && (
-    activo.tagName === "INPUT" || activo.tagName === "TEXTAREA" || activo.tagName === "SELECT"
+    activo.id?.startsWith("fisicoRec-") || activo.classList?.contains("input-fisico-lote")
   );
   if (escribiendo) return;
 
