@@ -2213,6 +2213,25 @@ function htmlBotonConfirmar(idx, guardado, tieneValor, modoCard) {
     ? "<button type='button' class='" + clase + "' title='Confirmar y guardar este item ahora' onclick='confirmarConteoIndividual(" + idx + ")'>" + texto + "</button>"
     : "<button type='button' class='" + clase + "' disabled title='Cargá el Físico primero'>" + texto + "</button>";
 }
+// Boton Borrar del articulo (a nivel principal, no lote): deja el campo
+// Fisico vacio (no contado) y desconfirma si estaba guardado localmente.
+function htmlBotonBorrar(idx, tieneAlgo, modoCard) {
+  const clase = modoCard ? "btn-check-full" : "btn-check";
+  const texto = modoCard ? "🗑 Borrar" : "🗑";
+  const estiloRojo = "border-color:var(--rojo);color:var(--rojo)" + (modoCard ? ";margin-top:6px" : "");
+  return tieneAlgo
+    ? "<button type='button' class='" + clase + "' style='" + estiloRojo + "' title='Borrar (dejar sin contar)' onclick='borrarConteoIndividual(" + idx + ")'>" + texto + "</button>"
+    : "<button type='button' class='" + clase + "' style='" + estiloRojo + "' disabled title='Nada para borrar'>" + texto + "</button>";
+}
+// Combina Confirmar + Borrar en un solo bloque -- usar esto en vez de
+// htmlBotonConfirmar solo, en cualquier lugar que renderice esa celda.
+function htmlAccionesRec(idx, guardado, tieneValor, modoCard) {
+  const confirmarHtml = htmlBotonConfirmar(idx, guardado, tieneValor, modoCard);
+  const borrarHtml = htmlBotonBorrar(idx, tieneValor || guardado, modoCard);
+  return modoCard
+    ? "<div style='display:flex;flex-direction:column'>" + confirmarHtml + borrarHtml + "</div>"
+    : "<div style='display:flex;gap:6px;justify-content:center'>" + confirmarHtml + borrarHtml + "</div>";
+}
 
 function renderizarRecuentoPrincipal() {
   const tbody = document.getElementById("cuerpoRecuentoPrincipal");
@@ -2290,7 +2309,7 @@ function renderizarRecuentoPrincipal() {
         + "<div class='rc-fisico-row'>" + fisicoBtns + "</div>"
         + "<div class='rc-datos'><span>Ajuste</span><span id='ajusteRec-" + idxReal + "'>" + ajusteHtml + "</span></div>"
         + "<div class='rc-datos'><span>Status Ajuste</span><span id='statusRec-" + idxReal + "'>" + statusHtml + "</span></div>"
-        + "<div class='rc-confirm-row' id='confirmarRec-" + idxReal + "' style='width:100%'>" + htmlBotonConfirmar(idxReal, guardado, fisicoVal !== "", true) + "</div>"
+        + "<div class='rc-confirm-row' id='confirmarRec-" + idxReal + "' style='width:100%'>" + htmlAccionesRec(idxReal, guardado, fisicoVal !== "", true) + "</div>"
         + "<div class='card-lotes-rec' id='" + filId + "'><div class='lotes-contenido'>Cargando lotes...</div></div>"
         + "</div>";
     }
@@ -2303,7 +2322,7 @@ function renderizarRecuentoPrincipal() {
       + "<td style='text-align:center'><div style='display:flex;align-items:center;justify-content:center;gap:6px'>" + fisicoBtns + "</div></td>"
       + "<td id='ajusteRec-" + idxReal + "' style='text-align:right'>" + ajusteHtml + "</td>"
       + "<td id='statusRec-" + idxReal + "'>" + statusHtml + "</td>"
-      + "<td id='confirmarRec-" + idxReal + "' style='text-align:center'>" + htmlBotonConfirmar(idxReal, guardado, fisicoVal !== "", false) + "</td></tr>"
+      + "<td id='confirmarRec-" + idxReal + "' style='text-align:center'>" + htmlAccionesRec(idxReal, guardado, fisicoVal !== "", false) + "</td></tr>"
       + "<tr class='fila-lotes-rec' id='" + filId + "'><td colspan='8' style='padding:0'><div class='lotes-contenido' style='padding:10px 16px;background:#fafbfc'>Cargando lotes...</div></td></tr>";
   });
 
@@ -2441,7 +2460,7 @@ function actualizarFisicoRecInline(idx, valor, commit) {
   // vuelve a mostrar como "pendiente" (ya no confirmado) porque cualquier
   // edición desconfirma el conteo anterior.
   if (confirmCell) {
-    confirmCell.innerHTML = htmlBotonConfirmar(idx, false, valor !== "", modoRecuentoCompacto());
+    confirmCell.innerHTML = htmlAccionesRec(idx, false, valor !== "", modoRecuentoCompacto());
   }
 
   if (valor === "") {
@@ -2518,6 +2537,31 @@ async function confirmarConteoIndividual(idxReal) {
   }
 }
 
+// Boton Borrar de un articulo: deja el campo Fisico completamente vacio (no
+// contado). Si ya estaba confirmado localmente, tambien lo desconfirma --
+// OJO: esto no borra la fila ya guardada en la hoja "Recuentos" de Sheets,
+// solo limpia el estado local en pantalla.
+function borrarConteoIndividual(idxReal) {
+  const it = DATOS_INV[idxReal];
+  if (!it) return;
+  recuentoActual = recuentoActual.filter(r => r.codigoConcatenado !== it.codigoConcatenado);
+  confirmadosSesion.delete(it.codigoConcatenado);
+
+  const inputEl = document.getElementById("fisicoRec-" + idxReal);
+  if (inputEl) { inputEl.value = ""; inputEl.dataset.raw = ""; inputEl.classList.remove("tiene-valor"); }
+  const ajusteCell = document.getElementById("ajusteRec-" + idxReal);
+  const statusCell = document.getElementById("statusRec-" + idxReal);
+  const confirmCell = document.getElementById("confirmarRec-" + idxReal);
+  if (ajusteCell) ajusteCell.innerHTML = "<span style='color:#bbb'>-</span>";
+  if (statusCell) statusCell.innerHTML = "<span class='badge-sincontar'>Sin contar</span>";
+  if (confirmCell) confirmCell.innerHTML = htmlAccionesRec(idxReal, false, false, modoRecuentoCompacto());
+
+  const idxVisibles = Array.from(document.querySelectorAll("#cuerpoRecuentoPrincipal input.input-fisico-rec, #wrapCardsRecuento input.input-fisico-rec"))
+    .map(i => Number(i.id.replace("fisicoRec-", "")));
+  renderizarResumenRecuento(idxVisibles.map(i => DATOS_INV[i]).filter(Boolean));
+  mostrarBannerInv("exito", "Se borró el conteo de: " + it.descripcion);
+}
+
 // --- Lotes expandibles dentro de Recuento (+/- por artículo) ---
 // Codigos de articulo cuyo panel de lotes esta actualmente abierto -- se usa
 // para volver a abrirlos automaticamente despues de cualquier re-render
@@ -2589,7 +2633,10 @@ async function cargarContenidoLotes(idxReal, filId) {
           + "<button type='button' class='btn-fisico' style='width:32px;height:32px;font-size:16px' onclick='abrirModalCantidadLote(" + idxReal + ",\"" + inputId + "\",\"" + statusId + "\"," + teoricoLote + ",\"" + pEsc + "\",\"sumar\")'>+</button>"
         + "</div></td>"
         + "<td style='padding:6px' id='" + statusId + "'><span class='badge-sincontar'>Sin contar</span></td>"
-        + "<td style='text-align:center;padding:6px' id='" + confirmId + "'><button type='button' class='btn-check' style='width:32px;height:32px;font-size:15px' disabled title='Cargá el Físico del lote primero' onclick='confirmarLote(\"" + inputId + "\",\"" + confirmId + "\"," + idxReal + ")'>✓</button></td></tr>";
+        + "<td style='text-align:center;padding:6px' id='" + confirmId + "'><div style='display:flex;gap:4px;justify-content:center'>"
+          + "<button type='button' class='btn-check' style='width:32px;height:32px;font-size:15px' disabled title='Cargá el Físico del lote primero' onclick='confirmarLote(\"" + inputId + "\",\"" + confirmId + "\"," + idxReal + ",\"" + statusId + "\"," + teoricoLote + ")'>✓</button>"
+          + "<button type='button' class='btn-check' style='width:32px;height:32px;font-size:15px;border-color:var(--rojo);color:var(--rojo)' title='Borrar (dejar sin contar)' onclick='borrarLote(\"" + inputId + "\",\"" + statusId + "\",\"" + confirmId + "\"," + idxReal + "," + teoricoLote + ")'>🗑</button>"
+        + "</div></td></tr>";
     });
     tabla += "</tbody></table>"
       + "<div style='margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap'>"
@@ -2626,6 +2673,28 @@ function formatearInputLote(input) {
   if (input.value === "" || isNaN(Number(input.value))) { input.dataset.raw = ""; return; }
   input.dataset.raw = input.value;
   input.value = formatoNumRec(Number(input.value));
+}
+// Boton Borrar de un lote: deja el campo completamente vacio (no contado),
+// resetea su status y su celda de confirmar, y recalcula la suma -- que en
+// cascada tambien vacia el Fisico total del articulo si no queda ningun
+// otro lote con valor.
+function borrarLote(inputId, statusId, confirmId, idxReal, teoricoLote) {
+  const input = document.getElementById(inputId);
+  if (input) {
+    input.value = "";
+    input.dataset.raw = "";
+    input.readOnly = false;
+    input.style.background = "";
+  }
+  if (statusId) actualizarStatusLote(statusId, "", teoricoLote);
+  const celda = document.getElementById(confirmId);
+  if (celda) {
+    celda.innerHTML = "<div style='display:flex;gap:4px;justify-content:center'>"
+      + "<button type='button' class='btn-check' style='width:32px;height:32px;font-size:15px' disabled title='Cargá el Físico del lote primero' onclick='confirmarLote(\"" + inputId + "\",\"" + confirmId + "\"," + idxReal + ",\"" + statusId + "\"," + teoricoLote + ")'>✓</button>"
+      + "<button type='button' class='btn-check' style='width:32px;height:32px;font-size:15px;border-color:var(--rojo);color:var(--rojo)' title='Borrar (dejar sin contar)' onclick='borrarLote(\"" + inputId + "\",\"" + statusId + "\",\"" + confirmId + "\"," + idxReal + "," + teoricoLote + ")'>🗑</button>"
+      + "</div>";
+  }
+  recalcularSumaLotes(idxReal);
 }
 function recalcularSumaLotes(idxReal) {
   const fila = document.getElementById("lotesRec-" + idxReal);
@@ -2666,13 +2735,18 @@ function habilitarConfirmarLote(confirmId, valor) {
 // evitar cambios accidentales). El guardado real en Sheets se hace a nivel
 // articulo (con "Usar esta suma" + el check de la fila principal, o el
 // guardado masivo) ya que el backend no registra conteos por lote.
-function confirmarLote(inputId, confirmId, idxReal) {
+function confirmarLote(inputId, confirmId, idxReal, statusId, teoricoLote) {
   const input = document.getElementById(inputId);
   if (!input || input.value === "") { mostrarBannerInv("fallo", "Cargá el Físico del lote antes de confirmar."); return; }
   input.readOnly = true;
   input.style.background = "#f4f7fa";
   const celda = document.getElementById(confirmId);
-  if (celda) celda.innerHTML = "<span class='badge-ajustado' title='Lote confirmado'>✓</span>";
+  if (celda) {
+    celda.innerHTML = "<div style='display:flex;gap:6px;align-items:center;justify-content:center'>"
+      + "<span class='badge-ajustado' title='Lote confirmado'>✓</span>"
+      + "<button type='button' class='btn-check' style='width:32px;height:32px;font-size:15px;border-color:var(--rojo);color:var(--rojo)' title='Borrar (dejar sin contar)' onclick='borrarLote(\"" + inputId + "\",\"" + statusId + "\",\"" + confirmId + "\"," + idxReal + "," + teoricoLote + ")'>🗑</button>"
+      + "</div>";
+  }
   recalcularSumaLotes(idxReal);
 }
 function usarSumaLotesEnFisico(idxReal) {
