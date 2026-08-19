@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Inventario — Packaging y Servicios</title>
 <style>
@@ -540,7 +541,11 @@
         <button type="button" class="btn btn-gris" style="font-size:12px;padding:6px 12px;margin-left:auto" onclick="limpiarFiltrosRecuento()">✕ Mostrar todos</button>
       </div>
 
-      <div id="resumenRecuento" style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;background:#eef4fb;border:1px solid var(--gris-borde);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:14px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <div id="resumenRecuento" style="flex:1;display:flex;gap:18px;flex-wrap:wrap;align-items:center;background:#eef4fb;border:1px solid var(--gris-borde);border-radius:8px;padding:10px 14px;font-size:14px"></div>
+        <button type="button" class="btn btn-verde" onclick="confirmarTodo()" title="Confirma y guarda en Sheets todos los artículos con Físico cargado en la vista actual">✓ Confirmar todo</button>
+        <button type="button" class="btn" style="background:var(--rojo);color:#fff" onclick="borrarTodo()" title="Borra de pantalla y de Sheets todos los artículos visibles que tengan Físico cargado">🗑 Borrar todo</button>
+      </div>
 
       <div id="wrapTablaRecuento" class="tabla-scroll" style="max-height:70vh">
         <table class="tabla-recuento">
@@ -564,9 +569,7 @@
       <div id="wrapCardsRecuento" style="display:none;flex-direction:column;gap:10px;max-height:70vh;overflow-y:auto;padding-right:2px"></div>
 
       <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap">
-        <button type="button" class="btn btn-gris" onclick="limpiarRecuento()">Limpiar todo</button>
-        <button type="button" class="btn btn-azul" onclick="exportarRecuentoCSV()">Exportar CSV</button>
-        <button type="button" class="btn btn-verde" onclick="guardarRecuentoEnSheet()" style="flex:1">Guardar recuento en Google Sheets</button>
+        <button type="button" class="btn btn-azul" onclick="exportarRecuentoXLSX()" style="flex:1">📥 Exportar a Excel (XLSX)</button>
       </div>
     </div>
 
@@ -2959,9 +2962,95 @@ function usarSumaLotesEnFisico(idxReal) {
 }
 
 function limpiarRecuento() {
-  if (!confirm("¿Borrar todo el recuento en curso? (Los artículos ya guardados en Google Sheets no se ven afectados)")) return;
   recuentoActual = [];
   renderizarRecuentoPrincipal();
+}
+
+// Confirma y guarda en Sheets todos los artículos con Físico cargado
+// que estén visibles en la vista actual (respeta filtros activos).
+async function confirmarTodo() {
+  const visibles = aplicarFiltrosRecuento(null);
+  const pendientes = visibles
+    .map(it => recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado))
+    .filter(r => r && r.stockFisico !== "" && r.stockFisico !== null && !r.guardado);
+  if (pendientes.length === 0) {
+    mostrarBannerInv("fallo", "No hay artículos con Físico cargado (sin confirmar) en la vista actual.");
+    return;
+  }
+  if (!confirm("¿Confirmar y guardar en Google Sheets " + pendientes.length + " artículo(s) visibles?")) return;
+  try {
+    const resp = await fetchInv(WEB_APP_URL + "?action=registrarRecuento", {
+      method: "POST",
+      body: JSON.stringify({ usuario: usuarioActual, items: pendientes }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      pendientes.forEach(p => {
+        p.guardado = true;
+        if (data.claves && data.claves[p.codigoConcatenado]) p.clave = data.claves[p.codigoConcatenado];
+        confirmadosSesion.add(p.codigoConcatenado);
+      });
+      mostrarBannerInv("exito", data.registrados + " artículo(s) confirmados y guardados.");
+      renderizarRecuentoPrincipal();
+      cargarHistorialRecuento();
+    } else {
+      mostrarBannerInv("fallo", "Error al guardar: " + (data.error || "desconocido"));
+    }
+  } catch(e) {
+    mostrarBannerInv("fallo", "Error de conexión al confirmar.");
+  }
+}
+
+// Borra de pantalla Y de Sheets todos los artículos visibles que tengan
+// Físico cargado (respeta filtros activos).
+async function borrarTodo() {
+  const visibles = aplicarFiltrosRecuento(null);
+  const conFisico = visibles.filter(it => recuentoActual.some(r => r.codigoConcatenado === it.codigoConcatenado));
+  if (conFisico.length === 0) {
+    mostrarBannerInv("fallo", "No hay artículos con Físico cargado en la vista actual.");
+    return;
+  }
+  if (!confirm("¿Borrar de pantalla y de Google Sheets " + conFisico.length + " artículo(s) visibles con Físico cargado?")) return;
+  // Borrar en Sheets los que ya estaban guardados
+  const yaGuardados = conFisico.filter(it => {
+    const r = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
+    return r && (r.guardado || r.clave);
+  });
+  for (const it of yaGuardados) {
+    try {
+      await fetchInv(WEB_APP_URL + "?action=eliminarRecuento&codigoConcatenado=" + encodeURIComponent(it.codigoConcatenado));
+    } catch(e) { /* silencioso */ }
+  }
+  // Limpiar estado local
+  conFisico.forEach(it => {
+    recuentoActual = recuentoActual.filter(r => r.codigoConcatenado !== it.codigoConcatenado);
+    confirmadosSesion.delete(it.codigoConcatenado);
+  });
+  mostrarBannerInv("exito", conFisico.length + " artículo(s) borrados.");
+  renderizarRecuentoPrincipal();
+}
+
+// Exporta el recuento actual a un archivo Excel (.xlsx) usando SheetJS,
+// que es directamente apto para cargar en Bejerman sin conversiones.
+function exportarRecuentoXLSX() {
+  if (recuentoActual.length === 0) { mostrarBannerInv("fallo", "No hay artículos en el recuento para exportar."); return; }
+  try {
+    const filas = [["Codigo", "Descripcion", "Stock Teorico", "Stock Fisico", "Diferencia", "Observacion"]];
+    recuentoActual.forEach(r => {
+      const dif = Number(r.stockFisico) - Number(r.stockTeorico);
+      filas.push([r.codigoConcatenado, r.descripcion, r.stockTeorico, r.stockFisico, dif, r.observacion || ""]);
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(filas);
+    // Ancho de columnas razonable
+    ws["!cols"] = [{ wch: 20 }, { wch: 40 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 30 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Recuento");
+    const fecha = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, "Recuento_" + fecha + ".xlsx");
+    mostrarBannerInv("exito", "Archivo Excel exportado correctamente.");
+  } catch(e) {
+    mostrarBannerInv("fallo", "Error al exportar: " + e.message + ". Asegurá de tener conexión (necesita la librería SheetJS).");
+  }
 }
 
 function exportarRecuentoCSV() {
