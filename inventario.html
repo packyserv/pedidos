@@ -2276,7 +2276,7 @@ function renderizarRecuentoPrincipal() {
       + " oninput='actualizarFisicoRecInline(" + idxReal + ",this.value,false)'"
       + " onchange='actualizarFisicoRecInline(" + idxReal + ",this.value,true)'"
       + " onfocus='this.value=this.dataset.raw||\"\"'"
-      + " onkeydown='if(event.key===\"Enter\"){actualizarFisicoRecInline(" + idxReal + ",this.value,true);this.blur();}'>"
+      + " onkeydown='if(event.key===\"Enter\"){this.blur();}'>"
       + "<button type='button' class='btn-fisico' onclick='abrirModalCantidadFisica(" + idxReal + ",\"sumar\")'>+</button>";
 
     if (modoCard) {
