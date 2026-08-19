@@ -2302,7 +2302,7 @@ function renderizarRecuentoPrincipal() {
       return "<div class='rc-card'>"
         + "<div class='rc-top'>"
           + "<div><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " · " + it.ancho + "x" + it.largo + " " + it.micColor + "</small>"
-          + "<div class='rc-badges'>" + claseBadge + " " + estRecBadge + "</div></div>"
+          + "<div class='rc-badges'>" + claseBadge + " <span id='estadoRec-" + idxReal + "'>" + estRecBadge + "</span></div></div>"
           + "<button type='button' class='lote-toggle-rec' id='loteToggleBtn-" + idxReal + "' title='Ver / contar lotes' onclick='toggleLotesRecuento(\"" + filId + "\"," + idxReal + ",this)'>+</button>"
         + "</div>"
         + "<div class='rc-datos'><span>Teórico</span><b>" + formatoNumRec(teorico) + "</b></div>"
@@ -2316,7 +2316,7 @@ function renderizarRecuentoPrincipal() {
 
     return "<tr>"
       + "<td><button type='button' class='lote-toggle-rec' id='loteToggleBtn-" + idxReal + "' title='Ver / contar lotes' onclick='toggleLotesRecuento(\"" + filId + "\"," + idxReal + ",this)'>+</button></td>"
-      + "<td style='min-width:170px'><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " · " + it.ancho + "x" + it.largo + " " + it.micColor + "</small><br>" + estRecBadge + "</td>"
+      + "<td style='min-width:170px'><b>" + it.descripcion + "</b><br><small style='color:#888'>" + it.codItem + " · " + it.ancho + "x" + it.largo + " " + it.micColor + "</small><br><span id='estadoRec-" + idxReal + "'>" + estRecBadge + "</span></td>"
       + "<td>" + claseBadge + "</td>"
       + "<td style='text-align:right;font-weight:700'>" + formatoNumRec(teorico) + "</td>"
       + "<td style='text-align:center'><div style='display:flex;align-items:center;justify-content:center;gap:6px'>" + fisicoBtns + "</div></td>"
@@ -2536,7 +2536,18 @@ async function confirmarConteoIndividual(idxReal) {
       if (data.claves && data.claves[it.codigoConcatenado]) entrada.clave = data.claves[it.codigoConcatenado];
       confirmadosSesion.add(it.codigoConcatenado);
       mostrarBannerInv("exito", "Confirmado: " + it.descripcion);
-      renderizarRecuentoPrincipal();
+      // Actualizacion liviana y puntual (en vez de renderizarRecuentoPrincipal
+      // completo) para no perder el desglose de lotes que el usuario pueda
+      // tener abierto en pantalla.
+      const estadoCell = document.getElementById("estadoRec-" + idxReal);
+      if (estadoCell) {
+        const estRec = estadoRecuentoInfo(it.codigoConcatenado);
+        estadoCell.innerHTML = estRec.status === "nunca" ? "<span class='badge-nuncacontado'>" + estRec.texto + "</span>"
+          : estRec.status === "vencido" ? "<span class='badge-vencido'>" + estRec.texto + "</span>"
+          : "<span class='badge-aldia'>" + estRec.texto + "</span>";
+      }
+      const confirmCell = document.getElementById("confirmarRec-" + idxReal);
+      if (confirmCell) confirmCell.innerHTML = htmlAccionesRec(idxReal, true, true, modoRecuentoCompacto());
       cargarHistorialRecuento();
     } else {
       mostrarBannerInv("fallo", "Error al confirmar: " + (data.error || "desconocido"));
