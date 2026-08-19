@@ -443,6 +443,14 @@
 
   <div class="panel" id="panelAlertas">
     <div class="resumen-alertas" id="resumenAlertas"></div>
+    <div class="card" style="border:2px solid var(--verde)">
+      <div class="con-info">
+        <h2 style="color:var(--verde);margin:0;padding:0;border:none">🎯 Fill Rate — pedidos sin quiebre de stock</h2>
+        <button class="info-btn" onclick="mostrarInfo(event, '% de líneas de pedido que, al momento de cargarse, tenían stock propio suficiente para cubrir la cantidad pedida (sin necesitar V2/backorder).\n\nSolo cuentan los pedidos cargados desde que se activó esta función — los pedidos anteriores no tienen este dato guardado y no afectan el cálculo.\n\nEl detalle por vendedor muestra primero los que tienen el Fill Rate más bajo, para priorizar dónde hay más quiebres.')">i</button>
+      </div>
+      <div id="fillRateResumen" style="font-size:13px;color:var(--gris-texto)">Cargando...</div>
+      <div id="fillRatePorVendedor" style="margin-top:12px;font-size:13px;color:var(--gris-texto);overflow-x:auto"></div>
+    </div>
     <div class="card" style="border:2px solid var(--azul)">
       <div class="con-info">
         <h2 style="color:var(--azul);margin:0;padding:0;border:none">🔄 Recuento cíclico — qué contar hoy</h2>
@@ -1898,6 +1906,58 @@ function irAContarArticulo(codigoConcatenado) {
   }, 150);
 }
 
+let fillRateCargado = false;
+async function cargarFillRate() {
+  const cont = document.getElementById("fillRateResumen");
+  if (cont) cont.textContent = "Cargando...";
+  try {
+    const resp = await fetchInv(WEB_APP_URL + "?action=fillRate&_ts=" + Date.now());
+    const data = await resp.json();
+    fillRateCargado = true;
+    renderizarFillRate(data);
+  } catch (e) {
+    if (cont) cont.innerHTML = "<span style='color:var(--rojo)'>Error al cargar el Fill Rate.</span>";
+  }
+}
+function renderizarFillRate(data) {
+  const cont = document.getElementById("fillRateResumen");
+  const contVend = document.getElementById("fillRatePorVendedor");
+  if (!cont) return;
+
+  if (data.error) {
+    cont.innerHTML = "<span style='color:var(--gris-texto)'>" + data.error + "</span>";
+    if (contVend) contVend.innerHTML = "";
+    return;
+  }
+  if (data.total === 0) {
+    cont.innerHTML = "<span style='color:var(--gris-texto)'>Todavía no hay pedidos nuevos con este dato. Se va a ir completando a medida que se carguen pedidos.</span>";
+    if (contVend) contVend.innerHTML = "";
+    return;
+  }
+
+  const colorPct = data.fillRatePct >= 90 ? "var(--verde)" : data.fillRatePct >= 75 ? "var(--naranja)" : "var(--rojo)";
+  cont.innerHTML =
+    "<div style='display:flex;align-items:baseline;gap:10px;flex-wrap:wrap'>"
+    + "<span style='font-size:32px;font-weight:800;color:" + colorPct + "'>" + data.fillRatePct + "%</span>"
+    + "<span>" + data.cubiertas.toLocaleString("es-AR") + " de " + data.total.toLocaleString("es-AR") + " línea(s) de pedido cubiertas con stock propio</span>"
+    + "</div>";
+
+  if (contVend && data.porVendedor && data.porVendedor.length > 0) {
+    let tabla = "<table><thead><tr><th>Vendedor</th><th style='text-align:right'>Fill Rate</th><th style='text-align:right'>Cubiertas</th><th style='text-align:right'>Total líneas</th></tr></thead><tbody>";
+    data.porVendedor.forEach(v => {
+      const color = v.fillRatePct >= 90 ? "var(--verde)" : v.fillRatePct >= 75 ? "var(--naranja)" : "var(--rojo)";
+      tabla += "<tr><td>" + v.vendedor + "</td>"
+        + "<td style='text-align:right;font-weight:700;color:" + color + "'>" + v.fillRatePct + "%</td>"
+        + "<td style='text-align:right'>" + v.cubiertas + "</td>"
+        + "<td style='text-align:right'>" + v.total + "</td></tr>";
+    });
+    tabla += "</tbody></table>";
+    contVend.innerHTML = tabla;
+  } else if (contVend) {
+    contVend.innerHTML = "";
+  }
+}
+
 function renderizarAlertas() {
   const sinStock = DATOS_INV.filter(it => it.stockDisponible <= 0);
   const bajoMin = DATOS_INV.filter(it => {
@@ -2083,6 +2143,7 @@ function cambiarTab(tab) {
   });
   if (tab === "movimientos" && historialMovActual.length === 0) cargarHistorialMovimientos();
   if (tab === "alertas" && !cicloConteoCargado) cargarCicloConteo();
+  if (tab === "alertas" && !fillRateCargado) cargarFillRate();
   if (tab === "recuento") {
     if (!cicloConteoCargado) cargarCicloConteo();
     renderizarRecuentoPrincipal();

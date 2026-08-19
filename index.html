@@ -3713,6 +3713,21 @@ document.getElementById('btnConfirmar').addEventListener('click', () => {
 });
 
 /* ---------- Resumen de confirmación antes de enviar (evita envíos por error) ---------- */
+// Devuelve el stock disponible (StockUnidades) de un item del carrito, o
+// null si el articulo no se encuentra en el indice de stock. Se usa tanto
+// para la alerta de "supera el stock disponible" como para registrar, en
+// cada pedido, si la linea quedo cubierta con stock propio (Fill Rate).
+function buscarStockDisponibleItem(it) {
+  const cc = (it.ancho && it.largo && it.micColor
+    ? Object.keys(INDICE_STOCK).find(k => {
+        const a = INDICE_ARTICULOS[k];
+        return a && a.CodItem.trim() === it.codItem && a.Ancho === it.ancho && a.Largo === it.largo && a.MicColor === it.micColor;
+      })
+    : null) || DATOS.articulos.find(a => a.CodItem.trim()===it.codItem && a.Ancho===it.ancho && a.Largo===it.largo && a.MicColor===it.micColor)?.CodigoConcatenado;
+  const st = INDICE_STOCK[cc];
+  return st ? Number(st.StockUnidades || 0) : null;
+}
+
 function mostrarResumenConfirmacion() {
   const vendedorSel = document.getElementById('vendedor');
   const moneda = document.getElementById('monedaCarga').value || 'ARS';
@@ -3759,13 +3774,8 @@ function mostrarResumenConfirmacion() {
 
   // Validacion de stock al confirmar (#9)
   const itemsSinStock = carrito.filter(it => {
-    const st = INDICE_STOCK[it.ancho && it.largo && it.micColor
-      ? Object.keys(INDICE_STOCK).find(k => {
-          const a = INDICE_ARTICULOS[k];
-          return a && a.CodItem.trim() === it.codItem && a.Ancho === it.ancho && a.Largo === it.largo && a.MicColor === it.micColor;
-        })
-      : null] || INDICE_STOCK[DATOS.articulos.find(a => a.CodItem.trim()===it.codItem && a.Ancho===it.ancho && a.Largo===it.largo && a.MicColor===it.micColor)?.CodigoConcatenado];
-    return st && Number(st.StockUnidades || 0) < it.cantidad;
+    const stockDisp = buscarStockDisponibleItem(it);
+    return stockDisp !== null && stockDisp < it.cantidad;
   });
 
   const alertaStock = itemsSinStock.length > 0
@@ -3829,6 +3839,19 @@ async function enviarPedidoConfirmado() {
 
   const facturacionPedido = obtenerFacturacionActual();
 
+  // Enriquecemos cada linea con el stock disponible AL MOMENTO del pedido y
+  // si quedo cubierta con stock propio -- esto es lo que despues permite
+  // calcular el Fill Rate real (cantidad pedida vs. stock disponible en
+  // ese instante, no el stock actual que ya pudo haber cambiado).
+  const itemsParaEnviar = carrito.map(it => {
+    const stockDisp = buscarStockDisponibleItem(it);
+    return {
+      ...it,
+      stockDisponibleAlPedido: stockDisp,
+      cubierto: stockDisp !== null ? stockDisp >= it.cantidad : null,
+    };
+  });
+
   const payload = {
     vendedor: vendedorSel.options[vendedorSel.selectedIndex].textContent,
     codVendedor: vendedorSel.value,
@@ -3852,7 +3875,7 @@ async function enviarPedidoConfirmado() {
     nombreFantasia: document.getElementById('nombreFantasia').value.trim(),
     descuentoGlobalPct: valorPorcentaje('descuentoGlobal'),
     motivoDescuentoGlobal: motivoDescuentoGlobal,
-    items: carrito,
+    items: itemsParaEnviar,
     ordenCompra: archivosAdjuntos.ordenCompra,
     anexos: archivosAdjuntos.anexos,
   };
