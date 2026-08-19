@@ -2486,9 +2486,10 @@ async function confirmarConteoIndividual(idxReal) {
   // no tener el valor mas reciente todavia.
   const inputEl = document.getElementById("fisicoRec-" + idxReal);
   if (inputEl && inputEl.value !== "") {
+    const valorReal = inputEl.dataset.raw !== undefined && inputEl.dataset.raw !== "" ? inputEl.dataset.raw : inputEl.value;
     const entradaPrevia = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
-    if (!entradaPrevia || String(entradaPrevia.stockFisico) !== String(inputEl.value)) {
-      agregarAlRecuento(it, Number(inputEl.value), entradaPrevia ? entradaPrevia.observacion : "");
+    if (!entradaPrevia || String(entradaPrevia.stockFisico) !== String(valorReal)) {
+      agregarAlRecuento(it, Number(valorReal), entradaPrevia ? entradaPrevia.observacion : "");
     }
   }
   const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
