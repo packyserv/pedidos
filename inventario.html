@@ -2464,7 +2464,14 @@ function actualizarFisicoRecInline(idx, valor, commit) {
   }
 
   if (valor === "") {
+    const entradaPrevia = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
+    if (entradaPrevia?.clave) {
+      // Ya estaba guardado en Sheets -- lo borramos alla tambien
+      fetchInv(WEB_APP_URL + "?action=eliminarRecuento&clave=" + encodeURIComponent(entradaPrevia.clave))
+        .catch(() => {}); // silencioso: no interrumpe la UI si falla
+    }
     recuentoActual = recuentoActual.filter(r => r.codigoConcatenado !== it.codigoConcatenado);
+    confirmadosSesion.delete(it.codigoConcatenado);
   } else if (Number(valor) >= 0) {
     const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
     agregarAlRecuento(it, Number(valor), entrada ? entrada.observacion : "");
@@ -2525,6 +2532,7 @@ async function confirmarConteoIndividual(idxReal) {
     const data = await resp.json();
     if (data.ok) {
       entrada.guardado = true;
+      if (data.claves && data.claves[it.codigoConcatenado]) entrada.clave = data.claves[it.codigoConcatenado];
       confirmadosSesion.add(it.codigoConcatenado);
       mostrarBannerInv("exito", "Confirmado: " + it.descripcion);
       renderizarRecuentoPrincipal();
@@ -2538,12 +2546,27 @@ async function confirmarConteoIndividual(idxReal) {
 }
 
 // Boton Borrar de un articulo: deja el campo Fisico completamente vacio (no
-// contado). Si ya estaba confirmado localmente, tambien lo desconfirma --
-// OJO: esto no borra la fila ya guardada en la hoja "Recuentos" de Sheets,
-// solo limpia el estado local en pantalla.
-function borrarConteoIndividual(idxReal) {
+// contado). Si el conteo ya estaba guardado en Sheets (tiene "clave"),
+// tambien borra esa fila de la hoja "Recuentos" en el servidor.
+async function borrarConteoIndividual(idxReal) {
   const it = DATOS_INV[idxReal];
   if (!it) return;
+  const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
+  const clave = entrada?.clave;
+
+  // Si estaba guardado en Sheets, borramos esa fila tambien en el servidor.
+  if (clave) {
+    try {
+      const resp = await fetchInv(WEB_APP_URL + "?action=eliminarRecuento&clave=" + encodeURIComponent(clave));
+      const data = await resp.json();
+      if (!data.ok) {
+        mostrarBannerInv("fallo", "No se pudo borrar de Sheets: " + (data.error || "desconocido") + ". Se borró igual en pantalla.");
+      }
+    } catch (e) {
+      mostrarBannerInv("fallo", "Error de conexión al borrar de Sheets. Se borró igual en pantalla.");
+    }
+  }
+
   recuentoActual = recuentoActual.filter(r => r.codigoConcatenado !== it.codigoConcatenado);
   confirmadosSesion.delete(it.codigoConcatenado);
 
@@ -2559,7 +2582,7 @@ function borrarConteoIndividual(idxReal) {
   const idxVisibles = Array.from(document.querySelectorAll("#cuerpoRecuentoPrincipal input.input-fisico-rec, #wrapCardsRecuento input.input-fisico-rec"))
     .map(i => Number(i.id.replace("fisicoRec-", "")));
   renderizarResumenRecuento(idxVisibles.map(i => DATOS_INV[i]).filter(Boolean));
-  mostrarBannerInv("exito", "Se borró el conteo de: " + it.descripcion);
+  mostrarBannerInv("exito", clave ? "Borrado de pantalla y de Google Sheets: " + it.descripcion : "Se borró el conteo de: " + it.descripcion);
 }
 
 // --- Lotes expandibles dentro de Recuento (+/- por artículo) ---
@@ -2815,9 +2838,10 @@ async function guardarRecuentoEnSheet() {
       mostrarBannerInv("exito", data.registrados + " item(s) guardados en Google Sheets (hoja Recuentos).");
       pendientes.forEach(p => confirmadosSesion.add(p.codigoConcatenado));
       recuentoActual = [];
-      renderizarRecuentoPrincipal();
       cargarHistorialRecuento();
       cargarCicloConteo(); // refresca "Nunca Contado" / "A Recontar" ya que se acaba de contar
+      await cargarRecuentosHoy(); // repuebla recuentoActual con las claves de Sheets (para poder Borrar despues)
+      renderizarRecuentoPrincipal();
     } else {
       mostrarBannerInv("fallo", "Error al guardar: " + (data.error || "desconocido"));
     }
