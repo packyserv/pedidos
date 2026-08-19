@@ -1373,7 +1373,7 @@ async function cargarRecuentosHoy() {
         huboNuevos = true;
       }
     });
-    if (huboNuevos && document.getElementById("panelRecuento")?.classList.contains("activo")) {
+    if (huboNuevos && lotesAbiertos.size === 0 && document.getElementById("panelRecuento")?.classList.contains("activo")) {
       renderizarRecuentoPrincipal();
     }
   } catch(e) {
@@ -3134,6 +3134,7 @@ window.addEventListener("resize", () => {
     const activo = document.activeElement;
     const escribiendo = activo && (activo.id?.startsWith("fisicoRec-") || activo.classList?.contains("input-fisico-lote"));
     if (escribiendo) return;
+    if (lotesAbiertos.size > 0) return;
     const modoActual = modoRecuentoCompacto();
     if (modoActual !== modoRecuentoCompactoPrevio) {
       modoRecuentoCompactoPrevio = modoActual;
@@ -3160,6 +3161,13 @@ async function refrescarDatosSilencioso() {
     activo.id?.startsWith("fisicoRec-") || activo.classList?.contains("input-fisico-lote")
   );
   if (escribiendo) return;
+
+  // Mientras haya algun panel de lotes desplegado, el refresco se pausa por
+  // completo -- el usuario puede estar cargando varios lotes con pausas
+  // entre uno y otro (no siempre con foco activo), y reconstruir el panel
+  // a mitad de esa carga lo hacia parpadear/cerrarse solo. Se retoma solo
+  // cuando el usuario colapsa el panel el mismo.
+  if (lotesAbiertos.size > 0) return;
 
   try {
     const scrollY = window.scrollY;
