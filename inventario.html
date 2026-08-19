@@ -258,6 +258,15 @@
             <div class="filtro-custom-opcion" data-val="v2" onclick="seleccionarFC('fcEstado','v2','⚠ V2 pendiente',event)">⚠ V2 pendiente</div>
           </div>
         </div>
+        <div class="filtro-custom" id="fcMovimiento">
+          <button class="filtro-custom-trigger" type="button" id="fcMovimientoTrig" onclick="toggleFiltroCustom('fcMovimiento')" onkeydown="teclasFC(event,'fcMovimiento')">Movimiento</button>
+          <div class="filtro-custom-lista" id="fcMovimientoLista">
+            <input class="filtro-custom-buscar" type="text" placeholder="Buscar..." oninput="filtrarOpciones('fcMovimiento',this.value)" onkeydown="teclasFC(event,'fcMovimiento')">
+            <div class="filtro-custom-opcion seleccionada" data-val="" onclick="seleccionarFC('fcMovimiento','','Movimiento',event)">Todos</div>
+            <div class="filtro-custom-opcion" data-val="slow" onclick="seleccionarFC('fcMovimiento','slow','🐌 Slow-moving (sin venta 6+ meses)',event)">🐌 Slow-moving (sin venta 6+ meses)</div>
+            <div class="filtro-custom-opcion" data-val="dead" onclick="seleccionarFC('fcMovimiento','dead','💀 Dead Stock (sin venta 12+ meses)',event)">💀 Dead Stock (sin venta 12+ meses)</div>
+          </div>
+        </div>
         <div class="filtro-custom" id="fcABC">
           <button class="filtro-custom-trigger" type="button" id="fcABCTrig" onclick="toggleFiltroCustom('fcABC')" onkeydown="teclasFC(event,'fcABC')">Clase ABC</button>
           <div class="filtro-custom-lista" id="fcABCLista">
@@ -896,7 +905,7 @@ let DATOS_INV = [];
 let articuloMovSeleccionado = null;
 let tipoMovActual = "entrada";
 let ordenActual = { col: "", asc: true }; // "" = orden por impacto por defecto
-let FILTROS_ACTIVOS = { estado: [], abc: [], xyz: [], proveedor: [], tipo: "todos" };
+let FILTROS_ACTIVOS = { estado: [], abc: [], xyz: [], proveedor: [], movimiento: [], tipo: "todos" };
 let FILTROS_ACTIVOS_REC = { categoria: [], abc: [], estadoRec: [], ancho: [], largo: [], mic: [], tipo: "todos" };
 let usuarioActual = "";
 let articuloMinimoActual = null;
@@ -928,6 +937,7 @@ const FC_CONFIG = {
   fcABC:    { key: "abc",    label: "Clase ABC" },
   fcXYZ:    { key: "xyz",    label: "Variabilidad XYZ" },
   fcProv:   { key: "proveedor", label: "Proveedor" },
+  fcMovimiento: { key: "movimiento", label: "Movimiento" },
   fcRecABC:      { key: "abc",       label: "Clase ABC",           activos: () => FILTROS_ACTIVOS_REC, render: () => refrescarRecuentoConCascada() },
   fcRecEstado:   { key: "estadoRec", label: "Estado de recuento",  activos: () => FILTROS_ACTIVOS_REC, render: () => refrescarRecuentoConCascada() },
   fcRecCategoria:{ key: "categoria", label: "Categoría",           activos: () => FILTROS_ACTIVOS_REC, render: () => refrescarRecuentoConCascada() },
@@ -1385,6 +1395,27 @@ async function recargarDatos() { DATOS_INV = []; cargarDatosInv(); }
 // --- Dashboard resumen (arriba del panel de Stock) ---
 const DIAS_ESTANCADO_6M = 180; // 6 meses sin venta
 const DIAS_ESTANCADO_12M = 365; // 12 meses sin venta (subconjunto mas critico dentro del de 6M)
+// Atajo desde las tarjetas del dashboard: aplica el filtro Movimiento
+// (Slow-moving o Dead Stock) y salta directo al listado, ya ordenado por
+// valor inmovilizado descendente.
+function irAMovimiento(tipo) {
+  FILTROS_ACTIVOS.movimiento = [tipo];
+  const trig = document.getElementById("fcMovimientoTrig");
+  document.querySelectorAll("#fcMovimientoLista .filtro-custom-opcion").forEach(op => {
+    op.classList.toggle("seleccionada", op.dataset.val === tipo);
+  });
+  if (trig) {
+    const label = tipo === "dead" ? "💀 Dead Stock" : "🐌 Slow-moving";
+    trig.textContent = label;
+    trig.classList.add("tiene-filtro");
+  }
+  cambiarTab("stock");
+  renderizarTabla();
+  setTimeout(() => {
+    document.getElementById("panelStock")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 100);
+}
+
 function renderizarDashboard() {
   const cont = document.getElementById("dashboardStock");
   if (!cont) return;
@@ -1426,10 +1457,10 @@ function renderizarDashboard() {
   if (valorInmovilizadoARS > 0) {
     html += "<div class='stat-box'><button class='info-btn' onclick=\"mostrarInfo(event, 'Valor total del stock que tenés en depósito, calculado como: cantidad de cada artículo × su costo unitario de compra.\\n\\nEs plata que está inmovilizada en mercadería en vez de circulando en el negocio.')\">i</button><div class='num' style='color:var(--azul)'>" + formatoCompacto(valorInmovilizado, moneda) + "</div><div class='lab'>Valor inmovilizado" + etiqMoneda + "</div></div>";
     if (valorEstancado6mARS > 0) {
-      html += "<div class='stat-box' style='border-color:var(--naranja)'><button class='info-btn' onclick=\"mostrarInfo(event, 'Parte del Valor inmovilizado que corresponde a artículos SIN venta en los últimos 6 meses (o que nunca se vendieron).\\n\\nEs la porción de plata parada con riesgo: no solo está inmovilizada, sino que además no está rotando. Candidatos a revisar antes de que empeore.')\">i</button><div class='num' style='color:var(--naranja)'>" + formatoCompacto(valorEstancado6m, moneda) + "</div><div class='lab'>↳ Estancado 6M (sin venta 6+ meses)</div></div>";
+      html += "<div class='stat-box' style='border-color:var(--naranja);cursor:pointer' onclick=\"irAMovimiento('slow')\" title='Tocá para ver el listado completo'><button class='info-btn' onclick=\"mostrarInfo(event, 'Parte del Valor inmovilizado que corresponde a artículos SIN venta en los últimos 6 meses (o que nunca se vendieron).\\n\\nEs la porción de plata parada con riesgo: no solo está inmovilizada, sino que además no está rotando. Candidatos a revisar antes de que empeore.\\n\\nTocá la tarjeta para ver el listado completo, ordenado por valor.')\">i</button><div class='num' style='color:var(--naranja)'>" + formatoCompacto(valorEstancado6m, moneda) + "</div><div class='lab'>↳ Estancado 6M (sin venta 6+ meses)</div></div>";
     }
     if (valorEstancado12mARS > 0) {
-      html += "<div class='stat-box' style='border-color:var(--rojo)'><button class='info-btn' onclick=\"mostrarInfo(event, 'Parte del Valor inmovilizado que corresponde a artículos SIN venta en los últimos 12 meses (o que nunca se vendieron).\\n\\nEs el subconjunto MÁS crítico dentro del Estancado 6M: llevan un año entero sin rotar. Son los primeros candidatos a liquidar, promocionar o dar de baja definitivamente.')\">i</button><div class='num' style='color:var(--rojo)'>" + formatoCompacto(valorEstancado12m, moneda) + "</div><div class='lab'>↳ Estancado 12M (sin venta 12+ meses)</div></div>";
+      html += "<div class='stat-box' style='border-color:var(--rojo);cursor:pointer' onclick=\"irAMovimiento('dead')\" title='Tocá para ver el listado completo'><button class='info-btn' onclick=\"mostrarInfo(event, 'Parte del Valor inmovilizado que corresponde a artículos SIN venta en los últimos 12 meses (o que nunca se vendieron).\\n\\nEs el subconjunto MÁS crítico dentro del Estancado 6M: llevan un año entero sin rotar. Son los primeros candidatos a liquidar, promocionar o dar de baja definitivamente.\\n\\nTocá la tarjeta para ver el listado completo, ordenado por valor.')\">i</button><div class='num' style='color:var(--rojo)'>" + formatoCompacto(valorEstancado12m, moneda) + "</div><div class='lab'>↳ Estancado 12M (sin venta 12+ meses)</div></div>";
     }
     html += "<div class='stat-box'><button class='info-btn' onclick=\"mostrarInfo(event, 'Cuánto te cuesta por mes tener esa plata parada en stock, en vez de invertida o disponible.\\n\\nSe calcula como: Valor inmovilizado x tasa mensual de referencia (" + (TASA_MENSUAL*100).toFixed(1) + "%). Es el costo de oportunidad del capital atado al inventario.')\">i</button><div class='num' style='color:var(--rojo)'>" + formatoCompacto(costoFinanciero, moneda) + "</div><div class='lab'>Costo financiero / mes (" + (TASA_MENSUAL*100).toFixed(1) + "%)</div></div>";
   }
@@ -1469,6 +1500,7 @@ function valorOrden(it, col) {
     case "minDias": return Number(it.stockMinimoDias) || 0;
     case "diasDeStock": return Number(it.diasDeStock || 0);
     case "frecuenciaReposicionDias": return Number(it.frecuenciaReposicionDias || -1);
+    case "valorInmovilizado": return (Number(it.costoUnitario) || 0) * (Number(it.stockReal) || 0);
     case "estadoOrden": {
       const est = estadoArticulo(it);
       return est === "critico" ? 0 : est === "bajo" ? 1 : 2;
@@ -1487,6 +1519,7 @@ function renderizarTabla() {
   const filtrosABC = FILTROS_ACTIVOS.abc;
   const filtrosXYZ = FILTROS_ACTIVOS.xyz;
   const filtrosProv = FILTROS_ACTIVOS.proveedor;
+  const filtrosMovimiento = FILTROS_ACTIVOS.movimiento;
   const tipoSeleccionado = FILTROS_ACTIVOS.tipo; // "todos","producto","insumo"
 
   let filas = DATOS_INV.filter(it => {
@@ -1497,6 +1530,17 @@ function renderizarTabla() {
     if (filtrosABC.length > 0 && !filtrosABC.includes(it.clasificacionABC)) return false;
     if (filtrosXYZ.length > 0 && !filtrosXYZ.includes(it.clasificacionXYZ)) return false;
     if (filtrosProv.length > 0 && !filtrosProv.includes(it.proveedor || "")) return false;
+    if (filtrosMovimiento.length > 0) {
+      const esInsumo = it.tipo === 'Insumo';
+      const sinVenta6m = it.diasSinVenta === null ? !esInsumo : it.diasSinVenta > DIAS_ESTANCADO_6M;
+      const sinVenta12m = it.diasSinVenta === null ? !esInsumo : it.diasSinVenta > DIAS_ESTANCADO_12M;
+      const pasa = filtrosMovimiento.some(fm => {
+        if (fm === "slow") return sinVenta6m;
+        if (fm === "dead") return sinVenta12m;
+        return true;
+      });
+      if (!pasa) return false;
+    }
     if (filtrosEstado.length > 0) {
       const est = estadoArticulo(it);
       const pasa = filtrosEstado.some(fe => {
@@ -1512,10 +1556,12 @@ function renderizarTabla() {
     return true;
   });
 
-  // Ordenamiento: si no hay columna seleccionada, usar orden por impacto:
-  // crítico A > crítico B > crítico C > bajo A > bajo B > bajo C > ok C > ok B > ok A
+  // Ordenamiento: si no hay columna seleccionada, usar orden por impacto
+  // (o por valor inmovilizado descendente si el filtro Movimiento esta activo).
   const col = ordenActual.col;
-  if (col === "impacto" || col === "") {
+  if ((col === "impacto" || col === "") && filtrosMovimiento.length > 0) {
+    filas.sort((a, b) => valorOrden(b, "valorInmovilizado") - valorOrden(a, "valorInmovilizado"));
+  } else if (col === "impacto" || col === "") {
     const pesoCritico = { A: 0, B: 1, C: 2 };
     const pesoBajo = { A: 3, B: 4, C: 5 };
     const pesoOk = { A: 9, B: 8, C: 7 };
@@ -1556,6 +1602,19 @@ function renderizarTabla() {
     const v2Badge = tieneV2
       ? "<br><button type='button' onclick='irAAjustarV2(\"" + it.codigoConcatenado + "\")' style='background:var(--naranja);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;display:inline-block;margin-top:3px;border:none;cursor:pointer'>⚠ V2: descontar " + it.stockComprometidoV2 + " u. manual</button>"
       : "";
+    // Badge Slow-moving / Dead Stock -- solo si tiene costo y stock (participa
+    // del calculo de valor inmovilizado) y no es insumo.
+    let movimientoBadge = "";
+    if (it.tipo !== "Insumo" && it.costoUnitario && it.stockReal > 0) {
+      const diasTxt = it.diasSinVenta === null ? "nunca vendido" : it.diasSinVenta + "d sin venta";
+      const valorArt = convertirInv(it.costoUnitario * it.stockReal);
+      const valorTxt = valorArt !== null ? formatoCompacto(valorArt, monedaInvActual()) : "";
+      if (it.diasSinVenta === null || it.diasSinVenta > DIAS_ESTANCADO_12M) {
+        movimientoBadge = "<br><span style='background:var(--rojo);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;display:inline-block;margin-top:3px' title='Sin venta hace 12+ meses'>💀 Dead Stock · " + diasTxt + (valorTxt ? " · " + valorTxt : "") + "</span>";
+      } else if (it.diasSinVenta > DIAS_ESTANCADO_6M) {
+        movimientoBadge = "<br><span style='background:var(--naranja);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;display:inline-block;margin-top:3px' title='Sin venta hace 6+ meses'>🐌 Slow-moving · " + diasTxt + (valorTxt ? " · " + valorTxt : "") + "</span>";
+      }
+    }
     // Guardamos el indice real en DATOS_INV para el modal
     const idxReal = DATOS_INV.indexOf(it);
     const colorABC = it.clasificacionABC === "A" ? "var(--rojo)"
@@ -1566,7 +1625,7 @@ function renderizarTabla() {
       ? "<span style='background:" + colorABC + ";color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px' title='" + (it.clasificacionABC === "D" ? "Sin actividad (venta/compra) en los últimos 12 meses" : "ABC: importancia por facturación (A=más alto). XYZ: variabilidad de demanda (X=estable, Z=errática)") + "'>" + it.clasificacionABCXYZ + "</span>"
       : "<span style='color:#ccc;font-size:11px'>-</span>";
     const filId = "lotes-" + idxReal;
-    return "<tr" + filaEstilo + "><td style='min-width:120px'><b>" + it.descripcion + "</b> " + tipoTag + "<br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small>" + v2Badge + "</td>"
+    return "<tr" + filaEstilo + "><td style='min-width:120px'><b>" + it.descripcion + "</b> " + tipoTag + "<br><small style='color:#888'>" + it.codItem + " - " + it.ancho + "x" + it.largo + " " + it.micColor + "</small>" + v2Badge + movimientoBadge + "</td>"
       + "<td>" + claseBadge + "</td>"
       + "<td style='text-align:right;font-weight:700'>" + Number(it.stockReal || 0).toLocaleString("es-AR") + "</td>"
       + "<td style='text-align:right'>" + comp + "</td>"
