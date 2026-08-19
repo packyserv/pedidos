@@ -537,6 +537,7 @@
           <button type="button" class="tipo-check-btn" id="checkRecProductoLbl" onclick="toggleTipoRec('producto')"><input id="checkRecProducto"> 📦 Prod. Terminado</button>
           <button type="button" class="tipo-check-btn" id="checkRecInsumoLbl" onclick="toggleTipoRec('insumo')"><input id="checkRecInsumo"> 🧱 Insumo</button>
         </div>
+        <button type="button" class="btn btn-gris" style="font-size:12px;padding:6px 12px;margin-left:auto" onclick="limpiarFiltrosRecuento()">✕ Mostrar todos</button>
       </div>
 
       <div id="resumenRecuento" style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;background:#eef4fb;border:1px solid var(--gris-borde);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:14px"></div>
@@ -2259,6 +2260,23 @@ function normalizarBusqueda(s) {
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[\s\-_.]/g, "");
+}
+
+// Botón "Mostrar todos" — limpia todos los filtros de Recuento de una vez.
+function limpiarFiltrosRecuento() {
+  FILTROS_ACTIVOS_REC = { categoria: [], abc: [], estadoRec: [], ancho: [], largo: [], mic: [], tipo: "todos" };
+  document.getElementById("buscarRecuento").value = "";
+  // Resetear labels y selecciones de todos los filtros custom de Recuento
+  ["fcRecABC", "fcRecEstado", "fcRecCategoria", "fcRecAncho", "fcRecLargo", "fcRecMic"].forEach(id => {
+    const trig = document.getElementById(id + "Trig");
+    const defaultLabel = FC_CONFIG[id]?.label || "Filtro";
+    if (trig) { trig.textContent = defaultLabel; trig.classList.remove("tiene-filtro"); }
+    document.querySelectorAll("#" + id + "Lista .filtro-custom-opcion").forEach(op => {
+      op.classList.toggle("seleccionada", op.dataset.val === "");
+    });
+  });
+  // Resetear el botón Tipo → Todos
+  toggleTipoRec("todos");
 }
 
 function toggleTipoRec(tipo) {
