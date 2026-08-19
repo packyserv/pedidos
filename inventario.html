@@ -2639,11 +2639,10 @@ function recalcularSumaLotes(idxReal) {
   const span = document.getElementById("sumaLotesRec-" + idxReal);
   if (span) { span.textContent = formatoNumRec(suma); span.dataset.raw = suma; }
   // El Fisico total del articulo se mantiene siempre igual a la suma de sus
-  // lotes contados -- evita que queden desconectados entre si (si se carga
-  // por lote, el total nunca puede ser un numero distinto e inconsistente).
-  if (hayAlgunLote) {
-    actualizarFisicoRecInline(idxReal, String(suma), true);
-  }
+  // lotes contados. Si NINGUN lote tiene valor cargado (todos vacios), el
+  // total tambien queda VACIO (no contado) -- un 0 explicito en un lote si
+  // se suma normalmente (significa "no hay stock", no "no contado").
+  actualizarFisicoRecInline(idxReal, hayAlgunLote ? String(suma) : "", true);
 }
 // Pinta el badge de Status Ajuste de UNA fila de lote (Ajustado/Ajustar/Sin contar).
 function actualizarStatusLote(statusId, valor, teoricoLote) {
