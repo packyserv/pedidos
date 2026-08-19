@@ -2244,12 +2244,21 @@ function renderizarRecuentoPrincipal() {
   const col = ordenRecuentoTabla.col;
   if (!col) {
     const pesoClase = { A: 0, B: 1, C: 2, D: 3 };
-    const pesoEstado = { nunca: 0, vencido: 1, aldia: 2 };
     filas.sort((a, b) => {
-      const ea = estadoRecuentoInfo(a.codigoConcatenado).status, eb = estadoRecuentoInfo(b.codigoConcatenado).status;
-      const pa = (pesoEstado[ea] ?? 2) * 10 + (pesoClase[a.clasificacionABC] ?? 2);
-      const pb = (pesoEstado[eb] ?? 2) * 10 + (pesoClase[b.clasificacionABC] ?? 2);
-      return pa - pb;
+      // 1) Clase (A primero)
+      const pa = pesoClase[a.clasificacionABC] ?? 2;
+      const pb = pesoClase[b.clasificacionABC] ?? 2;
+      if (pa !== pb) return pa - pb;
+
+      // 2) Ajuste descendente (los no contados quedan al final de su clase)
+      const ea = recuentoActual.find(r => r.codigoConcatenado === a.codigoConcatenado);
+      const eb = recuentoActual.find(r => r.codigoConcatenado === b.codigoConcatenado);
+      const ajusteA = ea && ea.stockFisico !== "" ? Number(ea.stockFisico) - Number(a.stockReal || 0) : -Infinity;
+      const ajusteB = eb && eb.stockFisico !== "" ? Number(eb.stockFisico) - Number(b.stockReal || 0) : -Infinity;
+      if (ajusteA !== ajusteB) return ajusteB - ajusteA;
+
+      // 3) Stock Teorico descendente
+      return Number(b.stockReal || 0) - Number(a.stockReal || 0);
     });
   } else {
     filas.sort((a, b) => {
