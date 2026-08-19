@@ -2269,10 +2269,14 @@ function renderizarRecuentoPrincipal() {
     const { ajusteHtml, statusHtml } = calcularAjusteYStatus(fisicoVal, teorico);
     const guardado = entrada && entrada.guardado === true;
     const filId = "lotesRec-" + idxReal;
+    const fisicoValFormateado = fisicoVal !== "" ? formatoNumRec(fisicoVal) : "";
     const fisicoBtns =
       "<button type='button' class='btn-fisico' onclick='abrirModalCantidadFisica(" + idxReal + ",\"restar\")'>−</button>"
-      + "<input type='text' inputmode='decimal' pattern='[0-9]*' min='0' class='input-fisico-rec" + (fisicoVal !== "" ? " tiene-valor" : "") + "' id='fisicoRec-" + idxReal + "' value='" + fisicoVal + "'"
-      + " oninput='actualizarFisicoRecInline(" + idxReal + ",this.value,false)' onchange='actualizarFisicoRecInline(" + idxReal + ",this.value,true)'>"
+      + "<input type='text' inputmode='decimal' pattern='[0-9]*' min='0' data-raw=\"" + fisicoVal + "\" class='input-fisico-rec" + (fisicoVal !== "" ? " tiene-valor" : "") + "' id='fisicoRec-" + idxReal + "' value='" + fisicoValFormateado + "'"
+      + " oninput='actualizarFisicoRecInline(" + idxReal + ",this.value,false)'"
+      + " onchange='actualizarFisicoRecInline(" + idxReal + ",this.value,true)'"
+      + " onfocus='this.value=this.dataset.raw||\"\"'"
+      + " onkeydown='if(event.key===\"Enter\"){actualizarFisicoRecInline(" + idxReal + ",this.value,true);this.blur();}'>"
       + "<button type='button' class='btn-fisico' onclick='abrirModalCantidadFisica(" + idxReal + ",\"sumar\")'>+</button>";
 
     if (modoCard) {
@@ -2366,7 +2370,7 @@ function abrirModalCantidadLote(idxReal, inputId, statusId, teoricoLote, loteLab
   document.getElementById("tituloModalCantFisica").textContent = modo === "restar" ? "Restar cantidad" : "Sumar cantidad";
   document.getElementById("labelModalCantFisica").textContent = modo === "restar" ? "Cantidad a restar" : "Cantidad a sumar";
   const inputLote = document.getElementById(inputId);
-  const actual = inputLote && inputLote.value !== "" ? Number(inputLote.value) : 0;
+  const actual = inputLote && inputLote.dataset.raw ? Number(inputLote.dataset.raw) : (inputLote && inputLote.value !== "" ? Number(inputLote.value) : 0);
   document.getElementById("infoModalCantFisica").innerHTML =
     "Lote <b>" + loteLabel + "</b><br>Físico actual: <b>" + formatoNumRec(actual) + "</b>";
   const input = document.getElementById("inputModalCantFisica");
@@ -2386,9 +2390,10 @@ function confirmarCantidadFisica() {
   if (cantFisicaContexto.tipo === "lote") {
     const input = document.getElementById(cantFisicaContexto.inputId);
     if (input) {
-      const actual = input.value !== "" ? Number(input.value) : 0;
+      const actual = input.dataset.raw ? Number(input.dataset.raw) : (input.value !== "" ? Number(input.value) : 0);
       const nuevo = Math.max(0, actual + delta);
       input.value = nuevo;
+      formatearInputLote(input);
       recalcularSumaLotes(cantFisicaContexto.idxReal);
       actualizarStatusLote(cantFisicaContexto.statusId, String(nuevo), cantFisicaContexto.teoricoLote);
       habilitarConfirmarLote(cantFisicaContexto.inputId.replace("loteFisico-", "loteConfirmar-"), String(nuevo));
@@ -2443,6 +2448,12 @@ function actualizarFisicoRecInline(idx, valor, commit) {
   } else if (Number(valor) >= 0) {
     const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
     agregarAlRecuento(it, Number(valor), entrada ? entrada.observacion : "");
+  }
+  // Reformatear el campo con separador de miles (queda legible al no estar en edicion),
+  // guardando el valor real en data-raw para que el proximo foco lo recupere sin ambiguedad.
+  if (inputEl) {
+    inputEl.value = valor === "" ? "" : formatoNumRec(Number(valor));
+    inputEl.dataset.raw = valor;
   }
   // Solo refrescamos el resumen (liviano) para no perder el foco de otros campos abiertos.
   const idxVisibles = Array.from(document.querySelectorAll("#cuerpoRecuentoPrincipal input.input-fisico-rec, #wrapCardsRecuento input.input-fisico-rec"))
@@ -2548,7 +2559,9 @@ async function toggleLotesRecuento(filId, idxReal, btn) {
           + "<button type='button' class='btn-fisico' style='width:32px;height:32px;font-size:16px' onclick='abrirModalCantidadLote(" + idxReal + ",\"" + inputId + "\",\"" + statusId + "\"," + teoricoLote + ",\"" + pEsc + "\",\"restar\")'>−</button>"
           + "<input type='text' inputmode='decimal' pattern='[0-9]*' min='0' data-lote=\"" + pEsc + "\" class='input-fisico-lote' id='" + inputId + "'"
           + " style='width:80px;text-align:center;padding:5px;font-size:14px;border:1px solid var(--gris-borde);border-radius:6px'"
-          + " onchange='recalcularSumaLotes(" + idxReal + "); actualizarStatusLote(\"" + statusId + "\", this.value, " + teoricoLote + "); habilitarConfirmarLote(\"" + confirmId + "\", this.value)'>"
+          + " onchange='var _raw=this.value; formatearInputLote(this); recalcularSumaLotes(" + idxReal + "); actualizarStatusLote(\"" + statusId + "\", _raw, " + teoricoLote + "); habilitarConfirmarLote(\"" + confirmId + "\", _raw)'"
+          + " onfocus='this.value=this.dataset.raw||this.value'"
+          + " onkeydown='if(event.key===\"Enter\"){this.blur();}'>"
           + "<button type='button' class='btn-fisico' style='width:32px;height:32px;font-size:16px' onclick='abrirModalCantidadLote(" + idxReal + ",\"" + inputId + "\",\"" + statusId + "\"," + teoricoLote + ",\"" + pEsc + "\",\"sumar\")'>+</button>"
         + "</div></td>"
         + "<td style='padding:6px' id='" + statusId + "'><span class='badge-sincontar'>Sin contar</span></td>"
@@ -2564,11 +2577,22 @@ async function toggleLotesRecuento(filId, idxReal, btn) {
     celda.innerHTML = "<span style='color:var(--rojo);font-size:13px'>Error al cargar los lotes.</span>";
   }
 }
+// Formatea visualmente un input de lote con separador de miles, guardando
+// el valor real en data-raw para que los calculos nunca lean el texto
+// formateado (Number("8.000") se interpretaria mal, como 8).
+function formatearInputLote(input) {
+  if (input.value === "" || isNaN(Number(input.value))) { input.dataset.raw = ""; return; }
+  input.dataset.raw = input.value;
+  input.value = formatoNumRec(Number(input.value));
+}
 function recalcularSumaLotes(idxReal) {
   const fila = document.getElementById("lotesRec-" + idxReal);
   if (!fila) return;
   let suma = 0;
-  fila.querySelectorAll(".input-fisico-lote").forEach(i => { if (i.value !== "") suma += Number(i.value) || 0; });
+  fila.querySelectorAll(".input-fisico-lote").forEach(i => {
+    const v = i.dataset.raw !== undefined && i.dataset.raw !== "" ? i.dataset.raw : i.value;
+    if (v !== "") suma += Number(v) || 0;
+  });
   const span = document.getElementById("sumaLotesRec-" + idxReal);
   if (span) { span.textContent = formatoNumRec(suma); span.dataset.raw = suma; }
 }
@@ -2615,7 +2639,10 @@ function usarSumaLotesEnFisico(idxReal) {
   const fila = document.getElementById("lotesRec-" + idxReal);
   if (fila) {
     const detalles = [];
-    fila.querySelectorAll(".input-fisico-lote").forEach(i => { if (i.value !== "") detalles.push(i.dataset.lote + "=" + i.value); });
+    fila.querySelectorAll(".input-fisico-lote").forEach(i => {
+      const v = i.dataset.raw !== undefined && i.dataset.raw !== "" ? i.dataset.raw : i.value;
+      if (v !== "") detalles.push(i.dataset.lote + "=" + v);
+    });
     const entrada = recuentoActual.find(r => r.codigoConcatenado === it.codigoConcatenado);
     if (entrada && detalles.length) entrada.observacion = "Lotes: " + detalles.join(", ");
   }
@@ -3086,7 +3113,10 @@ async function refrescarDatosSilencioso() {
   if (escribiendo) return;
 
   try {
-    mostrarBannerInv("cargando", "Actualizando datos...");
+    const scrollY = window.scrollY;
+    const contenedorScroll = document.getElementById("wrapTablaRecuento") || document.getElementById("wrapCardsRecuento");
+    const scrollInterno = contenedorScroll ? contenedorScroll.scrollTop : 0;
+
     const resp = await fetchInv(URL_INV + (URL_INV.includes("?") ? "&" : "?") + "_ts=" + Date.now());
     const data = await resp.json();
     DATOS_INV = data.items || [];
@@ -3099,7 +3129,11 @@ async function refrescarDatosSilencioso() {
     renderizarDashboard();
     // Sincronizar recuentos confirmados desde otros dispositivos
     await cargarRecuentosHoy();
-    ocultarBannerInv();
+
+    // Restaurar la posicion de scroll exacta (el re-render puede cambiar
+    // alturas y sin esto la pagina "salta")
+    window.scrollTo(0, scrollY);
+    if (contenedorScroll) contenedorScroll.scrollTop = scrollInterno;
   } catch (e) {
     ocultarBannerInv(); // falla silenciosamente, no molesta al usuario
   }
