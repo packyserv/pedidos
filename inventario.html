@@ -2291,9 +2291,11 @@ function renderizarRecuentoPrincipal() {
       ? "<span style='background:" + colorABC + ";color:#fff;font-size:12px;font-weight:700;padding:3px 8px;border-radius:9px'>" + it.clasificacionABCXYZ + "</span>"
       : "<span style='color:#ccc;font-size:12px'>-</span>";
     const estRec = estadoRecuentoInfo(it.codigoConcatenado);
-    const estRecBadge = estRec.status === "nunca" ? "<span class='badge-nuncacontado'>" + estRec.texto + "</span>"
+    const iconoTipoRec = it.tipo === "Insumo" ? "🧱" : "📦";
+    const estRecBadge = (estRec.status === "nunca" ? "<span class='badge-nuncacontado'>" + estRec.texto + "</span>"
       : estRec.status === "vencido" ? "<span class='badge-vencido'>" + estRec.texto + "</span>"
-      : "<span class='badge-aldia'>" + estRec.texto + "</span>";
+      : "<span class='badge-aldia'>" + estRec.texto + "</span>")
+      + " <span title='" + (it.tipo === "Insumo" ? "Insumo" : "Producto Terminado") + "'>" + iconoTipoRec + "</span>";
     const { ajusteHtml, statusHtml } = calcularAjusteYStatus(fisicoVal, teorico);
     const guardado = entrada && entrada.guardado === true;
     const filId = "lotesRec-" + idxReal;
@@ -2551,9 +2553,11 @@ async function confirmarConteoIndividual(idxReal) {
       const estadoCell = document.getElementById("estadoRec-" + idxReal);
       if (estadoCell) {
         const estRec = estadoRecuentoInfo(it.codigoConcatenado);
-        estadoCell.innerHTML = estRec.status === "nunca" ? "<span class='badge-nuncacontado'>" + estRec.texto + "</span>"
+        const iconoTipoRec = it.tipo === "Insumo" ? "🧱" : "📦";
+        estadoCell.innerHTML = (estRec.status === "nunca" ? "<span class='badge-nuncacontado'>" + estRec.texto + "</span>"
           : estRec.status === "vencido" ? "<span class='badge-vencido'>" + estRec.texto + "</span>"
-          : "<span class='badge-aldia'>" + estRec.texto + "</span>";
+          : "<span class='badge-aldia'>" + estRec.texto + "</span>")
+          + " <span title='" + (it.tipo === "Insumo" ? "Insumo" : "Producto Terminado") + "'>" + iconoTipoRec + "</span>";
       }
       const confirmCell = document.getElementById("confirmarRec-" + idxReal);
       if (confirmCell) confirmCell.innerHTML = htmlAccionesRec(idxReal, true, true, modoRecuentoCompacto());
