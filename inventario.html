@@ -2590,12 +2590,19 @@ function recalcularSumaLotes(idxReal) {
   const fila = document.getElementById("lotesRec-" + idxReal);
   if (!fila) return;
   let suma = 0;
+  let hayAlgunLote = false;
   fila.querySelectorAll(".input-fisico-lote").forEach(i => {
     const v = i.dataset.raw !== undefined && i.dataset.raw !== "" ? i.dataset.raw : i.value;
-    if (v !== "") suma += Number(v) || 0;
+    if (v !== "") { suma += Number(v) || 0; hayAlgunLote = true; }
   });
   const span = document.getElementById("sumaLotesRec-" + idxReal);
   if (span) { span.textContent = formatoNumRec(suma); span.dataset.raw = suma; }
+  // El Fisico total del articulo se mantiene siempre igual a la suma de sus
+  // lotes contados -- evita que queden desconectados entre si (si se carga
+  // por lote, el total nunca puede ser un numero distinto e inconsistente).
+  if (hayAlgunLote) {
+    actualizarFisicoRecInline(idxReal, String(suma), true);
+  }
 }
 // Pinta el badge de Status Ajuste de UNA fila de lote (Ajustado/Ajustar/Sin contar).
 function actualizarStatusLote(statusId, valor, teoricoLote) {
