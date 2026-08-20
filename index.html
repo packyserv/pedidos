@@ -475,7 +475,10 @@
           <li><b>Cantidad promedio:</b> cuántas unidades compra cuando lo pide. <i>Ejemplo: si pidió 100, 120 y 80 unidades → promedio 100 unidades.</i></li>
           <li><b>Importe estimado:</b> cantidad promedio × último precio conocido del artículo.</li>
         </ul>
-        Solo aparecen artículos con al menos 40% de participación y 2 o más compras registradas. Se usan los últimos 12 meses (si hay datos suficientes) o el historial completo si no.<br>
+        Aparecen artículos con 2 o más compras registradas, clasificados en dos niveles:<br>
+        <b>⭐ Recurrente:</b> aparece en el 25% o más de los pedidos.<br>
+        <b>🔸 Ocasional:</b> aparece 2+ veces pero en menos del 25% de los pedidos.<br>
+        Se usan los últimos 12 meses (si hay datos suficientes) o el historial completo si no.<br>
         <small style="color:var(--gris-texto)">⚠ Los precios son de referencia — siempre revisalos antes de confirmar.</small>
       </div>
       <div id="contenidoPrediccion"></div>
@@ -1956,8 +1959,12 @@ function renderizarPrediccion(data) {
     const estiloFila = sinStock ? 'background:#c0392b; color:#fff; font-weight:700;' : '';
     const colorStock = sinStock ? '#fff' : stockSuficiente ? '#2e7d4f' : '#c0392b';
     const boldStock = 'font-weight:700;';
+    const nivelBadge = it.Nivel === "Ocasional"
+      ? `<span style="background:#e67e22;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">🔸 Ocasional</span>`
+      : `<span style="background:#2e7d4f;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">⭐ Recurrente</span>`;
+
     return `<tr style="${estiloFila}">
-      <td style="word-break:break-word">${it.Descripcion}<br><small style="color:${sinStock ? '#ffcccc' : '#888'}">${it.CodItem} · ${it.Ancho}/${it.Largo}/${it.MicColor}</small></td>
+      <td style="word-break:break-word">${it.Descripcion}${nivelBadge}<br><small style="color:${sinStock ? '#ffcccc' : '#888'}">${it.CodItem} · ${it.Ancho}/${it.Largo}/${it.MicColor}</small></td>
       <td style="text-align:center">${participacion}</td>
       <td style="text-align:center">${it.cantidadRedondeada}</td>
       <td style="text-align:right">${importeTexto}</td>
