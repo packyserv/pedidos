@@ -229,6 +229,26 @@
   body.tema-oscuro .info-box .dato b{color:#bcd9f0;}
   .info-box .alerta{color:var(--rojo);font-weight:700;}
   .info-box .ok{color:var(--verde);font-weight:700;}
+  .info-box .dato-bcra{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(0,0,0,.08);margin-top:4px;padding-top:8px;flex-wrap:wrap;gap:6px;}
+  body.tema-oscuro .info-box .dato-bcra{border-top-color:rgba(255,255,255,.1);}
+  .bcra-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:700;}
+  .bcra-sit1{background:#d4edda;color:#155724;}
+  .bcra-sit2{background:#fff3cd;color:#856404;}
+  .bcra-sit3{background:#ffe5cc;color:#7a3e00;}
+  .bcra-sit45{background:#f8d7da;color:#721c24;}
+  .bcra-loading{color:#888;font-size:12px;}
+  .bcra-cheque{font-size:11px;color:var(--rojo);margin-left:4px;}
+  .btn-bcra-detalle{background:none;border:1px solid var(--azul);border-radius:6px;color:var(--azul);font-size:12px;padding:3px 10px;cursor:pointer;white-space:nowrap;}
+  .btn-bcra-detalle:hover{background:var(--azul-claro);}
+  body.tema-oscuro .bcra-sit1{background:#1a3a23;color:#7ecf9a;}
+  body.tema-oscuro .bcra-sit2{background:#3a3010;color:#f5cc5a;}
+  body.tema-oscuro .bcra-sit3{background:#3a2010;color:#f5a05a;}
+  body.tema-oscuro .bcra-sit45{background:#3a1015;color:#f5707a;}
+  .modal-bcra-entidad{display:grid;grid-template-columns:1fr auto auto;gap:4px 10px;align-items:center;padding:7px 0;border-bottom:1px solid #eee;font-size:13px;}
+  .modal-bcra-entidad:last-child{border-bottom:none;}
+  body.tema-oscuro .modal-bcra-entidad{border-bottom-color:#333;}
+  .modal-bcra-resumen{background:var(--azul-claro);border-radius:6px;padding:10px;margin-top:12px;font-size:13px;}
+  body.tema-oscuro .modal-bcra-resumen{background:#1a2a3a;}
   .btn{
     display:inline-flex;
     align-items:center;
@@ -532,6 +552,18 @@
         <button type="button" class="quitar" style="font-size:22px" onclick="cerrarModalUltimaCompra()">✕</button>
       </div>
       <div id="contenidoUltimaCompra"></div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL CENTRAL DE DEUDORES BCRA ============ -->
+  <div id="modalBCRA" style="display:none; position:fixed; inset:0; background:rgba(18,41,63,.55); z-index:50; align-items:center; justify-content:center; padding:16px;" onclick="if(event.target===this)cerrarModalBCRA()">
+    <div style="background:#fff; border-radius:var(--radio); max-width:440px; width:100%; max-height:82vh; overflow-y:auto; padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <h2 style="margin:0; border:none; padding:0; font-size:16px;">🏦 Central de Deudores BCRA</h2>
+        <button type="button" class="quitar" style="font-size:22px" onclick="cerrarModalBCRA()">✕</button>
+      </div>
+      <div id="bcraModalSubtitulo" style="font-size:12px;color:#888;margin-bottom:14px;"></div>
+      <div id="bcraModalContenido"><p style="color:#888;font-size:13px;">Cargando...</p></div>
     </div>
   </div>
 
@@ -1789,8 +1821,34 @@ function seleccionarCliente(c) {
     <div class="dato"><b>Deuda a vencer</b>${formatoMoneda(Number(c.CreditoAVencer || 0))}</div>
     <div class="dato"><b>Ticket promedio</b>${ticketArs ? formatoMoneda(ticketArs) : '-'}${ticketUsd !== null ? ` · U$S ${ticketUsd.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2})}` : ''}</div>
     <div class="dato"><b>Última operación</b>${ultimaArs ? formatoMoneda(ultimaArs) : '-'}${ultimaUsd !== null ? ` · U$S ${ultimaUsd.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2})}` : ''}</div>
+    <div class="dato-bcra">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <b style="font-size:12px;">🏦 BCRA</b>
+        <span id="bcraBadge" class="bcra-loading">Consultando...</span>
+      </div>
+      <button class="btn-bcra-detalle" id="btnBCRADetalle" style="display:none" onclick="abrirModalBCRA()">Ver detalle</button>
+    </div>
   `;
   box.classList.add('visible');
+
+  // Consultar BCRA en segundo plano
+  const cuitConsulta = String(c.Cuit || '').replace(/\D/g,'');
+  if (cuitConsulta.length === 11) {
+    consultarBCRA(cuitConsulta).then(data => {
+      const parsed = parsearBCRA(data);
+      const badgeEl = document.getElementById('bcraBadge');
+      const btnEl = document.getElementById('btnBCRADetalle');
+      if (!badgeEl) return;
+      badgeEl.outerHTML = renderBadgeBCRA(parsed);
+      if (parsed && !parsed.sinDeudas && btnEl) btnEl.style.display = 'inline-block';
+      else if (parsed?.sinDeudas && btnEl) btnEl.style.display = 'none';
+      // Guardar parsed para el modal
+      window._bcraParsedActual = parsed;
+      window._bcraCuitActual = cuitConsulta;
+    });
+  } else {
+    document.getElementById('bcraBadge').textContent = 'CUIT no disponible';
+  }
 }
 
 /* ---------- Lupa: ultima compra del cliente ---------- */
@@ -1838,6 +1896,125 @@ document.getElementById('btnLupaCliente').addEventListener('click', () => {
 
 function cerrarModalUltimaCompra() {
   document.getElementById('modalUltimaCompra').style.display = 'none';
+}
+
+// ============ CENTRAL DE DEUDORES BCRA ============
+let bcraCache = {};
+
+function claseBCRA(sit) {
+  if (sit <= 1) return 'bcra-sit1';
+  if (sit === 2) return 'bcra-sit2';
+  if (sit === 3) return 'bcra-sit3';
+  return 'bcra-sit45';
+}
+function labelSit(sit) {
+  const labels = {1:'Normal',2:'Riesgo bajo',3:'Riesgo medio',4:'Riesgo alto',5:'Irrecuperable',6:'Sin info'};
+  return labels[sit] || ('Sit. '+sit);
+}
+
+async function consultarBCRA(cuit) {
+  if (!cuit) return null;
+  const cuitLimpio = String(cuit).replace(/\D/g,'');
+  if (cuitLimpio.length !== 11) return null;
+  if (bcraCache[cuitLimpio]) return bcraCache[cuitLimpio];
+  try {
+    const [rDeudas, rCheques] = await Promise.all([
+      fetch('https://api.bcra.gob.ar/centraldedeudores/v1.0/Deudas/' + cuitLimpio, {signal: AbortSignal.timeout(8000)}),
+      fetch('https://api.bcra.gob.ar/centraldedeudores/v1.0/Deudas/ChequesRechazados/' + cuitLimpio, {signal: AbortSignal.timeout(8000)})
+    ]);
+    const deudas = rDeudas.ok ? await rDeudas.json() : null;
+    const cheques = rCheques.ok ? await rCheques.json() : null;
+    const resultado = { deudas, cheques, cuit: cuitLimpio };
+    bcraCache[cuitLimpio] = resultado;
+    return resultado;
+  } catch(e) { return null; }
+}
+
+function parsearBCRA(data) {
+  if (!data || !data.deudas || !data.deudas.results) return null;
+  const r = data.deudas.results;
+  if (!r.periodos || r.periodos.length === 0) return { sinDeudas: true, denominacion: r.denominacion };
+  const ultimoPeriodo = r.periodos[0];
+  const entidades = ultimoPeriodo.entidades || [];
+  let peorSit = 0, deudaTotal = 0;
+  entidades.forEach(e => {
+    if (e.situacion > peorSit) peorSit = e.situacion;
+    deudaTotal += (e.monto || 0) * 1000;
+  });
+  const chequesData = data.cheques?.results?.causales || [];
+  let totalCheques = 0;
+  chequesData.forEach(c => { totalCheques += (c.detalle || []).length; });
+  return { periodo: ultimoPeriodo.periodo, denominacion: r.denominacion, entidades, peorSit, deudaTotal, totalCheques, chequesData };
+}
+
+function renderBadgeBCRA(parsed) {
+  if (!parsed) return '<span class="bcra-loading">BCRA: sin datos</span>';
+  if (parsed.sinDeudas) return '<span class="bcra-badge bcra-sit1">✓ Sin deudas registradas</span>';
+  const clase = claseBCRA(parsed.peorSit);
+  const chequesTxt = parsed.totalCheques > 0 ? `<span class="bcra-cheque">⚠ ${parsed.totalCheques} cheque${parsed.totalCheques>1?'s':''} rechazado${parsed.totalCheques>1?'s':''}</span>` : '';
+  return `<span class="bcra-badge ${clase}">Sit. ${parsed.peorSit} — ${labelSit(parsed.peorSit)}</span>${chequesTxt}`;
+}
+
+function abrirModalBCRA() {
+  renderModalBCRA(window._bcraParsedActual || null, window._bcraCuitActual || '');
+  document.getElementById('modalBCRA').style.display = 'flex';
+}
+function cerrarModalBCRA() {
+  document.getElementById('modalBCRA').style.display = 'none';
+}
+
+function renderModalBCRA(parsed, cuit) {
+  const sub = document.getElementById('bcraModalSubtitulo');
+  const cont = document.getElementById('bcraModalContenido');
+  if (!parsed) {
+    sub.textContent = 'CUIT: ' + cuit;
+    cont.innerHTML = '<p style="color:#888;font-size:13px;">No se pudo obtener información del BCRA. Verificá la conexión o consultá manualmente en bcra.gob.ar.</p>';
+    return;
+  }
+  if (parsed.sinDeudas) {
+    sub.textContent = (parsed.denominacion || '') + ' · Sin deudas registradas';
+    cont.innerHTML = '<p style="color:green;font-size:14px;font-weight:700;">✓ Sin deudas registradas en el sistema financiero.</p>';
+    return;
+  }
+  sub.textContent = (parsed.denominacion || '') + ' · Período: ' + (parsed.periodo || '-') + ' · Fuente: api.bcra.gob.ar';
+
+  let filas = parsed.entidades.map(e => {
+    const clase = claseBCRA(e.situacion);
+    const monto = (e.monto||0)*1000;
+    return `<div class="modal-bcra-entidad">
+      <span style="font-size:12px;">${e.entidad||'-'}</span>
+      <span class="bcra-badge ${clase}" style="font-size:11px;padding:2px 7px;">Sit. ${e.situacion}</span>
+      <span style="font-size:12px;color:#555;text-align:right;">${monto>0?'$ '+monto.toLocaleString('es-AR',{maximumFractionDigits:0}):'-'}</span>
+    </div>`;
+  }).join('');
+
+  let chequeHtml = '';
+  if (parsed.totalCheques > 0) {
+    let filasChq = '';
+    parsed.chequesData.forEach(causal => {
+      (causal.detalle||[]).forEach(d => {
+        const monto = d.monto ? '$ '+Number(d.monto).toLocaleString('es-AR',{maximumFractionDigits:0}) : '-';
+        filasChq += `<div class="modal-bcra-entidad">
+          <span style="font-size:12px;">${d.entidad||'-'} · ${causal.causal||''}</span>
+          <span style="font-size:11px;color:var(--rojo);font-weight:700;">Rechazado</span>
+          <span style="font-size:12px;color:#555;text-align:right;">${monto}</span>
+        </div>`;
+      });
+    });
+    chequeHtml = `<div style="font-size:12px;font-weight:700;color:var(--rojo);margin:14px 0 6px;">⚠ Cheques rechazados</div>${filasChq}`;
+  }
+
+  const totalFmt = parsed.deudaTotal > 0 ? '$ '+parsed.deudaTotal.toLocaleString('es-AR',{maximumFractionDigits:0}) : '-';
+  cont.innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:#555;margin-bottom:6px;">Financiaciones</div>
+    ${filas}
+    ${chequeHtml}
+    <div class="modal-bcra-resumen">
+      <div style="font-size:13px;">Peor situación: <b>${parsed.peorSit} — ${labelSit(parsed.peorSit)}</b></div>
+      <div style="font-size:13px;margin-top:3px;">Deuda total en el sistema: <b>${totalFmt}</b></div>
+    </div>
+    <p style="font-size:11px;color:#aaa;margin-top:10px;">Sit. 1=Normal · 2=Riesgo bajo · 3=Riesgo medio · 4=Riesgo alto · 5=Irrecuperable</p>
+  `;
 }
 
 // Abre el modal de predicción de compra directamente desde "Clientes para recontactar"
